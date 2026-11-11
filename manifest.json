@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "WebPullBook",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Extract serialized web fiction and multi-chapter pages into clean, volume-organized EPUB ebooks directly in your browser.",
   "homepage_url": "https://github.com/WiltonGabriel/WebPullBook",
   "icons": {

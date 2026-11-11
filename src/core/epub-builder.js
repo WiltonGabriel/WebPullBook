@@ -299,9 +299,6 @@ function buildContentOpf({
     spineItems.push(`    <itemref idref="${escapeXml(ch.id)}"/>`);
   }
 
-  const seriesMeta = seriesName
-    ? `\n    <meta name="calibre:series" content="${escapeXml(seriesName)}"/>\n    <meta name="calibre:series_index" content="${escapeXml(String(seriesIndex ?? 1))}"/>`
-    : '';
   const epub3SeriesMeta = epub3 && seriesName
     ? `\n    <meta property="belongs-to-collection" id="series-col">${escapeXml(seriesName)}</meta>\n    <meta refines="#series-col" property="collection-type">series</meta>\n    <meta refines="#series-col" property="group-position">${escapeXml(String(seriesIndex ?? 1))}</meta>`
     : '';
@@ -329,7 +326,7 @@ function buildContentOpf({
     <dc:title>${escapeXml(bookTitle)}</dc:title>
     ${creatorTag}
     <dc:language>${escapeXml(language)}</dc:language>
-    <dc:source>${escapeXml(sourceUrl)}</dc:source>${subjectTags}${descTag}${coverMeta}${seriesMeta}${modifiedMeta}${epub3SeriesMeta}
+    <dc:source>${escapeXml(sourceUrl)}</dc:source>${subjectTags}${descTag}${coverMeta}${modifiedMeta}${epub3SeriesMeta}
   </metadata>
   <manifest>
 ${manifestItems.join('\n')}

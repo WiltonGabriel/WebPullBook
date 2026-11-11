@@ -3,7 +3,7 @@
 [🇧🇷 Português](README.md) | **🇺🇸 English**
 
 [![Manifest V3](https://img.shields.io/badge/Manifest-V3-4338ca?style=flat-square)](manifest.json)
-[![Version](https://img.shields.io/badge/Version-1.0.1-0ea5e9?style=flat-square)](https://github.com/WiltonGabriel/WebPullBook/releases)
+[![Version](https://img.shields.io/badge/Version-1.0.2-0ea5e9?style=flat-square)](https://github.com/WiltonGabriel/WebPullBook/releases)
 [![Dependencies](https://img.shields.io/badge/Dependencies-Zero-16a34a?style=flat-square)](src/core/zip.js)
 [![License: MIT](https://img.shields.io/badge/License-MIT-f59e0b?style=flat-square)](LICENSE)
 [![CI Validation](https://github.com/WiltonGabriel/WebPullBook/actions/workflows/ci.yml/badge.svg)](https://github.com/WiltonGabriel/WebPullBook/actions/workflows/ci.yml)
@@ -33,10 +33,7 @@ Reading long serialized works in a browser tab is inconvenient offline or on e-i
 
 ## Compatibility
 
-The complete list of **Verified Compatible**, **Potentially Compatible**, and **Incompatible** sources and layouts is maintained in the `docs/` directory:
-
-- 📄 **[Compatibility Matrix (English)](docs/COMPATIBILITY.en.md)**
-- 📄 **[Matriz de Compatibilidade (Português)](docs/COMPATIBILITY.md)**
+The compatibility table (**Verified Compatible**, **Potentially Compatible**, and **Not Compatible**) lives in [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md) and is designed to be easily updated via Pull Request as new sites are tested.
 
 ---
 
@@ -91,8 +88,7 @@ WebPullBook/
 ├── README.md                     # Documentation (Português)
 ├── README.en.md                  # Documentation (English)
 ├── docs/
-│   ├── COMPATIBILITY.md          # Compatibility matrix (Português)
-│   └── COMPATIBILITY.en.md       # Compatibility matrix (English)
+│   └── COMPATIBILITY.md          # Compatibility table (PR-friendly)
 ├── icons/                        # Extension toolbar and store icons
 └── src/
     ├── background/
@@ -127,7 +123,7 @@ WebPullBook/
 ## Getting Help
 
 - **Inspect execution logs:** Open the **Logs** tab inside the extension workspace and click **Download Log** to save a timestamped trace of network or parsing errors.
-- **Compatibility matrix:** Check [docs/COMPATIBILITY.en.md](docs/COMPATIBILITY.en.md) for verified and supported site structures.
+- **Compatibility table:** Check [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md) for verified and potentially compatible site structures.
 - **Bug reports & site requests:** Open an issue in the repository's GitHub **Issues** tab describing the HTML structure (container classes for chapter list and chapter text) and attach any relevant log output.
 - **Developer documentation:** See [CONTRIBUTING.md](CONTRIBUTING.md) for architecture details and instructions on adding new parser adapters.
 - **Security:** See [SECURITY.md](.github/SECURITY.md) for privately reporting security vulnerabilities.
@@ -138,4 +134,4 @@ WebPullBook/
 
 WebPullBook is an open-source project maintained by the **WebPullBook Contributors** under the [MIT License](LICENSE) and follows our [Code of Conduct](.github/CODE_OF_CONDUCT.md).
 
-Contributions—especially new structural parser adapters in [src/parsers/](src/parsers/index.js), UI refinements, and compatibility reports in [docs/COMPATIBILITY.en.md](docs/COMPATIBILITY.en.md)—are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
+Contributions—especially new structural parser adapters in [src/parsers/](src/parsers/index.js), UI refinements, and compatibility updates in [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md)—are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.

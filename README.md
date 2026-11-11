@@ -3,7 +3,7 @@
 **🇧🇷 Português** | [🇺🇸 English](README.en.md)
 
 [![Manifest V3](https://img.shields.io/badge/Manifest-V3-4338ca?style=flat-square)](manifest.json)
-[![Versão](https://img.shields.io/badge/Vers%C3%A3o-1.0.1-0ea5e9?style=flat-square)](https://github.com/WiltonGabriel/WebPullBook/releases)
+[![Versão](https://img.shields.io/badge/Vers%C3%A3o-1.0.2-0ea5e9?style=flat-square)](https://github.com/WiltonGabriel/WebPullBook/releases)
 [![Dependências](https://img.shields.io/badge/Depend%C3%AAncias-Zero-16a34a?style=flat-square)](src/core/zip.js)
 [![Licença: MIT](https://img.shields.io/badge/Licen%C3%A7a-MIT-f59e0b?style=flat-square)](LICENSE)
 [![CI Validation](https://github.com/WiltonGabriel/WebPullBook/actions/workflows/ci.yml/badge.svg)](https://github.com/WiltonGabriel/WebPullBook/actions/workflows/ci.yml)
@@ -33,10 +33,7 @@ Ler obras longas com centenas de capítulos no navegador dificulta a leitura off
 
 ## Compatibilidade
 
-A lista completa de **Compatíveis Verificados**, **Possíveis Compatíveis** e **Não Compatíveis** está disponível na documentação dedicada:
-
-- 📄 **[Matriz de Compatibilidade (Português)](docs/COMPATIBILITY.md)**
-- 📄 **[Compatibility Matrix (English)](docs/COMPATIBILITY.en.md)**
+A lista simples de sites verificados, possíveis compatíveis e incompatíveis fica em [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md) (qualquer pessoa pode editar a tabela via Pull Request conforme testar novos sites).
 
 ---
 
@@ -91,8 +88,7 @@ WebPullBook/
 ├── README.md                     # Documentação (Português)
 ├── README.en.md                  # Documentação (English)
 ├── docs/
-│   ├── COMPATIBILITY.md          # Matriz de compatibilidade (Português)
-│   └── COMPATIBILITY.en.md       # Matriz de compatibilidade (English)
+│   └── COMPATIBILITY.md          # Tabela de compatibilidade (editável via PR)
 ├── icons/                        # Ícones da extensão
 └── src/
     ├── background/
