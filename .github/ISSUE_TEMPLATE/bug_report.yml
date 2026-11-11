@@ -1,0 +1,50 @@
+name: Bug Report
+description: Reporte um erro de extração, formatação EPUB ou problema na extensão / Report a bug
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Obrigado por ajudar a melhorar o **WebPullBook**! Preencha os campos abaixo (pode escrever em Português ou English).
+  - type: textarea
+    id: description
+    attributes:
+      label: Descrição do problema / Problem description
+      description: O que aconteceu vs. o que você esperava que acontecesse?
+    validations:
+      required: true
+  - type: input
+    id: browser
+    attributes:
+      label: Navegador e Versão / Browser & Version
+      placeholder: "Ex.: Google Chrome 130 / Edge / Brave"
+    validations:
+      required: true
+  - type: dropdown
+    id: format
+    attributes:
+      label: Formato de Saída / Output Format
+      options:
+        - EPUB (.epub)
+        - HTML Único (.html)
+        - Markdown (.md)
+        - Texto Puro (.txt)
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Passos para reproduzir / Steps to reproduce
+      placeholder: |
+        1. Abrir página do índice...
+        2. Clicar em Empacotar EPUB...
+        3. Erro exibido no banner / no Calibre...
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Log de Execução (aba Logs -> Baixar Log) / Execution Logs
+      description: Cole as linhas relevantes da aba Logs da extensão (remova dados privados se houver).
+      render: text

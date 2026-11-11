@@ -1,0 +1,89 @@
+name: CI Validation
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Validate MV3 manifest.json and JavaScript syntax
+        run: |
+          node -e '
+            const fs = require("fs");
+            const manifest = JSON.parse(fs.readFileSync("manifest.json", "utf8"));
+            if (manifest.manifest_version !== 3) {
+              throw new Error("manifest_version must be 3");
+            }
+            if (!manifest.name || !manifest.version) {
+              throw new Error("manifest name and version are required");
+            }
+            console.log("Manifest validated:", manifest.name, manifest.version);
+          '
+          while IFS= read -r -d '' jsfile; do
+            echo "Checking syntax: $jsfile"
+            node --check "$jsfile"
+          done < <(find src -name "*.js" -print0)
+
+      - name: Check MV3 CSP compliance & Markdown relative links
+        run: |
+          python3 - <<'PY'
+          import os
+          import re
+          import sys
+
+          # 1. MV3 strict CSP check on extension HTML pages (no inline scripts or on* handlers)
+          for root, _, files in os.walk("src"):
+              for fn in files:
+                  if fn.endswith(".html"):
+                      path = os.path.join(root, fn)
+                      with open(path, "r", encoding="utf-8") as f:
+                          html = f.read()
+                      inline_scripts = re.findall(r"<script\b(?![^>]*\bsrc=)[^>]*>", html, flags=re.IGNORECASE)
+                      if inline_scripts:
+                          raise SystemExit(f"MV3 CSP violation (inline <script>) in {path}: {inline_scripts}")
+                      inline_events = re.findall(r"<[^>]*\s+on[a-z]+\s*=", html, flags=re.IGNORECASE)
+                      if inline_events:
+                          raise SystemExit(f"MV3 CSP violation (inline event handler) in {path}: {inline_events}")
+                      print(f"[OK] MV3 CSP check: {path}")
+
+          # 2. Check all relative markdown links exist in repository
+          md_files = ["README.md", "README.en.md", "CONTRIBUTING.md", ".github/SECURITY.md"]
+          for root, _, files in os.walk("docs"):
+              for fn in files:
+                  if fn.endswith(".md"):
+                      md_files.append(os.path.join(root, fn))
+
+          for md in md_files:
+              with open(md, "r", encoding="utf-8") as f:
+                  content = f.read()
+              base_dir = os.path.dirname(md)
+              links = re.findall(r"\[[^\]]+\]\(([^)#]+)(?:#[^)]*)?\)", content)
+              for link in links:
+                  if link.startswith(("http://", "https://", "mailto:")):
+                      continue
+                  target = os.path.normpath(os.path.join(base_dir, link))
+                  if not os.path.exists(target):
+                      raise SystemExit(f"Broken relative link in {md}: {link} -> {target}")
+              print(f"[OK] Markdown links check: {md} ({len(links)} links)")
+          PY
+
+      - name: Dry-run extension ZIP package
+        run: |
+          zip -r WebPullBook-preview.zip manifest.json icons src LICENSE README.md README.en.md docs
+          unzip -t WebPullBook-preview.zip
+          rm -f WebPullBook-preview.zip

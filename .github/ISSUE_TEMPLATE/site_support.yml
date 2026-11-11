@@ -1,0 +1,31 @@
+name: New Site Layout / Adapter Support
+description: Sugira suporte estrutural para um novo layout ou tema HTML / Request support for a site layout
+title: "[Adapter]: "
+labels: ["enhancement", "parser"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        O WebPullBook prioriza adaptadores baseados em **padrões estruturais de DOM**. Descreva os seletores CSS ou estrutura HTML encontrada.
+  - type: input
+    id: cms
+    attributes:
+      label: CMS / Tema / Tipo de Página (CMS, Theme, or SPA/Static)
+      placeholder: "Ex.: WordPress Custom Theme / React SPA / Blog estático"
+    validations:
+      required: true
+  - type: textarea
+    id: selectors
+    attributes:
+      label: Seletores HTML identificados (se souber) / Known CSS Selectors
+      placeholder: |
+        Lista de capítulos: .chapter-list a
+        Corpo do capítulo: .reading-body
+        Volumes: .volume-header
+  - type: checkboxes
+    id: tested_custom
+    attributes:
+      label: Verificações prévias / Pre-checks
+      options:
+        - label: Testei informar os seletores manualmente em Opções Avançadas
+        - label: Testei ativar o "Modo SPA / JavaScript" caso a página carregue via JS

@@ -1,0 +1,17 @@
+name: Feature Request
+description: Sugira uma nova funcionalidade ou formato de exportação / Suggest a feature
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Resumo da sugestão / Feature summary
+      description: Descreva o que você gostaria que o WebPullBook fizesse.
+    validations:
+      required: true
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Caso de uso / Motivation
+      description: Como essa funcionalidade ajudaria seu fluxo de leitura no Kindle, Calibre ou navegador?

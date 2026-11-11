@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <script src="theme-init.js"></script>
+  <title>WebPullBook</title>
+  <link rel="stylesheet" href="workspace.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <img src="../../icons/icon-48.png" alt="" class="brand-icon" width="32" height="32">
+        <div>
+          <h1>WebPullBook</h1>
+          <p class="brand-sub" data-i18n="brandSub">Extrator por volumes e empacotador EPUB para e-readers &amp; Calibre</p>
+        </div>
+      </div>
+
+      <form id="load-series-form" class="url-bar">
+        <label for="starting-url" class="sr-only" data-i18n="urlLabel">URL da página da obra ou capítulo</label>
+        <input
+          id="starting-url"
+          type="url"
+          placeholder="https://example.com/series/minha-obra/"
+          data-i18n-placeholder="urlPlaceholder"
+          required
+        >
+        <button type="submit" id="btn-load-series" class="btn primary" data-i18n="btnLoadSeries">Carregar Obra</button>
+        <button
+          type="button"
+          id="btn-merge-tabs"
+          class="btn secondary"
+          data-i18n="btnMergeTabs"
+          data-i18n-title="btnMergeTabsTitle"
+          title="Capturar abas abertas da janela atual como capítulos (estilo EpubPress)"
+        >Juntar Abas</button>
+      </form>
+
+      <div class="topbar-right">
+        <nav class="tabs" aria-label="Seções">
+          <button type="button" class="tab-btn active" data-tab="main">
+            <span data-i18n="tabMain">Obra &amp; Capítulos</span>
+          </button>
+          <button type="button" class="tab-btn" data-tab="library">
+            <span data-i18n="tabLibrary">Biblioteca</span>
+            <span id="library-badge" class="badge hidden">0</span>
+          </button>
+          <button type="button" class="tab-btn" data-tab="advanced">
+            <span data-i18n="tabAdvanced">Opções Avançadas</span>
+          </button>
+          <button type="button" class="tab-btn" data-tab="logs">
+            <span data-i18n="tabLogs">Logs</span>
+            <span id="log-badge" class="badge hidden">0</span>
+          </button>
+        </nav>
+
+        <select id="ui-lang-top" class="lang-select" aria-label="Idioma / Language">
+          <option value="pt">🇧🇷 PT</option>
+          <option value="en">🇺🇸 EN</option>
+        </select>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <div id="status-banner" class="banner hidden" role="status" aria-live="polite"></div>
+
+    <!-- TAB 1: MAIN -->
+    <section id="tab-main" class="tab-panel">
+      <div class="top-grid">
+        <!-- Cover + Pack Card -->
+        <aside class="card pack-card">
+          <div class="cover-box">
+            <img id="cover-preview" alt="Prévia da capa" hidden>
+            <div id="cover-placeholder" class="cover-placeholder" data-i18n="noCover">Sem capa</div>
+          </div>
+          <div class="cover-actions">
+            <button type="button" id="btn-clear-cover" class="btn ghost sm" data-i18n="btnClearCover">Limpar Capa</button>
+            <button type="button" id="btn-hires-cover" class="btn ghost sm" data-i18n="btnHiresCover">Alta Res.</button>
+          </div>
+
+          <div class="field mt-sm">
+            <label for="output-format" data-i18n="labelOutputFormat">Formato de Saída</label>
+            <select id="output-format">
+              <option value="epub">EPUB (eBook)</option>
+              <option value="html">HTML Único (Offline)</option>
+              <option value="md">Markdown (.md)</option>
+              <option value="txt">Texto Puro (.txt)</option>
+            </select>
+          </div>
+
+          <fieldset class="mode-fieldset">
+            <legend data-i18n="legendPackMode">Modo de Saída</legend>
+            <label class="radio-card">
+              <input type="radio" name="pack-mode" value="by-volume" checked>
+              <span>
+                <strong data-i18n="modeByVolumeTitle">1 Arquivo por Volume</strong>
+                <small data-i18n="modeByVolumeDesc">Gera um arquivo separado para cada volume selecionado</small>
+              </span>
+            </label>
+            <label class="radio-card">
+              <input type="radio" name="pack-mode" value="single">
+              <span>
+                <strong data-i18n="modeSingleTitle">Arquivo Único</strong>
+                <small data-i18n="modeSingleDesc">Todos os capítulos selecionados em 1 livro (com sumário por volume)</small>
+              </span>
+            </label>
+          </fieldset>
+
+          <div class="pack-actions">
+            <button type="button" id="btn-pack-epub" class="btn primary lg" disabled data-i18n="btnPackEpub">Empacotar EPUB</button>
+            <button type="button" id="btn-retry-failed" class="btn secondary hidden">Tentar Falhos (0)</button>
+            <div id="run-controls" class="run-controls hidden">
+              <button type="button" id="btn-pause" class="btn secondary" data-i18n="btnPause">Pausar</button>
+              <button type="button" id="btn-cancel" class="btn danger" data-i18n="btnCancel">Cancelar</button>
+            </div>
+          </div>
+
+          <div id="progress-box" class="progress-box hidden">
+            <div class="progress-head">
+              <span id="progress-label" data-i18n="progressPreparing">Preparando...</span>
+              <span id="progress-pct">0%</span>
+            </div>
+            <progress id="progress-bar" max="100" value="0"></progress>
+            <p id="progress-detail" class="muted sm"></p>
+          </div>
+
+          <p class="hint sm" data-i18n="kindleHint">
+            Dica Kindle USB: arraste os .epub para o Calibre e converta para .azw3 (ou envie o .epub direto pelo Send to Kindle).
+          </p>
+        </aside>
+
+        <!-- Metadata Card -->
+        <section class="card meta-card">
+          <div class="card-header">
+            <h2 data-i18n="metaHeading">Metadados da Obra</h2>
+            <div class="row-gap">
+              <button type="button" id="btn-save-library" class="btn secondary sm" data-i18n="btnSaveLibrary">Salvar na Biblioteca</button>
+              <span id="parser-badge" class="pill">Parser: Auto</span>
+              <span id="series-status-pill" class="pill muted" data-i18n="statusWaitingUrl">Aguardando URL</span>
+            </div>
+          </div>
+
+          <div class="form-grid">
+            <div class="field span-2">
+              <label for="meta-title" data-i18n="labelTitle">Título</label>
+              <input id="meta-title" type="text" placeholder="Título do livro" data-i18n-placeholder="placeholderTitle">
+            </div>
+
+            <div class="field">
+              <label for="meta-author" data-i18n="labelAuthor">Autor</label>
+              <input id="meta-author" type="text" placeholder="Nome do autor" data-i18n-placeholder="placeholderAuthor">
+            </div>
+
+            <div class="field">
+              <label for="meta-language" data-i18n="labelLanguage">Idioma</label>
+              <input id="meta-language" type="text" value="pt" placeholder="pt">
+            </div>
+
+            <div class="field">
+              <label for="meta-filename" data-i18n="labelFilename">Nome base do arquivo</label>
+              <input id="meta-filename" type="text" placeholder="nome-do-arquivo" data-i18n-placeholder="placeholderFilename">
+            </div>
+
+            <div class="field">
+              <label for="meta-cover-url" data-i18n="labelCoverUrl">URL da Imagem de Capa</label>
+              <input id="meta-cover-url" type="url" placeholder="https://...">
+            </div>
+          </div>
+
+          <details class="more-meta">
+            <summary data-i18n="moreMetaSummary">Mais metadados (Sinopse, Gêneros)</summary>
+            <div class="form-grid mt-sm">
+              <div class="field span-2">
+                <label for="meta-genres" data-i18n="labelGenres">Gêneros</label>
+                <input id="meta-genres" type="text" placeholder="Ação, Fantasia..." data-i18n-placeholder="placeholderGenres">
+              </div>
+              <div class="field span-2">
+                <label for="meta-synopsis" data-i18n="labelSynopsis">Sinopse</label>
+                <textarea id="meta-synopsis" rows="4" placeholder="Sinopse da obra..." data-i18n-placeholder="placeholderSynopsis"></textarea>
+              </div>
+            </div>
+          </details>
+
+          <!-- Volumes section -->
+          <div class="volumes-section">
+            <div class="volumes-header">
+              <div>
+                <h3><span data-i18n="volumesHeading">Volumes</span> <span id="volume-summary" class="muted sm"></span></h3>
+                <p class="muted sm" data-i18n="volumesHint">Clique em um volume para marcar/desmarcar todos os seus capítulos.</p>
+              </div>
+              <div class="volumes-actions">
+                <button type="button" id="btn-filter-clear-vol" class="btn ghost sm hidden" data-i18n="btnShowAllVolumes">Mostrar todos volumes</button>
+                <button type="button" id="btn-open-volume-modal" class="btn secondary sm" data-i18n="btnManualVolumes">Definir Volumes Manualmente</button>
+              </div>
+            </div>
+            <div id="volume-chips" class="volume-chips">
+              <span class="muted sm" data-i18n="volumesEmpty">Carregue uma obra para detectar os volumes automaticamente.</span>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- Chapters Table Card -->
+      <section class="card chapters-card">
+        <div class="chapters-top">
+          <div class="chapters-title-row">
+            <h2 data-i18n="chaptersHeading">Capítulos</h2>
+            <span id="chapter-count-badge" class="pill">0 / 0 selecionados</span>
+          </div>
+
+          <div class="range-controls">
+            <div class="field inline-field">
+              <label for="first-chapter" data-i18n="labelFirstChapter">Primeiro Capítulo</label>
+              <select id="first-chapter"></select>
+            </div>
+            <div class="field inline-field">
+              <label for="last-chapter" data-i18n="labelLastChapter">Último Capítulo</label>
+              <select id="last-chapter"></select>
+            </div>
+            <div class="field inline-field grow">
+              <label for="chapter-filter" data-i18n="labelFilter">Filtro</label>
+              <input id="chapter-filter" type="search" placeholder="Filtrar por capítulo, título ou volume..." data-i18n-placeholder="placeholderFilter">
+            </div>
+          </div>
+
+          <div class="toolbar">
+            <button type="button" id="btn-select-all" class="btn ghost sm" data-i18n="btnSelectAll">Selecionar Todos</button>
+            <button type="button" id="btn-unselect-all" class="btn ghost sm" data-i18n="btnUnselectAll">Desmarcar Todos</button>
+            <button type="button" id="btn-reverse-order" class="btn ghost sm" data-i18n="btnReverseOrder">Inverter Ordem</button>
+            <button type="button" id="btn-edit-urls" class="btn ghost sm" data-i18n="btnEditUrls">Editar URLs</button>
+            <button type="button" id="btn-copy-urls" class="btn ghost sm" data-i18n="btnCopyUrls">Copiar URLs</button>
+            <button type="button" id="btn-select-failed" class="btn ghost sm hidden" data-i18n="btnSelectFailed">Selecionar Falhos</button>
+            <label class="checkbox-inline">
+              <input type="checkbox" id="toggle-show-urls">
+              <span data-i18n="toggleShowUrls">Mostrar URLs</span>
+            </label>
+            <span class="muted sm tip-shift" data-i18n="tipShiftClick">Dica: use Shift+Clique para marcar intervalos</span>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table class="chapters-table">
+            <thead>
+              <tr>
+                <th class="col-check"><input type="checkbox" id="master-checkbox" aria-label="Selecionar capítulos visíveis"></th>
+                <th class="col-idx">#</th>
+                <th class="col-vol" data-i18n="thVolume">Volume</th>
+                <th class="col-title" data-i18n="thChapter">Capítulo</th>
+                <th class="col-status" data-i18n="thStatus">Status</th>
+              </tr>
+            </thead>
+            <tbody id="chapters-tbody">
+              <tr>
+                <td colspan="5" class="empty-cell" data-i18n="emptyChaptersInitial">Cole a URL de uma obra acima e clique em "Carregar Obra" ou use "Juntar Abas".</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+
+    <!-- TAB 2: LIBRARY -->
+    <section id="tab-library" class="tab-panel hidden">
+      <section class="card">
+        <div class="card-header">
+          <div>
+            <h2 data-i18n="libraryHeading">Biblioteca &amp; Lista de Leitura</h2>
+            <p class="muted sm mt-xs" data-i18n="librarySub">
+              Salve suas obras acompanhadas para checar novos capítulos e selecionar automaticamente apenas o que saiu desde o último download.
+            </p>
+          </div>
+          <button type="button" id="btn-save-library-tab" class="btn primary sm" data-i18n="btnSaveCurrentToLib">+ Salvar Obra Atual</button>
+        </div>
+        <div id="library-grid" class="library-grid"></div>
+      </section>
+    </section>
+
+    <!-- TAB 3: ADVANCED OPTIONS -->
+    <section id="tab-advanced" class="tab-panel hidden">
+      <div class="adv-grid">
+        <section class="card">
+          <h2 data-i18n="advAppearanceHeading">Aparência &amp; Arquivos</h2>
+          <div class="form-grid mt-sm">
+            <div class="field">
+              <label for="opt-ui-lang" data-i18n="labelUiLang">Idioma da Interface</label>
+              <select id="opt-ui-lang">
+                <option value="pt">Português (pt-BR)</option>
+                <option value="en">English (en)</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="opt-theme" data-i18n="labelTheme">Tema da Interface</label>
+              <select id="opt-theme">
+                <option value="system" data-i18n="themeSystem">Sistema (Automático)</option>
+                <option value="light" data-i18n="themeLight">Claro</option>
+                <option value="dark" data-i18n="themeDark">Escuro</option>
+              </select>
+            </div>
+
+            <div class="field span-2">
+              <label for="opt-custom-filename" data-i18n="labelCustomFilename">Modelo de Nome do Arquivo</label>
+              <input id="opt-custom-filename" type="text" value="%Filename%">
+              <small class="muted" data-i18n="tokensHint">Tokens: %Filename%, %Title%, %Author%, %Volume%</small>
+            </div>
+          </div>
+
+          <div class="checks-col">
+            <label class="checkbox-row">
+              <input type="checkbox" id="opt-subfolder" checked>
+              <span data-i18n="optSubfolder">Salvar dentro de subpasta WebPullBook/&lt;Título&gt;/ em Downloads</span>
+            </label>
+            <label class="checkbox-row">
+              <input type="checkbox" id="opt-no-save-as" checked>
+              <span data-i18n="optNoSaveAs">Não abrir janela "Salvar como" (baixar direto)</span>
+            </label>
+            <label class="checkbox-row">
+              <input type="checkbox" id="opt-remove-illegal" checked>
+              <span data-i18n="optRemoveIllegal">Remover caracteres inválidos do nome de arquivo</span>
+            </label>
+            <label class="checkbox-row">
+              <input type="checkbox" id="opt-epub3" checked>
+              <span data-i18n="optEpub3">Criar EPUB 3 (inclui também toc.ncx para compatibilidade com Calibre/Kindle)</span>
+            </label>
+            <label class="checkbox-row">
+              <input type="checkbox" id="opt-add-info" checked>
+              <span data-i18n="optAddInfo">Adicionar página de Informações (Metadados &amp; Sinopse)</span>
+            </label>
+            <label class="checkbox-row">
+              <input type="checkbox" id="opt-remove-nav" checked>
+              <span data-i18n="optRemoveNav">Remover links de Próximo / Capítulo Anterior do texto</span>
+            </label>
+          </div>
+        </section>
+
+        <section class="card">
+          <h2 data-i18n="advNetworkHeading">Imagens, Rede, SPA &amp; Resiliência</h2>
+          <div class="form-grid mt-sm">
+            <div class="field">
+              <label for="opt-parser" data-i18n="labelParser">Seleção de Parser</label>
+              <select id="opt-parser">
+                <option value="auto" data-i18n="parserAutoOption">Automático (Pontuação DOM)</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="opt-delay" data-i18n="labelDelay">Delay entre capítulos (ms)</label>
+              <input id="opt-delay" type="number" min="0" max="10000" step="50" value="350">
+            </div>
+            <div class="field">
+              <label for="opt-max-chapters" data-i18n="labelMaxChapters">Máx. capítulos por EPUB (modo único)</label>
+              <input id="opt-max-chapters" type="number" min="1" max="10000" value="10000">
+            </div>
+            <div class="field">
+              <label for="opt-img-res" data-i18n="labelImgRes">Resolução máxima das imagens (px)</label>
+              <input id="opt-img-res" type="number" min="200" max="4000" step="20" value="1080">
+            </div>
+            <div class="field">
+              <label for="opt-img-fmt" data-i18n="labelImgFmt">Formato ao comprimir imagens</label>
+              <select id="opt-img-fmt">
+                <option value="jpg">JPEG</option>
+                <option value="png">PNG</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="opt-list-selector" data-i18n="labelListSelector">Seletor CSS da lista de capítulos (opcional)</label>
+              <input id="opt-list-selector" type="text" placeholder="Ex.: .chapter-list a">
+            </div>
+            <div class="field">
+              <label for="opt-content-selector" data-i18n="labelContentSelector">Seletor CSS do conteúdo do capítulo (opcional)</label>
+              <input id="opt-content-selector" type="text" placeholder="Ex.: article .content">
+            </div>
+            <div class="field">
+              <label for="opt-exclude-selector" data-i18n="labelExcludeSelector">Seletor CSS de elementos a excluir (opcional)</label>
+              <input id="opt-exclude-selector" type="text" placeholder="Ex.: .ads, .author-note">
+            </div>
+          </div>
+
+          <div class="checks-col">
+            <label class="checkbox-row">
+              <input type="checkbox" id="opt-continue-on-error" checked>
+              <span data-i18n="optContinueOnError">Continuar baixando mesmo se algum capítulo falhar (Resiliência Parcial)</span>
+            </label>
+            <label class="checkbox-row">
+              <input type="checkbox" id="opt-render-with-tab">
+              <span data-i18n="optRenderWithTab">Modo SPA / JavaScript: renderizar páginas via aba em segundo plano</span>
+            </label>
+            <label class="checkbox-row">
+              <input type="checkbox" id="opt-cover-jpeg" checked>
+              <span data-i18n="optCoverJpeg">Converter capa para JPEG otimizado (recomendado para Kindle/Calibre)</span>
+            </label>
+            <label class="checkbox-row">
+              <input type="checkbox" id="opt-compress-images">
+              <span data-i18n="optCompressImages">Redimensionar e comprimir imagens internas dos capítulos</span>
+            </label>
+            <label class="checkbox-row">
+              <input type="checkbox" id="opt-skip-images">
+              <span data-i18n="optSkipImages">Ignorar imagens dentro dos capítulos (somente texto + capa)</span>
+            </label>
+            <label class="checkbox-row">
+              <input type="checkbox" id="opt-use-svg">
+              <span data-i18n="optUseSvg">Usar wrapper &lt;svg&gt; na página da capa</span>
+            </label>
+            <label class="checkbox-row">
+              <input type="checkbox" id="opt-skip-404">
+              <span data-i18n="optSkip404">Pular silenciosamente capítulos com erro HTTP 404</span>
+            </label>
+          </div>
+        </section>
+
+        <section class="card span-2">
+          <div class="card-header">
+            <h2 data-i18n="advTypoHeading">Tipografia &amp; Stylesheet (CSS do Livro)</h2>
+            <button type="button" id="btn-reset-css" class="btn ghost sm" data-i18n="btnResetCss">Restaurar Padrão</button>
+          </div>
+          <div class="form-grid typo-grid">
+            <div class="field">
+              <label for="opt-font-family" data-i18n="labelFontFamily">Fonte Base</label>
+              <select id="opt-font-family">
+                <option value="reader-default" data-i18n="fontReaderDefault">Padrão do Leitor (Kindle Bookerly / Sistema)</option>
+                <option value="serif" data-i18n="fontSerif">Serifada (Georgia / Serif)</option>
+                <option value="sans" data-i18n="fontSans">Sem Serifa (Sans-serif)</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="opt-text-align" data-i18n="labelTextAlign">Alinhamento do Texto</label>
+              <select id="opt-text-align">
+                <option value="justify" data-i18n="alignJustify">Justificado</option>
+                <option value="left" data-i18n="alignLeft">Alinhado à Esquerda</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="opt-line-height" data-i18n="labelLineHeight">Espaçamento entre Linhas</label>
+              <input id="opt-line-height" type="number" min="1.1" max="2.4" step="0.05" value="1.55">
+            </div>
+            <div class="field typo-indent-field">
+              <label class="checkbox-row">
+                <input type="checkbox" id="opt-paragraph-indent">
+                <span data-i18n="optParagraphIndent">Recuo de 1ª linha nos parágrafos (estilo livro impresso)</span>
+              </label>
+            </div>
+          </div>
+          <textarea id="opt-stylesheet" class="code-area" rows="12" spellcheck="false"></textarea>
+
+          <div class="dev-tools">
+            <button type="button" id="btn-export-opts" class="btn secondary sm" data-i18n="btnExportOpts">Exportar Opções (JSON)</button>
+            <label class="btn secondary sm file-label">
+              <span data-i18n="btnImportOpts">Importar Opções (JSON)</span>
+              <input type="file" id="input-import-opts" accept="application/json" hidden>
+            </label>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <!-- TAB 4: LOGS -->
+    <section id="tab-logs" class="tab-panel hidden">
+      <section class="card">
+        <div class="card-header">
+          <h2 data-i18n="logsHeading">Registro de Execução</h2>
+          <div class="row-gap">
+            <button type="button" id="btn-download-logs" class="btn secondary sm" data-i18n="btnDownloadLogs">Baixar Log</button>
+            <button type="button" id="btn-clear-logs" class="btn ghost sm" data-i18n="btnClearLogs">Limpar</button>
+          </div>
+        </div>
+        <pre id="log-output" class="log-box" data-i18n="logsEmpty">Nenhuma atividade registrada ainda.</pre>
+      </section>
+    </section>
+  </main>
+
+  <!-- MODAL: DEFINIR VOLUMES MANUALMENTE -->
+  <dialog id="volume-modal" closedby="any" aria-labelledby="volume-modal-title">
+    <div class="dialog-header">
+      <h2 id="volume-modal-title" data-i18n="modalVolTitle">Definir Volumes Manualmente</h2>
+      <form method="dialog">
+        <button type="submit" value="cancel" class="btn ghost sm" aria-label="Fechar">✕</button>
+      </form>
+    </div>
+    <div class="dialog-body">
+      <div class="modal-section">
+        <h3 data-i18n="modalVolSec1">1. Dividir automaticamente a cada N capítulos</h3>
+        <div class="row-gap mt-sm">
+          <label class="inline-label"><span data-i18n="modalVolChunkSize">Capítulos por volume:</span>
+            <input id="vol-chunk-size" type="number" min="1" max="1000" value="25" class="sm-input">
+          </label>
+          <label class="inline-label"><span data-i18n="modalVolChunkStart">Começar no Volume:</span>
+            <input id="vol-chunk-start" type="number" min="1" max="999" value="1" class="sm-input">
+          </label>
+          <button type="button" id="btn-apply-chunk-vols" class="btn primary sm" data-i18n="btnApplyChunkVols">Aplicar Divisão</button>
+        </div>
+      </div>
+
+      <div class="modal-section">
+        <h3 data-i18n="modalVolSec2">2. Definir volume por faixa de capítulos (índice # da tabela)</h3>
+        <div class="row-gap mt-sm">
+          <label class="inline-label"><span data-i18n="modalVolFrom">Do #</span> <input id="vol-range-from" type="number" min="1" value="1" class="sm-input"></label>
+          <label class="inline-label"><span data-i18n="modalVolTo">até #</span> <input id="vol-range-to" type="number" min="1" value="25" class="sm-input"></label>
+          <label class="inline-label"><span data-i18n="modalVolName">Nome:</span> <input id="vol-range-name" type="text" value="Volume 01" class="md-input"></label>
+          <button type="button" id="btn-apply-range-vol" class="btn secondary sm" data-i18n="btnApplyRangeVol">Aplicar Faixa</button>
+        </div>
+      </div>
+
+      <div class="modal-section">
+        <h3 data-i18n="modalVolSec3">3. Atribuir aos capítulos marcados atualmente</h3>
+        <div class="row-gap mt-sm">
+          <input id="vol-selected-name" type="text" value="Volume Extra" class="md-input" placeholder="Ex.: Volume 01">
+          <button type="button" id="btn-apply-selected-vol" class="btn secondary sm" data-i18n="btnApplySelectedVol">Aplicar nos Selecionados</button>
+        </div>
+      </div>
+
+      <div class="modal-section">
+        <h3 data-i18n="modalVolSec4">4. Definição em lote (1 regra por linha: inicio-fim: Nome)</h3>
+        <textarea id="vol-batch-rules" rows="5" class="code-area" placeholder="1-24: Volume 01&#10;25-49: Volume 02"></textarea>
+        <div class="mt-sm">
+          <button type="button" id="btn-apply-batch-vols" class="btn secondary sm" data-i18n="btnApplyBatchVols">Aplicar Regras em Lote</button>
+        </div>
+      </div>
+    </div>
+    <div class="dialog-footer">
+      <form method="dialog">
+        <button type="submit" value="close" class="btn primary" autofocus data-i18n="btnDone">Concluir</button>
+      </form>
+    </div>
+  </dialog>
+
+  <!-- MODAL: EDITAR URLS -->
+  <dialog id="edit-urls-modal" closedby="any" aria-labelledby="edit-urls-title">
+    <div class="dialog-header">
+      <h2 id="edit-urls-title" data-i18n="modalEditUrlsTitle">Editar Lista de Capítulos</h2>
+      <form method="dialog">
+        <button type="submit" value="cancel" class="btn ghost sm" aria-label="Fechar">✕</button>
+      </form>
+    </div>
+    <div class="dialog-body">
+      <p class="muted sm" data-i18n="modalEditUrlsHint">Uma entrada por linha no formato: URL | Título (opcional) | Volume (opcional)</p>
+      <textarea id="edit-urls-textarea" class="code-area mt-sm" rows="16" spellcheck="false"></textarea>
+    </div>
+    <div class="dialog-footer">
+      <form method="dialog" class="row-gap">
+        <button type="submit" value="cancel" class="btn ghost" data-i18n="btnCancelModal">Cancelar</button>
+        <button type="submit" value="save" id="btn-save-edited-urls" class="btn primary" autofocus data-i18n="btnSaveEditedUrls">Aplicar Alterações</button>
+      </form>
+    </div>
+  </dialog>
+
+  <script type="module" src="workspace.js"></script>
+</body>
+</html>

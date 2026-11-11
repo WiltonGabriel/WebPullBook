@@ -1,0 +1,26 @@
+# OS & Editor files
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# Build / Extension packaging artifacts
+*.zip
+*.crx
+*.pem
+*.xpi
+dist/
+build/
+
+# Logs, caches & local environment
+*.log
+*.tmp
+tmp/
+__pycache__/
+node_modules/
+.env
+.env.*
