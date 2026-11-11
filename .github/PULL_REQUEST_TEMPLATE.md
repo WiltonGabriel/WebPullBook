@@ -14,8 +14,9 @@ Fixes #(issue)
 
 ## Checklist
 
+- [ ] Ran `npm run check` (`lint` + `node --test` unit & parser snapshot tests) with all tests passing.
 - [ ] Tested unpacked extension in Chrome/Chromium (`chrome://extensions/`).
 - [ ] Verified no inline `<script>` or inline `on*` event handlers were added in HTML (MV3 CSP compliance).
-- [ ] Verified generated `.epub` / exported output structure (`container.xml`, XHTML/OPF/NCX/NAV) and tested opening in an EPUB reader.
+- [ ] Verified generated `.epub` / exported output passes `EPUBCheck` (`REQUIRE_EPUBCHECK=1 npm run test:epubcheck`) and/or `npm run test:e2e`.
 - [ ] Confirmed no unrelated third-party domains or brand names are hardcoded inside `src/`.
-- [ ] Updated `README.md` / `README.en.md` / `docs/COMPATIBILITY*.md` if user-facing behavior or compatibility changed.
+- [ ] Updated `README.md` / `README.en.md` / `docs/COMPATIBILITY.md` / `tests/fixtures/` if parser behavior or compatibility changed.

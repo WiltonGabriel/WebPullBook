@@ -8,12 +8,42 @@ function randomUuid() {
 }
 
 async function fetchImageBytes(url, signal) {
-  const resp = await fetch(url, { credentials: 'include', signal });
+  let resp = null;
+  let firstErr = null;
+  try {
+    resp = await fetch(url, { credentials: 'include', signal });
+  } catch (err) {
+    if (err.name === 'AbortError') throw err;
+    firstErr = err;
+  }
+
+  // Some CDNs / S3 buckets reject credentialed requests or cookies with 401/403 or CORS errors
+  if (!resp || resp.status === 401 || resp.status === 403) {
+    try {
+      const anonResp = await fetch(url, {
+        credentials: 'omit',
+        referrerPolicy: 'no-referrer',
+        signal
+      });
+      if (anonResp.ok || !resp) {
+        resp = anonResp;
+      }
+    } catch (err) {
+      if (err.name === 'AbortError') throw err;
+      if (!resp && firstErr) throw firstErr;
+      if (!resp) throw err;
+    }
+  }
+
   if (!resp.ok) {
     throw new Error(`HTTP ${resp.status} while fetching image ${url}`);
   }
   const blob = await resp.blob();
-  return { blob, mime: blob.type || 'image/jpeg' };
+  const mime = (blob.type || '').split(';')[0].trim().toLowerCase();
+  if (mime && (/^text\//i.test(mime) || /^application\/(?:json|xml|xhtml\+xml)/i.test(mime))) {
+    throw new Error(`Invalid image MIME (${mime}) while fetching ${url}`);
+  }
+  return { blob, mime: mime || 'image/jpeg' };
 }
 
 async function convertImageViaCanvas(blob, { maxDim = 1080, forceJpeg = false, quality = 0.88 }) {
@@ -63,11 +93,15 @@ function buildCoverXhtml({ title, coverHref, useSvg, epub3 }) {
     ? `<div class="svg_outer"><div class="svg_inner"><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" height="100%" preserveAspectRatio="xMidYMid meet" version="1.1" viewBox="0 0 1000 1400" width="100%"><image width="1000" height="1400" xlink:href="${escapeXml(coverHref)}"/></svg></div></div>`
     : `<div class="svg_outer"><div class="svg_inner"><img src="${escapeXml(coverHref)}" alt="Cover of ${escapeXml(title)}" /></div></div>`;
 
+  const metaTag = epub3
+    ? '<meta charset="utf-8" />'
+    : '<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=utf-8" />';
+
   return `<?xml version="1.0" encoding="utf-8"?>
 ${doctype}
 <html xmlns="http://www.w3.org/1999/xhtml"${epub3 ? ' xmlns:epub="http://www.idpf.org/2007/ops"' : ''}>
 <head>
-  <meta charset="utf-8" />
+  ${metaTag}
   <title>Capa — ${escapeXml(title)}</title>
   <link rel="stylesheet" type="text/css" href="../styles/stylesheet.css" />
 </head>
@@ -93,11 +127,19 @@ function buildInfoXhtml({ metadata, bookTitle, chapterCount, epub3 }) {
     ? `<p><strong>Gêneros:</strong> ${escapeXml(metadata.genres.join(', '))}</p>`
     : '';
 
+  const sourceLine = metadata.startingUrl
+    ? `\n    <p><strong>Fonte:</strong> <a href="${escapeXml(metadata.startingUrl)}">${escapeXml(metadata.startingUrl)}</a></p>`
+    : '';
+
+  const metaTag = epub3
+    ? '<meta charset="utf-8" />'
+    : '<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=utf-8" />';
+
   return `<?xml version="1.0" encoding="utf-8"?>
 ${doctype}
 <html xmlns="http://www.w3.org/1999/xhtml"${epub3 ? ' xmlns:epub="http://www.idpf.org/2007/ops"' : ''}>
 <head>
-  <meta charset="utf-8" />
+  ${metaTag}
   <title>Informações — ${escapeXml(bookTitle)}</title>
   <link rel="stylesheet" type="text/css" href="../styles/stylesheet.css" />
 </head>
@@ -107,10 +149,9 @@ ${doctype}
     <p><strong>Autor:</strong> ${escapeXml(metadata.author || '<unknown>')}</p>
     <p><strong>Idioma:</strong> ${escapeXml(metadata.language || 'pt')}</p>
     <p><strong>Capítulos neste arquivo:</strong> ${chapterCount}</p>
-    ${genresLine}
-    <p><strong>Fonte:</strong> <a href="${escapeXml(metadata.startingUrl)}">${escapeXml(metadata.startingUrl)}</a></p>
+    ${genresLine}${sourceLine}
   </div>
-  ${synParas ? `<h3>Sinopse</h3>\n  <div class="synopsis">\n    ${synParas}\n  </div>` : ''}
+  ${synParas ? `<h2>Sinopse</h2>\n  <div class="synopsis">\n    ${synParas}\n  </div>` : ''}
 </body>
 </html>`;
 }
@@ -205,6 +246,8 @@ function buildTocNcx({ uuid, bookTitle, hasCoverPage, hasInfoPage, tocGroups }) 
     let volIdx = 1;
     for (const grp of tocGroups) {
       const firstHref = grp.items[0].href;
+      // Parent volume navPoint shares playOrder with its first chapter because both target firstHref
+      const vp = playOrder;
       const children = grp.items
         .map((rec) => {
           const p = playOrder++;
@@ -214,7 +257,6 @@ function buildTocNcx({ uuid, bookTitle, hasCoverPage, hasInfoPage, tocGroups }) 
       </navPoint>`;
         })
         .join('\n');
-      const vp = playOrder++;
       navPoints.push(`    <navPoint id="nav-vol-${volIdx++}" playOrder="${vp}">
       <navLabel><text>${escapeXml(grp.volume)}</text></navLabel>
       <content src="${escapeXml(firstHref)}"/>
@@ -233,7 +275,6 @@ ${children}
   }
 
   return `<?xml version="1.0" encoding="utf-8"?>
-<!DOCTYPE ncx PUBLIC "-//NISO//DTD ncx 2005-1//EN" "http://www.daisy.org/z3986/2005/ncx/ncx-2005-1.dtd">
 <ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1">
   <head>
     <meta name="dtb:uid" content="urn:uuid:${escapeXml(uuid)}"/>
@@ -261,6 +302,7 @@ function buildContentOpf({
   epub3,
   coverItem,
   hasCoverPage,
+  coverUsesSvg = false,
   hasInfoPage,
   chapterRecords,
   imageRecords
@@ -280,7 +322,8 @@ function buildContentOpf({
     manifestItems.push(`    <item id="cover-image" href="${escapeXml(coverItem.href)}" media-type="${escapeXml(coverItem.mime)}"${props}/>`);
   }
   if (hasCoverPage) {
-    manifestItems.push('    <item id="cover-page" href="text/cover.xhtml" media-type="application/xhtml+xml"/>');
+    const coverPageProps = epub3 && coverUsesSvg ? ' properties="svg"' : '';
+    manifestItems.push(`    <item id="cover-page" href="text/cover.xhtml" media-type="application/xhtml+xml"${coverPageProps}/>`);
   }
   if (hasInfoPage) {
     manifestItems.push('    <item id="info-page" href="text/info.xhtml" media-type="application/xhtml+xml"/>');
@@ -315,18 +358,20 @@ function buildContentOpf({
     ? `<dc:creator id="creator">${escapeXml(author)}</dc:creator>\n    <meta refines="#creator" property="role" scheme="marc:relators">aut</meta>`
     : `<dc:creator>${escapeXml(author)}</dc:creator>`;
 
+  const sourceTag = sourceUrl ? `\n    <dc:source>${escapeXml(sourceUrl)}</dc:source>` : '';
+  const packageLangAttr = epub3 ? ` xml:lang="${escapeXml(language)}"` : '';
+
   const guide = hasCoverPage
     ? `\n  <guide>\n    <reference type="cover" title="Capa" href="text/cover.xhtml"/>\n  </guide>`
     : '';
 
   return `<?xml version="1.0" encoding="utf-8"?>
-<package xmlns="http://www.idpf.org/2007/opf" version="${version}" unique-identifier="BookId" xml:lang="${escapeXml(language)}">
+<package xmlns="http://www.idpf.org/2007/opf" version="${version}" unique-identifier="BookId"${packageLangAttr}>
   <metadata xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:opf="http://www.idpf.org/2007/opf">
     <dc:identifier id="BookId">urn:uuid:${escapeXml(uuid)}</dc:identifier>
     <dc:title>${escapeXml(bookTitle)}</dc:title>
     ${creatorTag}
-    <dc:language>${escapeXml(language)}</dc:language>
-    <dc:source>${escapeXml(sourceUrl)}</dc:source>${subjectTags}${descTag}${coverMeta}${modifiedMeta}${epub3SeriesMeta}
+    <dc:language>${escapeXml(language)}</dc:language>${sourceTag}${subjectTags}${descTag}${coverMeta}${modifiedMeta}${epub3SeriesMeta}
   </metadata>
   <manifest>
 ${manifestItems.join('\n')}
@@ -349,6 +394,7 @@ export async function buildEpubBlob({
   options,
   groupNestedVolumes = false,
   onLog = () => {},
+  onWarning = () => {},
   signal
 }) {
   const epub3 = options.createEpub3 !== false;
@@ -407,7 +453,15 @@ export async function buildEpubBlob({
       break;
     } catch (err) {
       if (err.name === 'AbortError') throw err;
-      onLog(`Aviso: falha ao carregar capa (${cUrl}): ${err.message}`);
+      const msg = `Aviso: falha ao carregar capa (${cUrl}): ${err.message}`;
+      const logId = onLog(msg, 'warn');
+      onWarning({
+        kind: 'cover',
+        severity: 'light',
+        url: cUrl,
+        message: err.message,
+        logId
+      });
     }
   }
 
@@ -443,26 +497,29 @@ export async function buildEpubBlob({
           if (unproxied && unproxied !== imgInfo.originalUrl) {
             imgCandidates.push(unproxied);
           }
-          let lastImgErr = null;
+          const imgErrors = [];
           for (const candidateUrl of imgCandidates) {
             try {
               fetched = await fetchImageBytes(candidateUrl, signal);
               break;
             } catch (e) {
               if (e.name === 'AbortError') throw e;
-              lastImgErr = e;
+              imgErrors.push(e.message);
             }
           }
-          if (!fetched) throw lastImgErr || new Error('Failed to fetch image');
+          if (!fetched) {
+            throw new Error(imgErrors.join(' | ') || 'Failed to fetch image');
+          }
           const { blob, mime } = fetched;
           let bytes;
           let finalMime = mime;
-          if (options.compressImages) {
-            const forceJpeg = (options.compressedFormat || 'jpg') === 'jpg';
+          const needsEpub2Convert = !epub3 && /^image\/(?:webp|avif)$/i.test(mime);
+          if (options.compressImages || needsEpub2Convert) {
+            const forceJpeg = needsEpub2Convert || (options.compressedFormat || 'jpg') === 'jpg';
             const conv = await convertImageViaCanvas(blob, {
-              maxDim: options.compressedResolution || 1080,
+              maxDim: options.compressImages ? (options.compressedResolution || 1080) : 0,
               forceJpeg,
-              quality: 0.85
+              quality: options.compressImages ? 0.85 : 0.92
             });
             bytes = conv.bytes;
             finalMime = conv.mime;
@@ -480,8 +537,22 @@ export async function buildEpubBlob({
         imgInfo.element.setAttribute('src', `../${imgRec.href}`);
       } catch (err) {
         if (err.name === 'AbortError') throw err;
-        onLog(`Aviso: falha ao baixar imagem do capítulo (${imgInfo.originalUrl}): ${err.message}`);
+        const chTitle = parsed.chapter?.displayTitle || parsed.chapterTitle || `Cap. ${i + 1}`;
+        const msg = `Aviso: falha ao baixar imagem do capítulo "${chTitle}" (${imgInfo.originalUrl}): ${err.message}`;
+        const logId = onLog(msg, 'warn', { chapterIndex: parsed.chapter?.index });
+        onWarning({
+          kind: 'chapter-image',
+          severity: 'light',
+          chapterId: parsed.chapter?.id,
+          chapterIndex: parsed.chapter?.index ?? i + 1,
+          chapterTitle: chTitle,
+          url: imgInfo.originalUrl,
+          message: err.message,
+          logId
+        });
         imgInfo.element.remove();
+        const topIdx = Array.isArray(parsed.nodes) ? parsed.nodes.indexOf(imgInfo.element) : -1;
+        if (topIdx !== -1) parsed.nodes.splice(topIdx, 1);
       }
     }
 
@@ -532,6 +603,7 @@ export async function buildEpubBlob({
       epub3,
       coverItem,
       hasCoverPage,
+      coverUsesSvg: Boolean(options.useSvgForImages),
       hasInfoPage,
       chapterRecords,
       imageRecords

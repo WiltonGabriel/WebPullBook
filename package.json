@@ -1,0 +1,19 @@
+{
+  "name": "webpullbook",
+  "version": "1.2.0",
+  "private": true,
+  "type": "module",
+  "description": "Zero-dependency Manifest V3 browser extension that extracts serialized web fiction into EPUB 2/3, HTML, Markdown, and TXT.",
+  "scripts": {
+    "lint": "node scripts/check.mjs",
+    "lint:fix": "node scripts/check.mjs --fix",
+    "test": "node --test tests/*.test.js",
+    "test:epubcheck": "node --test tests/epub-validation.test.js",
+    "test:e2e": "node tests/e2e/extension.e2e.mjs",
+    "check": "npm run lint && npm test"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "playwright": "^1.65.0"
+  }
+}

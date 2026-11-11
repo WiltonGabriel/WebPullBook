@@ -58,6 +58,10 @@ function isAscii(bytes) {
  * @returns {Promise<Blob>}
  */
 export async function createZipBlob(entries) {
+  if (!Array.isArray(entries)) {
+    throw new TypeError('createZipBlob expects an array of entries');
+  }
+
   const encoder = new TextEncoder();
   const { dosTime, dosDate } = dosDateTime();
   const localParts = [];
@@ -65,8 +69,27 @@ export async function createZipBlob(entries) {
   let offset = 0;
 
   for (const entry of entries) {
+    if (!entry || typeof entry.name !== 'string' || entry.name.length === 0) {
+      throw new Error('ZIP entry must define a non-empty string name');
+    }
+    if (entry.data === undefined || entry.data === null) {
+      throw new TypeError(`ZIP entry "${entry.name}" is missing data`);
+    }
+    let rawBytes;
+    if (typeof entry.data === 'string') {
+      rawBytes = encoder.encode(entry.data);
+    } else if (entry.data instanceof Uint8Array) {
+      rawBytes = entry.data;
+    } else if (entry.data instanceof ArrayBuffer) {
+      rawBytes = new Uint8Array(entry.data);
+    } else {
+      throw new TypeError(`ZIP entry "${entry.name}" data must be a string, Uint8Array, or ArrayBuffer`);
+    }
+
     const nameBytes = encoder.encode(entry.name);
-    const rawBytes = typeof entry.data === 'string' ? encoder.encode(entry.data) : entry.data;
+    if (nameBytes.length > 0xffff) {
+      throw new RangeError(`ZIP entry name exceeds 65535 bytes: ${entry.name}`);
+    }
     const crc = crc32(rawBytes);
 
     let compressed = null;

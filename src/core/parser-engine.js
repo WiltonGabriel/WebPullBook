@@ -178,7 +178,7 @@ export function extractVolumeLabel(rawLabel, numText = '', href = '') {
   const sources = [rawLabel, numText, href];
   for (const src of sources) {
     if (!src) continue;
-    const match = String(src).match(/(?:vol(?:ume)?\.?\s*|livro\s*|book\s*|tome\s*|[-/]volume-)(\d+)/i);
+    const match = String(src).match(/(?:\bvol(?:ume)?[.\s_-]*|\blivro\s*|\bbook\s*|\btome\s*|[-/]volume-)(\d+)/i);
     if (match) {
       const n = parseInt(match[1], 10);
       if (!Number.isNaN(n)) {

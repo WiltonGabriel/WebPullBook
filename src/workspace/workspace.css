@@ -33,6 +33,9 @@
   --accent-contrast: light-dark(var(--accent-contrast-light), var(--accent-contrast-dark));
   --danger: light-dark(var(--danger-light), var(--danger-dark));
   --success: light-dark(var(--success-light), var(--success-dark));
+  --warn-light: #b45309;
+  --warn-dark: #fbbf24;
+  --warn: light-dark(var(--warn-light), var(--warn-dark));
 
   accent-color: var(--accent);
   scrollbar-color: light-dark(#b3bacb, #3a4259) transparent;
@@ -176,6 +179,16 @@ body {
   border-radius: 999px;
   padding: 0.05rem 0.45rem;
   font-size: 0.74rem;
+}
+
+.badge.danger {
+  background: var(--danger);
+  color: #ffffff;
+}
+
+.badge.warn {
+  background: var(--warn);
+  color: #161926;
 }
 
 /* Main container */
@@ -856,6 +869,140 @@ dialog::backdrop {
 .status-pill.downloading {
   border-color: var(--accent);
   color: var(--accent);
+}
+
+.status-pill.warn {
+  border-color: var(--warn);
+  color: var(--warn);
+}
+
+.status-pill.clickable {
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.status-pill.clickable:hover {
+  filter: brightness(1.08);
+  text-decoration: underline;
+}
+
+.chap-issue-btn {
+  display: inline-block;
+  margin-top: 0.2rem;
+  padding: 0;
+  border: none;
+  background: transparent;
+  font: inherit;
+  font-size: 0.76rem;
+  text-align: left;
+  cursor: pointer;
+  text-decoration: underline dotted;
+}
+
+.chap-issue-btn.error {
+  color: var(--danger);
+}
+
+.chap-issue-btn.warn {
+  color: var(--warn);
+}
+
+.export-report {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0.85rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  font-size: 0.86rem;
+}
+
+.export-report.is-ok {
+  border-color: var(--success);
+}
+
+.export-report.is-warn {
+  border-color: var(--warn);
+}
+
+.export-report.is-error {
+  border-color: var(--danger);
+}
+
+.export-report-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.export-report-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.report-list {
+  margin: 0;
+  padding-left: 1.25rem;
+  max-height: 190px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.28rem;
+}
+
+.report-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.4rem;
+}
+
+.report-tag {
+  font-weight: 700;
+  font-size: 0.78rem;
+}
+
+.report-tag.error {
+  color: var(--danger);
+}
+
+.report-tag.warn {
+  color: var(--warn);
+}
+
+.report-jump-btn {
+  border: none;
+  background: transparent;
+  color: var(--accent);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+}
+
+.log-line {
+  padding: 0.12rem 0.35rem;
+  border-radius: 4px;
+}
+
+.log-line.log-error {
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.log-line.log-warn {
+  color: var(--warn);
+}
+
+.log-line.log-highlight {
+  outline: 2px solid var(--accent);
+  background: var(--surface);
 }
 
 /* Library Grid */

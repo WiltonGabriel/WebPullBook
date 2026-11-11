@@ -1,0 +1,89 @@
+{
+  "wp-lightnovel": {
+    "parserId": "wp-lightnovel",
+    "startingUrl": "https://novel.example.org/series/torre-cinzenta/",
+    "title": "Crônicas da Torre Cinzenta",
+    "author": "Elena Vasconcelos",
+    "language": "pt",
+    "status": "Em Andamento",
+    "genres": ["Fantasia", "Aventura"],
+    "coverUrl": "https://novel.example.org/wp-content/uploads/cover-torre.jpg",
+    "synopsis": "Na borda do mar de cinzas, uma torre antiga guarda memórias perdidas.\n\nCada andar revela um fragmento de um mundo esquecido.",
+    "chapters": [
+      {
+        "url": "https://novel.example.org/series/torre-cinzenta/cap-01/",
+        "displayTitle": "Cap. 1 — O Primeiro Sinal",
+        "volume": "Volume 01"
+      },
+      {
+        "url": "https://novel.example.org/series/torre-cinzenta/cap-02/",
+        "displayTitle": "Cap. 2 — Escadaria de Pedra",
+        "volume": "Volume 01"
+      },
+      {
+        "url": "https://novel.example.org/series/torre-cinzenta/cap-03/",
+        "displayTitle": "Cap. 3 — Portões Fechados",
+        "volume": "Volume 02"
+      },
+      {
+        "url": "https://novel.example.org/series/torre-cinzenta/cap-04/",
+        "displayTitle": "Cap. 4 — A Forja Subterrânea",
+        "volume": "Volume 02"
+      }
+    ]
+  },
+  "madara-theme": {
+    "parserId": "madara-theme",
+    "startingUrl": "https://madara.example.org/novel/ashen-compass/",
+    "title": "Ashen Compass",
+    "author": "M. Keller",
+    "language": "en",
+    "genres": ["Mystery", "Steampunk"],
+    "coverUrl": "https://madara.example.org/covers/ashen-compass.jpg",
+    "synopsis": "A cartographer inherits a brass compass that points toward sunken cities.",
+    "chapters": [
+      {
+        "url": "https://madara.example.org/novel/ashen-compass/vol-1/ch-1/",
+        "displayTitle": "Chapter 1: The Brass Needle",
+        "volume": "Volume 01"
+      },
+      {
+        "url": "https://madara.example.org/novel/ashen-compass/vol-1/ch-2/",
+        "displayTitle": "Chapter 2: Harbor Fog",
+        "volume": "Volume 01"
+      },
+      {
+        "url": "https://madara.example.org/novel/ashen-compass/vol-2/ch-3/",
+        "displayTitle": "Chapter 3: Brass Meridian",
+        "volume": "Volume 02"
+      }
+    ]
+  },
+  "generic-html": {
+    "parserId": "generic-html",
+    "startingUrl": "https://blog.example.org/observatory/",
+    "title": "Letters from the Observatory",
+    "author": "Clara Nunes",
+    "language": "en",
+    "genres": [],
+    "coverUrl": "",
+    "synopsis": "Collected dispatches from a mountain observatory.",
+    "chapters": [
+      {
+        "url": "https://blog.example.org/observatory/vol-1/chapter-1",
+        "displayTitle": "Chapter 1 — Thin Air",
+        "volume": "Volume 01"
+      },
+      {
+        "url": "https://blog.example.org/observatory/vol-1/chapter-2",
+        "displayTitle": "Chapter 2 — Glass Dome",
+        "volume": "Volume 01"
+      },
+      {
+        "url": "https://blog.example.org/observatory/vol-2/chapter-3",
+        "displayTitle": "Chapter 3 — Winter Starlight",
+        "volume": "Volume 02"
+      }
+    ]
+  }
+}

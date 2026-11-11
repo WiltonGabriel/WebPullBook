@@ -54,6 +54,8 @@
           <button type="button" class="tab-btn" data-tab="logs">
             <span data-i18n="tabLogs">Logs</span>
             <span id="log-badge" class="badge hidden">0</span>
+            <span id="log-warn-badge" class="badge warn hidden" data-i18n-title="logWarnsTitle" title="Avisos leves">0</span>
+            <span id="log-error-badge" class="badge danger hidden" data-i18n-title="logErrorsTitle" title="Erros graves">0</span>
           </button>
         </nav>
 
@@ -67,6 +69,7 @@
 
   <main class="container">
     <div id="status-banner" class="banner hidden" role="status" aria-live="polite"></div>
+    <section id="export-report" class="export-report hidden" aria-live="polite"></section>
 
     <!-- TAB 1: MAIN -->
     <section id="tab-main" class="tab-panel">
@@ -513,7 +516,7 @@
             <button type="button" id="btn-clear-logs" class="btn ghost sm" data-i18n="btnClearLogs">Limpar</button>
           </div>
         </div>
-        <pre id="log-output" class="log-box" data-i18n="logsEmpty">Nenhuma atividade registrada ainda.</pre>
+        <div id="log-output" class="log-box" role="log" data-i18n="logsEmpty">Nenhuma atividade registrada ainda.</div>
       </section>
     </section>
   </main>

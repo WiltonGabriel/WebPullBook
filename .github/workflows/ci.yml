@@ -9,6 +9,9 @@ on:
 permissions:
   contents: read
 
+env:
+  EPUBCHECK_VERSION: "5.4.0"
+
 jobs:
   validate:
     runs-on: ubuntu-latest
@@ -20,73 +23,46 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "22"
+          cache: "npm"
 
-      - name: Validate MV3 manifest.json and JavaScript syntax
+      - name: Set up Java for EPUBCheck
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "21"
+
+      - name: Cache EPUBCheck
+        id: cache-epubcheck
+        uses: actions/cache@v4
+        with:
+          path: .tools/epubcheck
+          key: epubcheck-${{ env.EPUBCHECK_VERSION }}
+
+      - name: Download EPUBCheck
+        if: steps.cache-epubcheck.outputs.cache-hit != 'true'
         run: |
-          node -e '
-            const fs = require("fs");
-            const manifest = JSON.parse(fs.readFileSync("manifest.json", "utf8"));
-            if (manifest.manifest_version !== 3) {
-              throw new Error("manifest_version must be 3");
-            }
-            if (!manifest.name || !manifest.version) {
-              throw new Error("manifest name and version are required");
-            }
-            console.log("Manifest validated:", manifest.name, manifest.version);
-          '
-          while IFS= read -r -d '' jsfile; do
-            echo "Checking syntax: $jsfile"
-            node --check "$jsfile"
-          done < <(find src -name "*.js" -print0)
+          mkdir -p .tools/epubcheck
+          curl -fsSL -o /tmp/epubcheck.zip "https://github.com/w3c/epubcheck/releases/download/v${EPUBCHECK_VERSION}/epubcheck-${EPUBCHECK_VERSION}.zip"
+          unzip -q /tmp/epubcheck.zip -d .tools/epubcheck
+          rm -f /tmp/epubcheck.zip
 
-      - name: Check MV3 CSP compliance & Markdown relative links
+      - name: Run lint, syntax, CSP, i18n, and formatting checks
+        run: npm run lint
+
+      - name: Run unit, parser snapshot, and EPUBCheck validation tests
+        env:
+          REQUIRE_EPUBCHECK: "1"
+        run: npm test
+
+      - name: Install Playwright Chromium for E2E test
         run: |
-          python3 - <<'PY'
-          import os
-          import re
-          import sys
+          npm ci --no-audit --no-fund
+          npx playwright install chromium --with-deps
 
-          # 1. MV3 strict CSP check on extension HTML pages (no inline scripts or on* handlers)
-          for root, _, files in os.walk("src"):
-              for fn in files:
-                  if fn.endswith(".html"):
-                      path = os.path.join(root, fn)
-                      with open(path, "r", encoding="utf-8") as f:
-                          html = f.read()
-                      inline_scripts = re.findall(r"<script\b(?![^>]*\bsrc=)[^>]*>", html, flags=re.IGNORECASE)
-                      if inline_scripts:
-                          raise SystemExit(f"MV3 CSP violation (inline <script>) in {path}: {inline_scripts}")
-                      inline_events = re.findall(r"<[^>]*\s+on[a-z]+\s*=", html, flags=re.IGNORECASE)
-                      if inline_events:
-                          raise SystemExit(f"MV3 CSP violation (inline event handler) in {path}: {inline_events}")
-                      print(f"[OK] MV3 CSP check: {path}")
-
-          with open("src/core/epub-builder.js", "r", encoding="utf-8") as f:
-              epub_js = f.read()
-          if "application/oebps-package+xml" not in epub_js:
-              raise SystemExit("META-INF/container.xml must use media-type=\"application/oebps-package+xml\"")
-          print("[OK] EPUB container media-type check passed")
-
-          # 2. Check all relative markdown links exist in repository
-          md_files = ["README.md", "README.en.md", "CONTRIBUTING.md", ".github/SECURITY.md"]
-          for root, _, files in os.walk("docs"):
-              for fn in files:
-                  if fn.endswith(".md"):
-                      md_files.append(os.path.join(root, fn))
-
-          for md in md_files:
-              with open(md, "r", encoding="utf-8") as f:
-                  content = f.read()
-              base_dir = os.path.dirname(md)
-              links = re.findall(r"\[[^\]]+\]\(([^)#]+)(?:#[^)]*)?\)", content)
-              for link in links:
-                  if link.startswith(("http://", "https://", "mailto:")):
-                      continue
-                  target = os.path.normpath(os.path.join(base_dir, link))
-                  if not os.path.exists(target):
-                      raise SystemExit(f"Broken relative link in {md}: {link} -> {target}")
-              print(f"[OK] Markdown links check: {md} ({len(links)} links)")
-          PY
+      - name: Run extension E2E integration test
+        env:
+          REQUIRE_EPUBCHECK: "1"
+        run: npm run test:e2e
 
       - name: Dry-run extension ZIP package
         run: |

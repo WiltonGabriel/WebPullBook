@@ -71,14 +71,22 @@ export class HtmlSanitizer {
       imgEl.getAttribute('data-lazy-src'),
       imgEl.getAttribute('data-src'),
       imgEl.getAttribute('data-original'),
+      imgEl.getAttribute('data-cfsrc'),
+      imgEl.getAttribute('data-full-url'),
       imgEl.getAttribute('src')
     ];
     for (const cand of candidates) {
       if (!cand) continue;
       const trimmed = cand.trim();
-      if (!trimmed || trimmed.startsWith('data:image/svg+xml')) continue;
+      if (!trimmed || /^data:image\/svg\+xml/i.test(trimmed)) continue;
+      if (/^data:image\/(?:png|jpe?g|gif|webp|avif);base64,/i.test(trimmed)) {
+        return trimmed;
+      }
       try {
-        return new URL(trimmed, baseUrl).toString();
+        const u = new URL(trimmed, baseUrl);
+        if (u.protocol === 'http:' || u.protocol === 'https:') {
+          return u.toString();
+        }
       } catch {
         // Ignore malformed URLs
       }
@@ -285,7 +293,12 @@ export function serializeChapterXhtml({
 
   const head = xmlDoc.createElementNS(XHTML_NS, 'head');
   const metaCharset = xmlDoc.createElementNS(XHTML_NS, 'meta');
-  metaCharset.setAttribute('charset', 'utf-8');
+  if (epub3) {
+    metaCharset.setAttribute('charset', 'utf-8');
+  } else {
+    metaCharset.setAttribute('http-equiv', 'Content-Type');
+    metaCharset.setAttribute('content', 'application/xhtml+xml; charset=utf-8');
+  }
   head.appendChild(metaCharset);
 
   const titleEl = xmlDoc.createElementNS(XHTML_NS, 'title');
@@ -320,7 +333,12 @@ export function serializeChapterXhtml({
 
   html.replaceChildren(head, body);
 
-  const serialized = new XMLSerializer().serializeToString(xmlDoc);
+  // Serialize documentElement (not xmlDoc) and strip any leading XML PI/DOCTYPE so browsers
+  // never emit a duplicate `<?xml ...?>` declaration after line 1.
+  const serialized = new XMLSerializer()
+    .serializeToString(xmlDoc.documentElement)
+    .replace(/^(?:\s*<\?xml[^?]*\?>|\s*<!DOCTYPE[^>]*>)+/i, '')
+    .trimStart();
   const doctype = epub3
     ? '<!DOCTYPE html>'
     : '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">';

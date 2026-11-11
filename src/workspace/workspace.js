@@ -82,7 +82,9 @@ const state = {
   running: false,
   paused: false,
   abortController: null,
-  logs: []
+  logs: [],
+  logSeq: 0,
+  lastReport: null
 };
 
 const $ = (id) => document.getElementById(id);
@@ -115,14 +117,79 @@ function formatTimeRemaining(expiresAt) {
   return `${Math.max(1, hours)}h`;
 }
 
-function appendLog(msg) {
+function detectLogLevel(msg, explicitLevel) {
+  if (explicitLevel) return explicitLevel;
+  if (/^(?:ERRO|FALHA|BLOQUEIO)/i.test(msg)) return 'error';
+  if (/^Aviso:/i.test(msg)) return 'warn';
+  return 'info';
+}
+
+function updateLogBadges() {
+  const total = state.logs.length;
+  const warnCount = state.logs.filter((l) => l.level === 'warn').length;
+  const errCount = state.logs.filter((l) => l.level === 'error').length;
+
+  const totalBadge = $('log-badge');
+  totalBadge.textContent = String(total);
+  totalBadge.classList.toggle('hidden', total === 0);
+
+  const warnBadge = $('log-warn-badge');
+  if (warnBadge) {
+    warnBadge.textContent = String(warnCount);
+    warnBadge.classList.toggle('hidden', warnCount === 0);
+  }
+
+  const errBadge = $('log-error-badge');
+  if (errBadge) {
+    errBadge.textContent = String(errCount);
+    errBadge.classList.toggle('hidden', errCount === 0);
+  }
+}
+
+function renderLogsOutput() {
+  const box = $('log-output');
+  if (!box) return;
+  if (state.logs.length === 0) {
+    box.textContent = t('logsEmpty');
+    return;
+  }
+  const frag = document.createDocumentFragment();
+  for (const entry of state.logs) {
+    const line = document.createElement('div');
+    line.id = entry.id;
+    line.className = `log-line log-${entry.level}`;
+    line.textContent = `[${entry.time}] ${entry.msg}`;
+    frag.appendChild(line);
+  }
+  box.replaceChildren(frag);
+}
+
+function appendLog(msg, level) {
   const stamp = new Date().toLocaleTimeString('pt-BR', { hour12: false });
-  state.logs.push(`[${stamp}] ${msg}`);
+  const id = `log-${++state.logSeq}`;
+  const entry = {
+    id,
+    time: stamp,
+    level: detectLogLevel(msg, level),
+    msg
+  };
+  state.logs.push(entry);
   if (state.logs.length > 2000) state.logs.shift();
-  $('log-output').textContent = state.logs.join('\n');
-  const badge = $('log-badge');
-  badge.textContent = String(state.logs.length);
-  badge.classList.remove('hidden');
+  renderLogsOutput();
+  updateLogBadges();
+  return id;
+}
+
+function jumpToLog(logId) {
+  switchTab('logs');
+  if (!logId) return;
+  const target = document.getElementById(logId);
+  if (!target) return;
+  for (const el of document.querySelectorAll('.log-line.log-highlight')) {
+    el.classList.remove('log-highlight');
+  }
+  target.classList.add('log-highlight');
+  target.scrollIntoView({ block: 'center', behavior: 'smooth' });
 }
 
 function showBanner(msg, type = 'info') {
@@ -134,6 +201,100 @@ function showBanner(msg, type = 'info') {
 
 function hideBanner() {
   $('status-banner').classList.add('hidden');
+  const rep = $('export-report');
+  if (rep) rep.classList.add('hidden');
+}
+
+function renderExportReport({ okCount, chapterErrors, imageWarnings }) {
+  state.lastReport = { okCount, chapterErrors, imageWarnings };
+  const box = $('export-report');
+  if (!box) return;
+  const errCount = chapterErrors.length;
+  const warnCount = imageWarnings.length;
+
+  let tone = 'is-ok';
+  let summaryText = t('reportAllCleanTitle');
+  if (errCount > 0) {
+    tone = 'is-error';
+    summaryText = t('reportGraveTitle', { errors: errCount, warns: warnCount });
+  } else if (warnCount > 0) {
+    tone = 'is-warn';
+    summaryText = t('reportLightTitle', { ok: okCount, warns: warnCount });
+  }
+
+  box.className = `export-report ${tone}`;
+  const head = document.createElement('div');
+  head.className = 'export-report-head';
+
+  const strong = document.createElement('strong');
+  strong.textContent = summaryText;
+
+  const counts = document.createElement('div');
+  counts.className = 'export-report-counts';
+
+  const errPill = document.createElement('span');
+  errPill.className = `status-pill${errCount > 0 ? ' error' : ''}`;
+  errPill.textContent = t('reportErrorsCount', { count: errCount });
+
+  const warnPill = document.createElement('span');
+  warnPill.className = `status-pill${warnCount > 0 ? ' warn' : ''}`;
+  warnPill.textContent = t('reportWarningsCount', { count: warnCount });
+
+  counts.append(errPill, warnPill);
+  head.append(strong, counts);
+
+  const items = [];
+  for (const e of chapterErrors) {
+    items.push({
+      type: 'error',
+      tag: t('reportGraveTag', { num: e.chapterIndex }),
+      label: e.chapterTitle,
+      detail: e.message,
+      logId: e.logId
+    });
+  }
+  for (const w of imageWarnings) {
+    items.push({
+      type: 'warn',
+      tag: w.kind === 'cover' ? t('reportLightCoverTag') : t('reportLightChapterTag', { num: w.chapterIndex }),
+      label: w.chapterTitle || w.url,
+      detail: w.message,
+      logId: w.logId
+    });
+  }
+
+  if (items.length === 0) {
+    box.replaceChildren(head);
+    return;
+  }
+
+  const list = document.createElement('ol');
+  list.className = 'report-list';
+  for (const item of items) {
+    const li = document.createElement('li');
+    li.className = 'report-item';
+
+    const tagSpan = document.createElement('span');
+    tagSpan.className = `report-tag ${item.type}`;
+    tagSpan.textContent = item.tag;
+
+    const textSpan = document.createElement('span');
+    const shortDetail = item.detail.length > 90 ? `${item.detail.slice(0, 87)}...` : item.detail;
+    textSpan.textContent = `${item.label} — ${shortDetail}`;
+
+    li.append(tagSpan, textSpan);
+    if (item.logId) {
+      const jumpBtn = document.createElement('button');
+      jumpBtn.type = 'button';
+      jumpBtn.className = 'report-jump-btn';
+      jumpBtn.textContent = t('reportJumpLog');
+      jumpBtn.addEventListener('click', () => jumpToLog(item.logId));
+      li.appendChild(jumpBtn);
+    }
+    list.appendChild(li);
+  }
+
+  box.replaceChildren(head, list);
 }
 
 function switchTab(targetTab) {
@@ -236,6 +397,9 @@ function applyLanguageChoice(lang) {
   renderCacheSessions();
   if (state.logs.length === 0) {
     $('log-output').textContent = t('logsEmpty');
+  }
+  if (state.lastReport && !$('export-report')?.classList.contains('hidden')) {
+    renderExportReport(state.lastReport);
   }
 }
 
@@ -529,23 +693,44 @@ function getVisibleChapters() {
 }
 
 function buildStatusPill(ch) {
-  const pill = document.createElement('span');
   const cached = state.chapterCache.has(getCacheKey(ch.url));
   const st = ch.status || (cached ? 'ok' : 'pending');
+  const warnings = Array.isArray(ch.warnings) ? ch.warnings : [];
 
+  if (st === 'ok' && warnings.length > 0) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'status-pill warn clickable';
+    btn.textContent = cached
+      ? t('statusCachedWarn', { count: warnings.length })
+      : t('statusOkWarn', { count: warnings.length });
+    btn.title = warnings.map((w) => w.message).join('\n');
+    btn.addEventListener('click', () => jumpToLog(warnings[0]?.logId));
+    return btn;
+  }
+
+  if (st === 'error') {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'status-pill error clickable';
+    btn.textContent = t('statusErrorShort');
+    if (ch.errorMsg) btn.title = ch.errorMsg;
+    btn.addEventListener('click', () => jumpToLog(ch.logId));
+    return btn;
+  }
+
+  const pill = document.createElement('span');
   if (st === 'ok') {
     pill.className = 'status-pill ok';
     pill.textContent = cached ? t('statusCached') : t('statusOk');
-  } else if (st === 'error') {
-    pill.className = 'status-pill error';
-    pill.textContent = t('statusError');
-    if (ch.errorMsg) pill.title = ch.errorMsg;
+    if (cached) pill.title = t('statusCachedTooltip');
   } else if (st === 'downloading') {
     pill.className = 'status-pill downloading';
     pill.textContent = t('statusDownloading');
   } else if (st === 'skipped') {
     pill.className = 'status-pill';
     pill.textContent = t('statusSkipped');
+    if (ch.errorMsg) pill.title = ch.errorMsg;
   } else {
     pill.className = 'status-pill';
     pill.textContent = t('statusPending');
@@ -648,6 +833,24 @@ function renderChaptersTable() {
       urlSpan.className = 'chap-url-line';
       urlSpan.textContent = ch.url;
       tdTitle.appendChild(urlSpan);
+    }
+    if (ch.status === 'error' && ch.errorMsg) {
+      const errBtn = document.createElement('button');
+      errBtn.type = 'button';
+      errBtn.className = 'chap-issue-btn error';
+      const shortErr = ch.errorMsg.length > 85 ? `${ch.errorMsg.slice(0, 82)}...` : ch.errorMsg;
+      errBtn.textContent = t('chapErrorLink', { msg: shortErr });
+      errBtn.title = ch.errorMsg;
+      errBtn.addEventListener('click', () => jumpToLog(ch.logId));
+      tdTitle.appendChild(errBtn);
+    } else if (ch.status === 'ok' && ch.warnings?.length) {
+      const warnBtn = document.createElement('button');
+      warnBtn.type = 'button';
+      warnBtn.className = 'chap-issue-btn warn';
+      warnBtn.textContent = t('chapWarnLink', { count: ch.warnings.length });
+      warnBtn.title = ch.warnings.map((w) => w.message).join('\n');
+      warnBtn.addEventListener('click', () => jumpToLog(ch.warnings[0]?.logId));
+      tdTitle.appendChild(warnBtn);
     }
 
     const tdStatus = document.createElement('td');
@@ -1375,9 +1578,18 @@ async function handlePackEpub() {
   let networkFetchCount = 0;
   const networkTimestamps = [];
   const allPackagedChapters = [];
+  const chapterErrors = [];
+  const imageWarnings = [];
   const exporter = exporterRegistry.get(state.options.outputFormat);
   const extUpper = exporter.extension.toUpperCase();
   const seriesKey = getCurrentSeriesKey();
+
+  for (const ch of selected) {
+    ch.warnings = [];
+    if (ch.status === 'error') {
+      ch.logId = '';
+    }
+  }
 
   try {
     appendLog(
@@ -1404,6 +1616,7 @@ async function handlePackEpub() {
         if (cachedHydrated) {
           ch.status = 'ok';
           ch.errorMsg = '';
+          ch.logId = '';
           parsedChapters.push(cachedHydrated);
           allPackagedChapters.push(ch);
           totalOkChapters++;
@@ -1438,6 +1651,7 @@ async function handlePackEpub() {
 
           ch.status = 'ok';
           ch.errorMsg = '';
+          ch.logId = '';
           parsedChapters.push(hydrateCachedChapter(ch, cacheRec));
           allPackagedChapters.push(ch);
           totalOkChapters++;
@@ -1447,20 +1661,42 @@ async function handlePackEpub() {
             ch.status = 'error';
             ch.errorMsg = err.message;
             shouldPauseForRateLimit = true;
-            appendLog(`BLOQUEIO DE TAXA (${err.status || 503}) detectado em "${ch.displayTitle}" — pausando fila automaticamente!`);
+            ch.logId = appendLog(
+              `BLOQUEIO DE TAXA (${err.status || 503}) detectado em "${ch.displayTitle}" — pausando fila automaticamente!`,
+              'error'
+            );
           } else if (err.status === 404 && state.options.skip404) {
             ch.status = 'skipped';
             ch.errorMsg = 'HTTP 404';
-            appendLog(`404 pulado: ${ch.url}`);
+            ch.logId = appendLog(`404 pulado: ${ch.url}`, 'warn');
           } else if (state.options.continueOnError !== false) {
             ch.status = 'error';
             ch.errorMsg = err.message;
             totalFailedChapters++;
-            appendLog(`FALHA no capítulo "${ch.displayTitle}" (${ch.url}): ${err.message}`);
+            ch.logId = appendLog(
+              `FALHA no capítulo "${ch.displayTitle}" (${ch.url}): ${err.message}`,
+              'error'
+            );
+            chapterErrors.push({
+              chapterIndex: ch.index,
+              chapterTitle: ch.displayTitle,
+              message: err.message,
+              logId: ch.logId
+            });
           } else {
             ch.status = 'error';
             ch.errorMsg = err.message;
             totalFailedChapters++;
+            ch.logId = appendLog(
+              `FALHA no capítulo "${ch.displayTitle}" (${ch.url}): ${err.message}`,
+              'error'
+            );
+            chapterErrors.push({
+              chapterIndex: ch.index,
+              chapterTitle: ch.displayTitle,
+              message: err.message,
+              logId: ch.logId
+            });
             throw err;
           }
         }
@@ -1503,6 +1739,16 @@ async function handlePackEpub() {
         options: state.options,
         groupNestedVolumes: job.groupNestedVolumes,
         onLog: appendLog,
+        onWarning: (w) => {
+          imageWarnings.push(w);
+          if (w.chapterId) {
+            const chRef = state.chapters.find((c) => c.id === w.chapterId);
+            if (chRef) {
+              chRef.warnings = chRef.warnings || [];
+              chRef.warnings.push(w);
+            }
+          }
+        },
         signal
       });
 
@@ -1537,7 +1783,7 @@ async function handlePackEpub() {
           ext: extUpper,
           ok: totalOkChapters
         }),
-        'success'
+        imageWarnings.length > 0 ? 'info' : 'success'
       );
     } else if (filesGenerated > 0 && totalFailedChapters > 0) {
       showBanner(
@@ -1551,6 +1797,11 @@ async function handlePackEpub() {
     } else {
       showBanner(t('msgPackAllFailed', { failed: totalFailedChapters }), 'error');
     }
+    renderExportReport({
+      okCount: totalOkChapters,
+      chapterErrors,
+      imageWarnings
+    });
   } catch (err) {
     await persistSessionSnapshot();
     await renderCacheSessions();
@@ -1912,10 +2163,11 @@ function wireEvents() {
   $('btn-clear-logs').addEventListener('click', () => {
     state.logs = [];
     $('log-output').textContent = t('logsCleared');
-    $('log-badge').classList.add('hidden');
+    updateLogBadges();
   });
   $('btn-download-logs').addEventListener('click', () => {
-    const blob = new Blob([state.logs.join('\n')], { type: 'text/plain;charset=utf-8' });
+    const plain = state.logs.map((l) => `[${l.time}] ${l.msg}`).join('\n');
+    const blob = new Blob([plain], { type: 'text/plain;charset=utf-8' });
     downloadBlobToChrome(blob, 'webpullbook-log.txt');
   });
 

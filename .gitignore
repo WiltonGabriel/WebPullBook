@@ -22,5 +22,8 @@ build/
 tmp/
 __pycache__/
 node_modules/
+.tools/
+test-results/
+coverage/
 .env
 .env.*

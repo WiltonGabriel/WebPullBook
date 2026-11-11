@@ -15,15 +15,48 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Verify tag matches manifest version
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Set up Java for EPUBCheck
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "21"
+
+      - name: Verify tag matches manifest and package versions
         run: |
           TAG_VER="${GITHUB_REF_NAME#v}"
+          BASE_TAG_VER="${TAG_VER%%-*}"
           MANIFEST_VER=$(node -pe "JSON.parse(require('fs').readFileSync('manifest.json','utf8')).version")
-          if [ "$TAG_VER" != "$MANIFEST_VER" ]; then
-            echo "Tag version ($TAG_VER) does not match manifest.json version ($MANIFEST_VER)"
+          MANIFEST_VER_NAME=$(node -pe "JSON.parse(require('fs').readFileSync('manifest.json','utf8')).version_name || ''")
+          PKG_VER=$(node -pe "JSON.parse(require('fs').readFileSync('package.json','utf8')).version")
+          if [ "$BASE_TAG_VER" != "$MANIFEST_VER" ] || [ "$BASE_TAG_VER" != "$PKG_VER" ]; then
+            echo "Tag version ($TAG_VER) does not match manifest.json ($MANIFEST_VER) or package.json ($PKG_VER)"
             exit 1
           fi
+          IS_PRERELEASE="false"
+          RELEASE_TITLE="WebPullBook ${GITHUB_REF_NAME}"
+          if echo "${TAG_VER} ${MANIFEST_VER_NAME}" | grep -qiE '(beta|alpha|rc)'; then
+            IS_PRERELEASE="true"
+            RELEASE_TITLE="WebPullBook ${GITHUB_REF_NAME} (Beta)"
+          fi
           echo "VERSION=$TAG_VER" >> "$GITHUB_ENV"
+          echo "IS_PRERELEASE=$IS_PRERELEASE" >> "$GITHUB_ENV"
+          echo "RELEASE_TITLE=$RELEASE_TITLE" >> "$GITHUB_ENV"
+
+      - name: Run pre-release lint & unit tests with EPUBCheck
+        env:
+          REQUIRE_EPUBCHECK: "1"
+          EPUBCHECK_VERSION: "5.4.0"
+        run: |
+          mkdir -p .tools/epubcheck
+          curl -fsSL -o /tmp/epubcheck.zip "https://github.com/w3c/epubcheck/releases/download/v${EPUBCHECK_VERSION}/epubcheck-${EPUBCHECK_VERSION}.zip"
+          unzip -q /tmp/epubcheck.zip -d .tools/epubcheck
+          rm -f /tmp/epubcheck.zip
+          npm run check
 
       - name: Build extension archive
         run: |
@@ -34,15 +67,23 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          PRERELEASE_FLAG=""
+          if [ "$IS_PRERELEASE" = "true" ]; then
+            PRERELEASE_FLAG="--prerelease"
+          fi
           if gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
             gh release upload "${GITHUB_REF_NAME}" \
               "WebPullBook-v${VERSION}.zip" \
               "WebPullBook-v${VERSION}.zip.sha256" \
               --clobber
+            gh release edit "${GITHUB_REF_NAME}" \
+              --title "${RELEASE_TITLE}" \
+              $PRERELEASE_FLAG
           else
             gh release create "${GITHUB_REF_NAME}" \
               "WebPullBook-v${VERSION}.zip" \
               "WebPullBook-v${VERSION}.zip.sha256" \
-              --title "WebPullBook ${GITHUB_REF_NAME}" \
-              --generate-notes
+              --title "${RELEASE_TITLE}" \
+              --generate-notes \
+              $PRERELEASE_FLAG
           fi
