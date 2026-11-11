@@ -14,4 +14,4 @@ body:
     id: motivation
     attributes:
       label: Caso de uso / Motivation
-      description: Como essa funcionalidade ajudaria seu fluxo de leitura no Kindle, Calibre ou navegador?
+      description: Como essa funcionalidade ajudaria seu fluxo de leitura offline ou no navegador?

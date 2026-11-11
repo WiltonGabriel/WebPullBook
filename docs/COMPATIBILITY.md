@@ -15,8 +15,7 @@ Locais e fluxos testados de ponta a ponta (extração de metadados, capa em alta
 | Origem / Fluxo | Adaptador / Módulo | Detalhes da Verificação |
 | :--- | :--- | :--- |
 | **Central Novel** | `wp-lightnovel` | Testado de ponta a ponta no Google Chrome: índice com mais de 300 capítulos, detecção automática de 13 volumes, extração limpa de sinopse e gêneros, conversão de capa para JPEG, preservação de formatação inline (negrito, itálico, centralização, cartões de status) e geração tanto de **1 EPUB por Volume** quanto de **EPUB Único**. |
-| **Kindle via Calibre (`AZW3` / `KFX` por Cabo USB)** | `epub-builder` | Os arquivos `.epub` gerados incluem metadados `calibre:series`, `calibre:series_index`, `belongs-to-collection` e `toc.ncx` híbrido, convertendo sem erros no Calibre (`ebook-convert`) para leitura via cabo USB no Kindle Paperwhite e outros modelos. |
-| **Amazon Send to Kindle (Wi-Fi / Nuvem)** | `epub-builder` | Arquivos EPUB 3 validados com XHTML estrito (`application/xhtml+xml`) e CSS adaptativo compatível com a conversão automática da nuvem da Amazon. |
+| **Saída Padrão EPUB 2 / EPUB 3** | `epub-builder` | Estrutura OCF padrão (`META-INF/container.xml` com `application/oebps-package+xml`, `content.opf`, `toc.ncx`, `nav.xhtml`, XHTML estrito `application/xhtml+xml`), metadados completos de série/volume (`belongs-to-collection`), capa JPEG e sumário navegável. |
 
 ---
 

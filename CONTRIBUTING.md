@@ -67,4 +67,4 @@ export class CustomAdapter extends BaseParser {
 - Ensure all generated EPUB XML (`content.opf`, `toc.ncx`, `nav.xhtml`, chapter `.xhtml`) parses cleanly without XML errors.
 - Avoid inline `<script>` tags or inline event handlers in extension HTML (strict MV3 CSP).
 - Verify both light and dark color schemes render cleanly.
-- Test converting a generated `.epub` using Calibre or validating with an EPUB validator.
+- Validate generated `.epub` archives (`container.xml`, `content.opf`, `toc.ncx`, `nav.xhtml`, cover image) and test opening them in a standard EPUB reader or validator.

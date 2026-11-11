@@ -173,6 +173,10 @@ function buildNavXhtml({ bookTitle, lang, hasCoverPage, hasInfoPage, tocGroups }
 ${items.join('\n')}
     </ol>
   </nav>
+  <nav epub:type="landmarks" id="landmarks" hidden="hidden">
+    <ol>
+${hasCoverPage ? '      <li><a epub:type="cover" href="text/cover.xhtml">Capa</a></li>\n' : ''}${tocGroups[0]?.items?.[0] ? `      <li><a epub:type="bodymatter" href="${escapeXml(tocGroups[0].items[0].href)}">Início</a></li>\n` : ''}    </ol>
+  </nav>
 </body>
 </html>`;
 }
@@ -251,6 +255,7 @@ function buildContentOpf({
   seriesIndex,
   author,
   language,
+  genres = [],
   synopsis,
   sourceUrl,
   epub3,
@@ -304,6 +309,11 @@ function buildContentOpf({
   const coverMeta = coverItem ? '\n    <meta name="cover" content="cover-image"/>' : '';
   const modifiedMeta = epub3 ? `\n    <meta property="dcterms:modified">${modifiedIso}</meta>` : '';
   const descTag = synopsis ? `\n    <dc:description>${escapeXml(synopsis)}</dc:description>` : '';
+  const subjectTags = (genres || [])
+    .map((g) => g.trim())
+    .filter(Boolean)
+    .map((g) => `\n    <dc:subject>${escapeXml(g)}</dc:subject>`)
+    .join('');
   const creatorTag = epub3
     ? `<dc:creator id="creator">${escapeXml(author)}</dc:creator>\n    <meta refines="#creator" property="role" scheme="marc:relators">aut</meta>`
     : `<dc:creator>${escapeXml(author)}</dc:creator>`;
@@ -319,7 +329,7 @@ function buildContentOpf({
     <dc:title>${escapeXml(bookTitle)}</dc:title>
     ${creatorTag}
     <dc:language>${escapeXml(language)}</dc:language>
-    <dc:source>${escapeXml(sourceUrl)}</dc:source>${descTag}${coverMeta}${seriesMeta}${modifiedMeta}${epub3SeriesMeta}
+    <dc:source>${escapeXml(sourceUrl)}</dc:source>${subjectTags}${descTag}${coverMeta}${seriesMeta}${modifiedMeta}${epub3SeriesMeta}
   </metadata>
   <manifest>
 ${manifestItems.join('\n')}
@@ -353,7 +363,7 @@ export async function buildEpubBlob({
       data: `<?xml version="1.0" encoding="utf-8"?>
 <container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
   <rootfiles>
-    <rootfile full-path="OEBPS/content.opf" media-type="application/rdf+xml"/>
+    <rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/>
   </rootfiles>
 </container>`
     },
@@ -502,6 +512,7 @@ export async function buildEpubBlob({
       seriesIndex: seriesIndex ?? extractVolumeNumber(seriesName),
       author: metadata.author || '<unknown>',
       language: metadata.language || 'pt',
+      genres: metadata.genres || [],
       synopsis: metadata.synopsis || '',
       sourceUrl: metadata.startingUrl || '',
       epub3,

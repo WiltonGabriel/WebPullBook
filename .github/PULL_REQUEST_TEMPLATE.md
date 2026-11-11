@@ -16,6 +16,6 @@ Fixes #(issue)
 
 - [ ] Tested unpacked extension in Chrome/Chromium (`chrome://extensions/`).
 - [ ] Verified no inline `<script>` or inline `on*` event handlers were added in HTML (MV3 CSP compliance).
-- [ ] Verified generated `.epub` / exported output structure (XHTML/OPF/NCX/NAV) and tested readability (e.g., Calibre or EPUB reader).
+- [ ] Verified generated `.epub` / exported output structure (`container.xml`, XHTML/OPF/NCX/NAV) and tested opening in an EPUB reader.
 - [ ] Confirmed no unrelated third-party domains or brand names are hardcoded inside `src/`.
 - [ ] Updated `README.md` / `README.en.md` / `docs/COMPATIBILITY*.md` if user-facing behavior or compatibility changed.

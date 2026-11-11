@@ -3,7 +3,7 @@
 [🇧🇷 Português](README.md) | **🇺🇸 English**
 
 [![Manifest V3](https://img.shields.io/badge/Manifest-V3-4338ca?style=flat-square)](manifest.json)
-[![Version](https://img.shields.io/badge/Version-1.0.0-0ea5e9?style=flat-square)](https://github.com/WiltonGabriel/WebPullBook/releases)
+[![Version](https://img.shields.io/badge/Version-1.0.1-0ea5e9?style=flat-square)](https://github.com/WiltonGabriel/WebPullBook/releases)
 [![Dependencies](https://img.shields.io/badge/Dependencies-Zero-16a34a?style=flat-square)](src/core/zip.js)
 [![License: MIT](https://img.shields.io/badge/License-MIT-f59e0b?style=flat-square)](LICENSE)
 [![CI Validation](https://github.com/WiltonGabriel/WebPullBook/actions/workflows/ci.yml/badge.svg)](https://github.com/WiltonGabriel/WebPullBook/actions/workflows/ci.yml)
@@ -14,18 +14,19 @@
 
 ## Why WebPullBook?
 
-Reading long serialized works in a browser tab is inconvenient offline or on e-ink devices, and converting chapter-by-chapter PDFs often introduces broken line wraps and page-break artifacts. WebPullBook fetches the clean source HTML directly and packages structured, reflowable ebooks ready for e-readers and library managers.
+Reading long serialized works in a browser tab is inconvenient offline or on e-ink devices, and converting chapter-by-chapter PDFs often introduces broken line wraps and page-break artifacts. WebPullBook fetches the clean source HTML directly and packages structured, reflowable ebooks with cover art, nested Table of Contents, and standard EPUB series metadata.
 
 ### Key Features
 
-- **Automatic Volume Detection & Splitting:** Detects volume boundaries from collapsible sections, chapter labels, or URL patterns, letting you export either **1 File per Volume** (with `calibre:series` and `calibre:series_index` metadata) or a **Single File** with a nested volume/chapter Table of Contents.
+- **Automatic Volume Detection & Splitting:** Detects volume boundaries from collapsible sections, chapter labels, or URL patterns, letting you export either **1 File per Volume** (with standard series and volume index metadata) or a **Single File** with a nested volume/chapter Table of Contents.
 - **Manual Volume Editor:** Split chapters every *N* chapters, assign ranges (`from # to #`), tag checked rows, edit inline in the table, or apply batch rules (e.g., `1-24: Volume 01`).
 - **Partial Failure Resilience & Chapter Cache:** If 1 chapter fails mid-download across a 300-chapter batch, WebPullBook records the failure and continues. Already-downloaded chapters remain cached in memory so clicking **Retry Failed** fetches *only* the missing chapters before repackaging.
 - **SPA / JavaScript Tab Rendering Mode:** Supports dynamic React/Vue/Next.js pages by rendering them in a background browser tab (`chrome.tabs` + `chrome.scripting`) when static `fetch()` finds no chapter links or prose content.
 - **Merge Open Tabs Mode (EpubPress Style):** Grab all open tabs in your current browser window and compile their readable article content into a single ebook with 1 click.
 - **Built-in Library & Reading List:** Save tracked series in the **Library** tab (`chrome.storage.local`) and click **Load & Select New** to automatically detect and select only chapters published since your last download.
 - **Object-Oriented Modular Engine:** `ParserRegistry` ([src/parsers/](src/parsers/index.js)) ranks adapters extending `BaseParser` by DOM structure confidence, while `ExporterRegistry` ([src/exporters/](src/exporters/index.js)) exports to **EPUB 2/3**, **Single-File Offline HTML**, **Markdown (.md)**, and **Plain Text (.txt)**.
-- **Clean XHTML & E-Reader-First Typography:** `HtmlSanitizer` ([src/core/sanitizer.js](src/core/sanitizer.js)) preserves bold, italic, underline, strikethrough, alignment (`wpb-center`, `wpb-right`), relative size scaling (`<big>`, `<small>`), and blockquotes without locking fixed `px` font sizes or colors that break Kindle Dark Mode.
+- **Clean XHTML & E-Reader-First Typography:** `HtmlSanitizer` ([src/core/sanitizer.js](src/core/sanitizer.js)) preserves bold, italic, underline, strikethrough, alignment (`wpb-center`, `wpb-right`), relative size scaling (`<big>`, `<small>`), and blockquotes without locking fixed `px` font sizes or colors that break Dark Mode in e-readers.
+- **Cover & Image Optimization:** Extracts high-resolution covers (converting to optimized JPEG via `<canvas>` when enabled) and supports optional resizing/compression for inline chapter illustrations.
 - **Bilingual & Adaptive UI:** Full interface in **Portuguese (`pt-BR`)** and **English (`en`)**, with system, light, and dark color schemes.
 
 ---
@@ -72,10 +73,10 @@ Chapter content CSS selector:        article .chapter-body
 Excluded elements CSS selector:      .ads, .translator-note
 ```
 
-### Sending to Kindle
+### Output Formats
 
-- **Send to Kindle (Wi-Fi / Cloud):** Upload the generated `.epub` files directly via Amazon's Send to Kindle service.
-- **USB Transfer (Kindle Paperwhite & others):** Kindle firmware does not read `.epub` files copied directly via USB. Import the generated `.epub` files into **Calibre** and convert to **`.azw3`** or **`.kfx`** (series name and volume numbers are pre-filled automatically).
+- **EPUB 2 / EPUB 3 (`.epub`):** Standard OCF archive (`META-INF/container.xml`, `content.opf`, `toc.ncx`, `nav.xhtml`, and strict XHTML chapters) with cover art and series/volume metadata compatible with e-readers, mobile apps, and desktop viewers.
+- **Single-File HTML (`.html`), Markdown (`.md`), and Plain Text (`.txt`):** Lightweight formats for direct offline reading or archiving.
 
 ---
 

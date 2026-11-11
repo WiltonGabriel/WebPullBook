@@ -3,7 +3,7 @@
 **🇧🇷 Português** | [🇺🇸 English](README.en.md)
 
 [![Manifest V3](https://img.shields.io/badge/Manifest-V3-4338ca?style=flat-square)](manifest.json)
-[![Versão](https://img.shields.io/badge/Vers%C3%A3o-1.0.0-0ea5e9?style=flat-square)](https://github.com/WiltonGabriel/WebPullBook/releases)
+[![Versão](https://img.shields.io/badge/Vers%C3%A3o-1.0.1-0ea5e9?style=flat-square)](https://github.com/WiltonGabriel/WebPullBook/releases)
 [![Dependências](https://img.shields.io/badge/Depend%C3%AAncias-Zero-16a34a?style=flat-square)](src/core/zip.js)
 [![Licença: MIT](https://img.shields.io/badge/Licen%C3%A7a-MIT-f59e0b?style=flat-square)](LICENSE)
 [![CI Validation](https://github.com/WiltonGabriel/WebPullBook/actions/workflows/ci.yml/badge.svg)](https://github.com/WiltonGabriel/WebPullBook/actions/workflows/ci.yml)
@@ -14,18 +14,19 @@
 
 ## Por que usar o WebPullBook?
 
-Ler obras longas com centenas de capítulos no navegador dificulta a leitura offline e em leitores digitais, enquanto converter PDFs individuais de capítulos costuma gerar quebras de linha erradas e sujeira de paginação. O WebPullBook extrai o HTML limpo diretamente das páginas e empacota ebooks fluídos, com sumário navegável e metadados prontos para Kindle e Calibre.
+Ler obras longas com centenas de capítulos no navegador dificulta a leitura offline e em leitores digitais, enquanto converter PDFs individuais de capítulos costuma gerar quebras de linha erradas e sujeira de paginação. O WebPullBook extrai o HTML limpo diretamente das páginas e empacota ebooks fluídos, com capa, sumário navegável e metadados completos de série e volume no padrão EPUB.
 
 ### Principais Funcionalidades
 
-- **Detecção Automática e Divisão por Volumes:** Identifica volumes por seções recolhíveis, prefixos de capítulo ou slugs de URL, permitindo gerar **1 Arquivo por Volume** (com metadados `calibre:series` e `calibre:series_index`) ou um **Arquivo Único** com sumário aninhado por volume e capítulo.
+- **Detecção Automática e Divisão por Volumes:** Identifica volumes por seções recolhíveis, prefixos de capítulo ou slugs de URL, permitindo gerar **1 Arquivo por Volume** (com metadados padrão de série e índice de volume) ou um **Arquivo Único** com sumário aninhado por volume e capítulo.
 - **Editor Manual de Volumes:** Divida automaticamente a cada *N* capítulos, defina faixas (`do # ao #`), atribua aos capítulos selecionados, edite direto na tabela ou aplique regras em lote (ex.: `1-24: Volume 01`).
 - **Resiliência a Falhas Parciais & Cache de Capítulos:** Se 1 capítulo falhar no meio de um lote grande, o download continua sem perder o progresso. Os capítulos já baixados ficam em cache na sessão e o botão **Tentar Falhos** baixa apenas os que faltaram antes de reempacotar o livro.
 - **Modo SPA / JavaScript (Renderização via Aba):** Suporta páginas dinâmicas em React/Vue/Next.js abrindo uma aba em segundo plano (`chrome.tabs` + `chrome.scripting`) para hidratar o DOM automaticamente quando o `fetch` estático não encontra o texto.
 - **Modo Juntar Abas Abertas (Estilo EpubPress):** Capture todas as abas abertas na janela atual do navegador e compile os artigos ou capítulos abertos em um único ebook com 1 clique.
 - **Biblioteca & Lista de Leitura Integrada:** Salve obras acompanhadas na aba **Biblioteca** (`chrome.storage.local`) e use **Carregar & Marcar Novos** para detectar e selecionar automaticamente apenas os capítulos lançados desde o seu último download.
 - **Arquitetura Modular Orientada a Objetos:** O `ParserRegistry` ([src/parsers/](src/parsers/index.js)) ranqueia adaptadores que herdam de `BaseParser` por pontuação de estrutura DOM, enquanto o `ExporterRegistry` ([src/exporters/](src/exporters/index.js)) exporta em **EPUB 2/3**, **HTML Único offline**, **Markdown (.md)** e **Texto Puro (.txt)**.
-- **Sanitização XHTML & Tipografia Inteligente:** O `HtmlSanitizer` ([src/core/sanitizer.js](src/core/sanitizer.js)) preserva negrito, itálico, sublinhado, tachado, alinhamentos (`wpb-center`, `wpb-right`), escalas relativas (`<big>`, `<small>`) e blocos de citação sem travar fontes fixas em `px` ou cores que quebram o modo noturno do Kindle.
+- **Sanitização XHTML & Tipografia Inteligente:** O `HtmlSanitizer` ([src/core/sanitizer.js](src/core/sanitizer.js)) preserva negrito, itálico, sublinhado, tachado, alinhamentos (`wpb-center`, `wpb-right`), escalas relativas (`<big>`, `<small>`) e blocos de citação sem travar fontes fixas em `px` ou cores que quebram temas escuros em leitores digitais.
+- **Otimização de Capa e Imagens:** Extrai a capa em alta resolução (com conversão para JPEG otimizado via `<canvas>` para ampla compatibilidade) e oferece redimensionamento/compressão opcional para ilustrações internas.
 - **Interface Bilíngue e Adaptativa:** Interface completa em **Português (pt-BR)** e **Inglês (en)**, com tema claro, escuro e automático do sistema.
 
 ---
@@ -72,10 +73,10 @@ Seletor CSS do conteúdo:             article .chapter-body
 Seletor CSS de elementos a excluir:  .ads, .translator-note
 ```
 
-### Enviando para o Kindle
+### Formatos de Saída
 
-- **Send to Kindle (Wi-Fi / Nuvem):** Envie os arquivos `.epub` gerados diretamente pelo serviço Send to Kindle da Amazon.
-- **Transferência via Cabo USB (Kindle Paperwhite e outros):** O sistema do Kindle não lê `.epub` copiado direto por USB. Importe os `.epub` no **Calibre** e converta para **`.azw3`** ou **`.kfx`** (o nome da série e o número do volume já vão preenchidos automaticamente).
+- **EPUB 2 / EPUB 3 (`.epub`):** Empacotamento OCF completo (`META-INF/container.xml`, `content.opf`, `toc.ncx`, `nav.xhtml` e capítulos em XHTML estrito) com capa e metadados de série/volume para uso em leitores digitais, celulares ou computadores.
+- **HTML Único (`.html`), Markdown (`.md`) e Texto Puro (`.txt`):** Alternativas leves para leitura offline direta no navegador, editores de texto ou arquivamento.
 
 ---
 

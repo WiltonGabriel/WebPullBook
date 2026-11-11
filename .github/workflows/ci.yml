@@ -61,6 +61,12 @@ jobs:
                           raise SystemExit(f"MV3 CSP violation (inline event handler) in {path}: {inline_events}")
                       print(f"[OK] MV3 CSP check: {path}")
 
+          with open("src/core/epub-builder.js", "r", encoding="utf-8") as f:
+              epub_js = f.read()
+          if "application/oebps-package+xml" not in epub_js:
+              raise SystemExit("META-INF/container.xml must use media-type=\"application/oebps-package+xml\"")
+          print("[OK] EPUB container media-type check passed")
+
           # 2. Check all relative markdown links exist in repository
           md_files = ["README.md", "README.en.md", "CONTRIBUTING.md", ".github/SECURITY.md"]
           for root, _, files in os.walk("docs"):

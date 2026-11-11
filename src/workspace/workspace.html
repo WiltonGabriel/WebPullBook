@@ -15,7 +15,7 @@
         <img src="../../icons/icon-48.png" alt="" class="brand-icon" width="32" height="32">
         <div>
           <h1>WebPullBook</h1>
-          <p class="brand-sub" data-i18n="brandSub">Extrator por volumes e empacotador EPUB para e-readers &amp; Calibre</p>
+          <p class="brand-sub" data-i18n="brandSub">Extrator por volumes e empacotador EPUB para leitura offline</p>
         </div>
       </div>
 
@@ -128,8 +128,8 @@
             <p id="progress-detail" class="muted sm"></p>
           </div>
 
-          <p class="hint sm" data-i18n="kindleHint">
-            Dica Kindle USB: arraste os .epub para o Calibre e converta para .azw3 (ou envie o .epub direto pelo Send to Kindle).
+          <p class="hint sm" data-i18n="readerHint">
+            Os livros são empacotados no padrão EPUB 2/3 (com capa, sumário e metadados de volume), HTML único offline, Markdown ou TXT.
           </p>
         </aside>
 
@@ -324,7 +324,7 @@
             </label>
             <label class="checkbox-row">
               <input type="checkbox" id="opt-epub3" checked>
-              <span data-i18n="optEpub3">Criar EPUB 3 (inclui também toc.ncx para compatibilidade com Calibre/Kindle)</span>
+              <span data-i18n="optEpub3">Criar EPUB 3 (inclui também toc.ncx para compatibilidade com leitores EPUB 2)</span>
             </label>
             <label class="checkbox-row">
               <input type="checkbox" id="opt-add-info" checked>
@@ -390,7 +390,7 @@
             </label>
             <label class="checkbox-row">
               <input type="checkbox" id="opt-cover-jpeg" checked>
-              <span data-i18n="optCoverJpeg">Converter capa para JPEG otimizado (recomendado para Kindle/Calibre)</span>
+              <span data-i18n="optCoverJpeg">Converter capa para JPEG otimizado (recomendado para maior compatibilidade)</span>
             </label>
             <label class="checkbox-row">
               <input type="checkbox" id="opt-compress-images">
@@ -420,7 +420,7 @@
             <div class="field">
               <label for="opt-font-family" data-i18n="labelFontFamily">Fonte Base</label>
               <select id="opt-font-family">
-                <option value="reader-default" data-i18n="fontReaderDefault">Padrão do Leitor (Kindle Bookerly / Sistema)</option>
+                <option value="reader-default" data-i18n="fontReaderDefault">Padrão do Leitor (Fonte do dispositivo / Sistema)</option>
                 <option value="serif" data-i18n="fontSerif">Serifada (Georgia / Serif)</option>
                 <option value="sans" data-i18n="fontSans">Sem Serifa (Sans-serif)</option>
               </select>

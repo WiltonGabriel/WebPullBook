@@ -1,6 +1,6 @@
 export const I18N_DICTIONARY = {
   pt: {
-    brandSub: 'Extrator por volumes e empacotador EPUB para e-readers & Calibre',
+    brandSub: 'Extrator por volumes e empacotador EPUB para leitura offline',
     urlLabel: 'URL da página da obra ou capítulo',
     urlPlaceholder: 'https://example.com/series/minha-obra/',
     btnLoadSeries: 'Carregar Obra',
@@ -28,8 +28,8 @@ export const I18N_DICTIONARY = {
     btnCancel: 'Cancelar',
     progressPreparing: 'Preparando...',
     progressDone: 'Concluído!',
-    kindleHint:
-      'Dica Kindle USB: arraste os .epub para o Calibre e converta para .azw3 (ou envie o .epub direto pelo Send to Kindle).',
+    readerHint:
+      'Os livros são empacotados no padrão EPUB 2/3 (com capa, sumário e metadados de volume), HTML único offline, Markdown ou TXT.',
     metaHeading: 'Metadados da Obra',
     btnSaveLibrary: 'Salvar na Biblioteca',
     parserBadge: 'Parser: {name}',
@@ -101,7 +101,7 @@ export const I18N_DICTIONARY = {
     optSubfolder: 'Salvar dentro de subpasta WebPullBook/<Título>/ em Downloads',
     optNoSaveAs: 'Não abrir janela "Salvar como" (baixar direto)',
     optRemoveIllegal: 'Remover caracteres inválidos do nome de arquivo',
-    optEpub3: 'Criar EPUB 3 (inclui também toc.ncx para compatibilidade com Calibre/Kindle)',
+    optEpub3: 'Criar EPUB 3 (inclui também toc.ncx para compatibilidade com leitores EPUB 2)',
     optAddInfo: 'Adicionar página de Informações (Metadados & Sinopse)',
     optRemoveNav: 'Remover links de Próximo / Capítulo Anterior do texto',
     advNetworkHeading: 'Imagens, Rede, SPA & Resiliência',
@@ -114,7 +114,7 @@ export const I18N_DICTIONARY = {
     labelListSelector: 'Seletor CSS da lista de capítulos (opcional)',
     labelContentSelector: 'Seletor CSS do conteúdo do capítulo (opcional)',
     labelExcludeSelector: 'Seletor CSS de elementos a excluir (opcional)',
-    optCoverJpeg: 'Converter capa para JPEG otimizado (recomendado para Kindle/Calibre)',
+    optCoverJpeg: 'Converter capa para JPEG otimizado (recomendado para maior compatibilidade)',
     optCompressImages: 'Redimensionar e comprimir imagens internas dos capítulos',
     optSkipImages: 'Ignorar imagens dentro dos capítulos (somente texto + capa)',
     optUseSvg: 'Usar wrapper <svg> na página da capa',
@@ -124,7 +124,7 @@ export const I18N_DICTIONARY = {
     advTypoHeading: 'Tipografia & Stylesheet (CSS do Livro)',
     btnResetCss: 'Restaurar Padrão',
     labelFontFamily: 'Fonte Base',
-    fontReaderDefault: 'Padrão do Leitor (Kindle Bookerly / Sistema)',
+    fontReaderDefault: 'Padrão do Leitor (Fonte do dispositivo / Sistema)',
     fontSerif: 'Serifada (Georgia / Serif)',
     fontSans: 'Sem Serifa (Sans-serif)',
     labelTextAlign: 'Alinhamento do Texto',
@@ -177,7 +177,7 @@ export const I18N_DICTIONARY = {
     msgNoNewChapters: 'Nenhum capítulo novo desde o último registro ({total} capítulos no total).'
   },
   en: {
-    brandSub: 'Volume-aware web book extractor & EPUB packager for e-readers & Calibre',
+    brandSub: 'Volume-aware web book extractor & EPUB packager for offline reading',
     urlLabel: 'Series index or chapter URL',
     urlPlaceholder: 'https://example.com/series/my-book/',
     btnLoadSeries: 'Load Series',
@@ -205,8 +205,8 @@ export const I18N_DICTIONARY = {
     btnCancel: 'Cancel',
     progressPreparing: 'Preparing...',
     progressDone: 'Done!',
-    kindleHint:
-      'Kindle USB Tip: drag .epub files into Calibre and convert to .azw3 (or upload .epub directly via Send to Kindle).',
+    readerHint:
+      'Books are packaged using standard EPUB 2/3 (with cover, TOC, and volume metadata), offline single-file HTML, Markdown, or TXT.',
     metaHeading: 'Book Metadata',
     btnSaveLibrary: 'Save to Library',
     parserBadge: 'Parser: {name}',
@@ -278,7 +278,7 @@ export const I18N_DICTIONARY = {
     optSubfolder: 'Save inside WebPullBook/<Title>/ subfolder in Downloads',
     optNoSaveAs: 'Do not prompt "Save As" dialog (download directly)',
     optRemoveIllegal: 'Strip illegal characters from filenames',
-    optEpub3: 'Create EPUB 3 (also includes toc.ncx for Calibre/Kindle compatibility)',
+    optEpub3: 'Create EPUB 3 (also includes toc.ncx for EPUB 2 reader compatibility)',
     optAddInfo: 'Include Information page (Metadata & Synopsis)',
     optRemoveNav: 'Remove Next / Previous Chapter navigation links from text',
     advNetworkHeading: 'Images, Network, SPA & Resilience',
@@ -291,7 +291,7 @@ export const I18N_DICTIONARY = {
     labelListSelector: 'Chapter list CSS selector (optional)',
     labelContentSelector: 'Chapter content CSS selector (optional)',
     labelExcludeSelector: 'Excluded elements CSS selector (optional)',
-    optCoverJpeg: 'Convert cover to optimized JPEG (recommended for Kindle/Calibre)',
+    optCoverJpeg: 'Convert cover to optimized JPEG (recommended for broad compatibility)',
     optCompressImages: 'Resize and compress inline chapter images',
     optSkipImages: 'Skip inline chapter images (text + cover only)',
     optUseSvg: 'Use <svg> wrapper on cover page',
@@ -301,7 +301,7 @@ export const I18N_DICTIONARY = {
     advTypoHeading: 'Typography & Stylesheet (Book CSS)',
     btnResetCss: 'Restore Default',
     labelFontFamily: 'Base Font',
-    fontReaderDefault: 'Reader Default (Kindle Bookerly / System)',
+    fontReaderDefault: 'Reader Default (Device / System font)',
     fontSerif: 'Serif (Georgia / Serif)',
     fontSans: 'Sans-serif',
     labelTextAlign: 'Text Alignment',

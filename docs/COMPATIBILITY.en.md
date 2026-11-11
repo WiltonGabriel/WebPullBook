@@ -15,8 +15,7 @@ Sources and workflows verified end-to-end (metadata extraction, high-resolution 
 | Source / Workflow | Adapter / Module | Verification Details |
 | :--- | :--- | :--- |
 | **Central Novel** | `wp-lightnovel` | Tested end-to-end in Google Chrome: 300+ chapter index loading, automatic 13-volume detection, clean synopsis & genre extraction, JPEG cover conversion, inline typography preservation (bold, italic, centered text, status cards), and both **1 EPUB per Volume** and **Single EPUB** modes. |
-| **Kindle via Calibre (`AZW3` / `KFX` over USB)** | `epub-builder` | Generated `.epub` archives include `calibre:series`, `calibre:series_index`, `belongs-to-collection`, and hybrid `toc.ncx` navigation, converting cleanly via Calibre (`ebook-convert`) for USB sideloading onto Kindle Paperwhite and other models. |
-| **Amazon Send to Kindle (Wi-Fi / Cloud)** | `epub-builder` | Validated EPUB 3 archives with strict XHTML (`application/xhtml+xml`) and adaptive CSS compatible with Amazon's cloud conversion pipeline. |
+| **Standard EPUB 2 / EPUB 3 Output** | `epub-builder` | Standard OCF packaging (`META-INF/container.xml` with `application/oebps-package+xml`, `content.opf`, `toc.ncx`, `nav.xhtml`, strict `application/xhtml+xml` chapters), full series/volume metadata (`belongs-to-collection`), JPEG cover, and nested TOC. |
 
 ---
 
