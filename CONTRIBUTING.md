@@ -73,7 +73,8 @@ export class CustomAdapter extends BaseParser {
   1. All unit, regression, lint, and E2E tests are green in CI.
   2. `EPUBCheck` passes with 0 errors/warnings on EPUB 2 and EPUB 3 outputs.
   3. [manifest.json](manifest.json) `version` matches the release tag (`vX.Y.Z`) and [package.json](package.json) `version`.
-  4. Generated release `.zip` contains only extension runtime/doc assets (`manifest.json`, `icons/`, `src/`, `LICENSE`, `README*.md`, `docs/`).
+  4. [CHANGELOG.md](CHANGELOG.md) contains a `## [X.Y.Z]` section (used automatically by the release workflow to populate GitHub Release notes).
+  5. Generated release `.zip` contains only extension runtime/doc assets (`manifest.json`, `icons/`, `src/`, `LICENSE`, `README*.md`, `docs/`).
 
 ## Automated Testing & Quality Checks
 

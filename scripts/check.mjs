@@ -81,6 +81,7 @@ const mdFiles = [
   'README.md',
   'README.en.md',
   'CONTRIBUTING.md',
+  'CHANGELOG.md',
   '.github/SECURITY.md',
   ...walk('docs').filter((f) => f.endsWith('.md'))
 ];

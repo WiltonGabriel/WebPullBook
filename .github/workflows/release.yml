@@ -8,6 +8,9 @@ on:
 permissions:
   contents: write
 
+env:
+  EPUBCHECK_VERSION: "5.4.0"
+
 jobs:
   release:
     runs-on: ubuntu-latest
@@ -19,6 +22,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "22"
+          cache: "npm"
 
       - name: Set up Java for EPUBCheck
         uses: actions/setup-java@v4
@@ -47,16 +51,41 @@ jobs:
           echo "IS_PRERELEASE=$IS_PRERELEASE" >> "$GITHUB_ENV"
           echo "RELEASE_TITLE=$RELEASE_TITLE" >> "$GITHUB_ENV"
 
-      - name: Run pre-release lint & unit tests with EPUBCheck
-        env:
-          REQUIRE_EPUBCHECK: "1"
-          EPUBCHECK_VERSION: "5.4.0"
+      - name: Cache EPUBCheck
+        id: cache-epubcheck
+        uses: actions/cache@v4
+        with:
+          path: .tools/epubcheck
+          key: epubcheck-${{ env.EPUBCHECK_VERSION }}
+
+      - name: Download EPUBCheck
+        if: steps.cache-epubcheck.outputs.cache-hit != 'true'
         run: |
           mkdir -p .tools/epubcheck
           curl -fsSL -o /tmp/epubcheck.zip "https://github.com/w3c/epubcheck/releases/download/v${EPUBCHECK_VERSION}/epubcheck-${EPUBCHECK_VERSION}.zip"
           unzip -q /tmp/epubcheck.zip -d .tools/epubcheck
           rm -f /tmp/epubcheck.zip
-          npm run check
+
+      - name: Run pre-release lint, unit tests, and EPUBCheck
+        env:
+          REQUIRE_EPUBCHECK: "1"
+        run: npm run check
+
+      - name: Install Playwright Chromium & run pre-release E2E test
+        env:
+          REQUIRE_EPUBCHECK: "1"
+        run: |
+          npm ci --no-audit --no-fund
+          npx playwright install chromium
+          npm run test:e2e
+
+      - name: Prepare release notes from CHANGELOG.md
+        run: |
+          if node scripts/extract-release-notes.mjs "${GITHUB_REF_NAME}" /tmp/release-notes.md; then
+            echo "HAS_CHANGELOG_NOTES=true" >> "$GITHUB_ENV"
+          else
+            echo "HAS_CHANGELOG_NOTES=false" >> "$GITHUB_ENV"
+          fi
 
       - name: Build extension archive
         run: |
@@ -71,19 +100,36 @@ jobs:
           if [ "$IS_PRERELEASE" = "true" ]; then
             PRERELEASE_FLAG="--prerelease"
           fi
+
           if gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
             gh release upload "${GITHUB_REF_NAME}" \
               "WebPullBook-v${VERSION}.zip" \
               "WebPullBook-v${VERSION}.zip.sha256" \
               --clobber
-            gh release edit "${GITHUB_REF_NAME}" \
-              --title "${RELEASE_TITLE}" \
-              $PRERELEASE_FLAG
+            if [ "$HAS_CHANGELOG_NOTES" = "true" ]; then
+              gh release edit "${GITHUB_REF_NAME}" \
+                --title "${RELEASE_TITLE}" \
+                --notes-file /tmp/release-notes.md \
+                $PRERELEASE_FLAG
+            else
+              gh release edit "${GITHUB_REF_NAME}" \
+                --title "${RELEASE_TITLE}" \
+                $PRERELEASE_FLAG
+            fi
           else
-            gh release create "${GITHUB_REF_NAME}" \
-              "WebPullBook-v${VERSION}.zip" \
-              "WebPullBook-v${VERSION}.zip.sha256" \
-              --title "${RELEASE_TITLE}" \
-              --generate-notes \
-              $PRERELEASE_FLAG
+            if [ "$HAS_CHANGELOG_NOTES" = "true" ]; then
+              gh release create "${GITHUB_REF_NAME}" \
+                "WebPullBook-v${VERSION}.zip" \
+                "WebPullBook-v${VERSION}.zip.sha256" \
+                --title "${RELEASE_TITLE}" \
+                --notes-file /tmp/release-notes.md \
+                $PRERELEASE_FLAG
+            else
+              gh release create "${GITHUB_REF_NAME}" \
+                "WebPullBook-v${VERSION}.zip" \
+                "WebPullBook-v${VERSION}.zip.sha256" \
+                --title "${RELEASE_TITLE}" \
+                --generate-notes \
+                $PRERELEASE_FLAG
+            fi
           fi
