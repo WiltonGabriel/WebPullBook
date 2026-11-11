@@ -57,7 +57,7 @@ jobs:
       - name: Install Playwright Chromium for E2E test
         run: |
           npm ci --no-audit --no-fund
-          npx playwright install chromium --with-deps
+          npx playwright install chromium
 
       - name: Run extension E2E integration test
         env:
