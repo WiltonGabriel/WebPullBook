@@ -974,7 +974,9 @@ dialog::backdrop {
   color: var(--warn);
 }
 
-.report-jump-btn {
+.report-jump-btn,
+.report-ext-link,
+.chap-open-link {
   border: none;
   background: transparent;
   color: var(--accent);
@@ -984,6 +986,24 @@ dialog::backdrop {
   cursor: pointer;
   padding: 0;
   text-decoration: underline;
+}
+
+.chap-issue-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.55rem;
+  margin-top: 0.2rem;
+}
+
+.chap-issue-row .chap-issue-btn {
+  margin-top: 0;
+}
+
+.log-link {
+  color: var(--accent);
+  text-decoration: underline;
+  word-break: break-all;
 }
 
 .log-line {

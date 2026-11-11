@@ -98,6 +98,9 @@ export const I18N_DICTIONARY = {
     reportLightChapterTag: '[LEVE • Cap. #{num} / Imagem]',
     reportLightCoverTag: '[LEVE • Capa]',
     reportJumpLog: 'Ver no log',
+    reportOpenChapter: 'Abrir capítulo ↗',
+    reportOpenImage: 'Abrir imagem ↗',
+    chapOpenPage: 'Abrir página ↗',
     cacheSessionsHeading: 'Downloads Recentes & Cache Local',
     cacheSessionsSub:
       'Capítulos baixados ficam salvos temporariamente em IndexedDB para retomar downloads interrompidos sem perder progresso.',
@@ -319,6 +322,9 @@ export const I18N_DICTIONARY = {
     reportLightChapterTag: '[LIGHT • Ch. #{num} / Image]',
     reportLightCoverTag: '[LIGHT • Cover]',
     reportJumpLog: 'View in log',
+    reportOpenChapter: 'Open chapter ↗',
+    reportOpenImage: 'Open image ↗',
+    chapOpenPage: 'Open page ↗',
     cacheSessionsHeading: 'Recent Downloads & Local Cache',
     cacheSessionsSub:
       'Downloaded chapters are temporarily saved in IndexedDB so you can resume interrupted downloads without losing progress.',

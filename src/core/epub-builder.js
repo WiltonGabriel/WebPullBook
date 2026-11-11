@@ -538,7 +538,9 @@ export async function buildEpubBlob({
       } catch (err) {
         if (err.name === 'AbortError') throw err;
         const chTitle = parsed.chapter?.displayTitle || parsed.chapterTitle || `Cap. ${i + 1}`;
-        const msg = `Aviso: falha ao baixar imagem do capítulo "${chTitle}" (${imgInfo.originalUrl}): ${err.message}`;
+        const chUrl = parsed.chapter?.url || '';
+        const sourceCtx = chUrl ? `página: ${chUrl} | imagem: ${imgInfo.originalUrl}` : imgInfo.originalUrl;
+        const msg = `Aviso: falha ao baixar imagem do capítulo "${chTitle}" (${sourceCtx}): ${err.message}`;
         const logId = onLog(msg, 'warn', { chapterIndex: parsed.chapter?.index });
         onWarning({
           kind: 'chapter-image',
@@ -546,6 +548,7 @@ export async function buildEpubBlob({
           chapterId: parsed.chapter?.id,
           chapterIndex: parsed.chapter?.index ?? i + 1,
           chapterTitle: chTitle,
+          chapterUrl: chUrl,
           url: imgInfo.originalUrl,
           message: err.message,
           logId

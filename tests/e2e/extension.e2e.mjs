@@ -183,11 +183,15 @@ async function runE2E() {
     const errorBadgeHidden = await page.locator('#log-error-badge').evaluate((el) => el.classList.contains('hidden'));
     assert.equal(errorBadgeHidden, true, 'Grave error badge should remain hidden on image-only 403 warning');
 
-    // Click chapter warning pill or report link -> opens Logs tab & highlights log line
+    // Report exposes direct clickable links to original chapter & failed image URL
+    assert.equal(await page.locator('#export-report a.report-ext-link').count(), 2);
+
+    // Click report link -> opens Logs tab, highlights log line, and renders clickable URLs inside log
     await page.click('#export-report .report-jump-btn');
     await page.waitForSelector('#tab-logs:not(.hidden)');
     const highlighted = await page.locator('#log-output .log-line.log-highlight').count();
     assert.equal(highlighted, 1);
+    assert.ok((await page.locator('#log-output .log-line.log-highlight a.log-link').count()) >= 2);
 
     console.log('[OK] E2E extension flow passed end-to-end (load -> parse -> pack EPUB -> report -> jump to log)');
   } finally {

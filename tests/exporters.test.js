@@ -282,4 +282,5 @@ test('EpubExporter retries image fetch with anonymous credentials on HTTP 403 an
   assert.equal(warnings[0].kind, 'chapter-image');
   assert.equal(warnings[0].severity, 'light');
   assert.equal(warnings[0].chapterIndex, 1);
+  assert.equal(warnings[0].chapterUrl, 'https://example.com/ch/1');
 });

@@ -146,6 +146,60 @@ function updateLogBadges() {
   }
 }
 
+function appendTextWithLinks(parentEl, text) {
+  const str = String(text ?? '');
+  const urlRx = /https?:\/\/[^\s<>"']+/gi;
+  let lastIdx = 0;
+  let match;
+
+  while ((match = urlRx.exec(str)) !== null) {
+    if (match.index > lastIdx) {
+      parentEl.appendChild(document.createTextNode(str.slice(lastIdx, match.index)));
+    }
+    let rawUrl = match[0];
+    let suffix = '';
+    while (rawUrl.length > 8 && /[),.:;!?]$/.test(rawUrl)) {
+      suffix = rawUrl.slice(-1) + suffix;
+      rawUrl = rawUrl.slice(0, -1);
+    }
+    try {
+      const parsed = new URL(rawUrl);
+      if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+        const a = document.createElement('a');
+        a.href = parsed.toString();
+        a.target = '_blank';
+        a.rel = 'noopener noreferrer';
+        a.className = 'log-link';
+        a.textContent = rawUrl;
+        parentEl.appendChild(a);
+      } else {
+        parentEl.appendChild(document.createTextNode(rawUrl));
+      }
+    } catch {
+      parentEl.appendChild(document.createTextNode(rawUrl));
+    }
+    if (suffix) {
+      parentEl.appendChild(document.createTextNode(suffix));
+    }
+    lastIdx = match.index + match[0].length;
+  }
+
+  if (lastIdx < str.length) {
+    parentEl.appendChild(document.createTextNode(str.slice(lastIdx)));
+  }
+}
+
+function createExternalLink(url, label, className = 'report-ext-link') {
+  if (!url || !/^https?:\/\//i.test(url)) return null;
+  const a = document.createElement('a');
+  a.href = url;
+  a.target = '_blank';
+  a.rel = 'noopener noreferrer';
+  a.className = className;
+  a.textContent = label;
+  return a;
+}
+
 function renderLogsOutput() {
   const box = $('log-output');
   if (!box) return;
@@ -158,7 +212,7 @@ function renderLogsOutput() {
     const line = document.createElement('div');
     line.id = entry.id;
     line.className = `log-line log-${entry.level}`;
-    line.textContent = `[${entry.time}] ${entry.msg}`;
+    appendTextWithLinks(line, `[${entry.time}] ${entry.msg}`);
     frag.appendChild(line);
   }
   box.replaceChildren(frag);
@@ -250,7 +304,9 @@ function renderExportReport({ okCount, chapterErrors, imageWarnings }) {
       tag: t('reportGraveTag', { num: e.chapterIndex }),
       label: e.chapterTitle,
       detail: e.message,
-      logId: e.logId
+      logId: e.logId,
+      chapterUrl: e.chapterUrl || '',
+      mediaUrl: ''
     });
   }
   for (const w of imageWarnings) {
@@ -259,7 +315,9 @@ function renderExportReport({ okCount, chapterErrors, imageWarnings }) {
       tag: w.kind === 'cover' ? t('reportLightCoverTag') : t('reportLightChapterTag', { num: w.chapterIndex }),
       label: w.chapterTitle || w.url,
       detail: w.message,
-      logId: w.logId
+      logId: w.logId,
+      chapterUrl: w.chapterUrl || '',
+      mediaUrl: w.url || ''
     });
   }
 
@@ -291,6 +349,10 @@ function renderExportReport({ okCount, chapterErrors, imageWarnings }) {
       jumpBtn.addEventListener('click', () => jumpToLog(item.logId));
       li.appendChild(jumpBtn);
     }
+    const chLink = createExternalLink(item.chapterUrl, t('reportOpenChapter'));
+    if (chLink) li.appendChild(chLink);
+    const mediaLink = createExternalLink(item.mediaUrl, t('reportOpenImage'));
+    if (mediaLink) li.appendChild(mediaLink);
     list.appendChild(li);
   }
 
@@ -835,6 +897,8 @@ function renderChaptersTable() {
       tdTitle.appendChild(urlSpan);
     }
     if (ch.status === 'error' && ch.errorMsg) {
+      const row = document.createElement('div');
+      row.className = 'chap-issue-row';
       const errBtn = document.createElement('button');
       errBtn.type = 'button';
       errBtn.className = 'chap-issue-btn error';
@@ -842,15 +906,23 @@ function renderChaptersTable() {
       errBtn.textContent = t('chapErrorLink', { msg: shortErr });
       errBtn.title = ch.errorMsg;
       errBtn.addEventListener('click', () => jumpToLog(ch.logId));
-      tdTitle.appendChild(errBtn);
+      row.appendChild(errBtn);
+      const openPage = createExternalLink(ch.url, t('chapOpenPage'), 'chap-open-link');
+      if (openPage) row.appendChild(openPage);
+      tdTitle.appendChild(row);
     } else if (ch.status === 'ok' && ch.warnings?.length) {
+      const row = document.createElement('div');
+      row.className = 'chap-issue-row';
       const warnBtn = document.createElement('button');
       warnBtn.type = 'button';
       warnBtn.className = 'chap-issue-btn warn';
       warnBtn.textContent = t('chapWarnLink', { count: ch.warnings.length });
       warnBtn.title = ch.warnings.map((w) => w.message).join('\n');
       warnBtn.addEventListener('click', () => jumpToLog(ch.warnings[0]?.logId));
-      tdTitle.appendChild(warnBtn);
+      row.appendChild(warnBtn);
+      const openPage = createExternalLink(ch.url, t('chapOpenPage'), 'chap-open-link');
+      if (openPage) row.appendChild(openPage);
+      tdTitle.appendChild(row);
     }
 
     const tdStatus = document.createElement('td');
@@ -1680,6 +1752,7 @@ async function handlePackEpub() {
             chapterErrors.push({
               chapterIndex: ch.index,
               chapterTitle: ch.displayTitle,
+              chapterUrl: ch.url,
               message: err.message,
               logId: ch.logId
             });
@@ -1694,6 +1767,7 @@ async function handlePackEpub() {
             chapterErrors.push({
               chapterIndex: ch.index,
               chapterTitle: ch.displayTitle,
+              chapterUrl: ch.url,
               message: err.message,
               logId: ch.logId
             });
