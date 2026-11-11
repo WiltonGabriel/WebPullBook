@@ -921,3 +921,35 @@ dialog::backdrop {
   gap: 0.4rem;
   margin-top: 0.45rem;
 }
+
+.mt-md {
+  margin-top: 1.15rem;
+}
+
+.safe-mode-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  padding: 0.6rem 0.65rem;
+  margin-bottom: 0.85rem;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  cursor: pointer;
+}
+
+.safe-mode-card:has(input:checked) {
+  border-color: var(--accent);
+}
+
+.safe-mode-card strong {
+  display: block;
+  font-size: 0.86rem;
+}
+
+.safe-mode-card small {
+  display: block;
+  font-size: 0.76rem;
+  color: var(--muted);
+  line-height: 1.35;
+}

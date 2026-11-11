@@ -6,8 +6,15 @@ import {
   normalizeSpaces,
   normalizeUrl,
   sanitizeFilename,
+  sleep,
   toHighResCoverUrl
 } from '../core/parser-engine.js';
+import {
+  DEFAULT_CACHE_TTL_DAYS,
+  cacheStore,
+  hydrateCachedChapter,
+  serializeNodesForCache
+} from '../core/cache-store.js';
 import { getParserById, loadSeriesWithParser, parserRegistry } from '../parsers/index.js';
 import { genericHtmlParser } from '../parsers/generic-html.js';
 import { exporterRegistry } from '../exporters/index.js';
@@ -29,6 +36,11 @@ const DEFAULT_OPTIONS = {
   customContentSelector: '',
   customExcludeSelector: '',
   delayMs: 350,
+  safeMode: false,
+  safeRpm: 22,
+  safeBatchSize: 25,
+  autoPauseOnRateLimit: true,
+  cacheTtlDays: DEFAULT_CACHE_TTL_DAYS,
   maxChaptersPerEpub: 10000,
   compressedResolution: 1080,
   compressedFormat: 'jpg',
@@ -81,6 +93,26 @@ function t(key, vars = {}) {
 
 function getCacheKey(chapterUrl) {
   return `${normalizeUrl(chapterUrl)}|${state.activeParser?.id || 'auto'}|${Boolean(state.options.skipImages)}|${Boolean(state.options.removeNavLinks)}|${state.options.customContentSelector || ''}|${state.options.customExcludeSelector || ''}`;
+}
+
+function getCurrentSeriesKey() {
+  const raw = state.metadata.startingUrl || $('starting-url').value.trim();
+  const norm = raw ? normalizeUrl(raw) : '';
+  return norm || `local:${sanitizeFilename(state.metadata.title || 'webpullbook', true)}`;
+}
+
+function formatBytes(bytes) {
+  if (!bytes || bytes < 1024) return `${bytes || 0} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+}
+
+function formatTimeRemaining(expiresAt) {
+  const diff = Math.max(0, (expiresAt || 0) - Date.now());
+  const hours = Math.floor(diff / (1000 * 60 * 60));
+  const days = Math.floor(hours / 24);
+  if (days >= 1) return `${days}d ${hours % 24}h`;
+  return `${Math.max(1, hours)}h`;
 }
 
 function appendLog(msg) {
@@ -151,6 +183,19 @@ async function loadOptions() {
   applyLanguageChoice(state.options.uiLang);
 }
 
+function mergeLibraryArrays(remoteList, localList) {
+  const map = new Map();
+  for (const item of remoteList || []) {
+    if (item?.id) map.set(item.id, item);
+  }
+  for (const item of localList || []) {
+    if (item?.id) map.set(item.id, item);
+  }
+  return Array.from(map.values()).sort(
+    (a, b) => new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime()
+  );
+}
+
 async function loadLibrary() {
   if (chrome?.storage?.local) {
     const res = await chrome.storage.local.get('wpbLibrary');
@@ -161,8 +206,17 @@ async function loadLibrary() {
   renderLibrary();
 }
 
-async function saveLibrary() {
+async function saveLibrary({ removeId = null, upsertEntry = null } = {}) {
   if (chrome?.storage?.local) {
+    const res = await chrome.storage.local.get('wpbLibrary');
+    let merged = Array.isArray(res?.wpbLibrary) ? [...res.wpbLibrary] : [...state.library];
+    if (removeId) {
+      merged = merged.filter((x) => x.id !== removeId);
+    }
+    if (upsertEntry) {
+      merged = mergeLibraryArrays(merged, [upsertEntry]);
+    }
+    state.library = merged;
     await chrome.storage.local.set({ wpbLibrary: state.library });
   }
   renderLibrary();
@@ -179,6 +233,7 @@ function applyLanguageChoice(lang) {
   syncMetadataToUi();
   renderAllChapterViews();
   renderLibrary();
+  renderCacheSessions();
   if (state.logs.length === 0) {
     $('log-output').textContent = t('logsEmpty');
   }
@@ -253,6 +308,12 @@ function syncOptionsToUi() {
   $('opt-content-selector').value = o.customContentSelector;
   $('opt-exclude-selector').value = o.customExcludeSelector;
   $('opt-delay').value = o.delayMs;
+  $('opt-safe-mode').checked = Boolean(o.safeMode);
+  $('opt-safe-mode-quick').checked = Boolean(o.safeMode);
+  $('opt-safe-rpm').value = o.safeRpm ?? 22;
+  $('opt-safe-batch').value = o.safeBatchSize ?? 25;
+  $('opt-auto-pause-ratelimit').checked = o.autoPauseOnRateLimit !== false;
+  $('opt-cache-ttl').value = String(o.cacheTtlDays ?? DEFAULT_CACHE_TTL_DAYS);
   $('opt-max-chapters').value = o.maxChaptersPerEpub;
   $('opt-img-res').value = o.compressedResolution;
   $('opt-img-fmt').value = o.compressedFormat;
@@ -272,6 +333,7 @@ function syncOptionsToUi() {
 }
 
 function readOptionsFromUi() {
+  const ttlParsed = parseInt($('opt-cache-ttl').value, 10);
   state.options = {
     uiLang: $('opt-ui-lang').value || 'pt',
     theme: $('opt-theme').value,
@@ -288,6 +350,11 @@ function readOptionsFromUi() {
     customContentSelector: $('opt-content-selector').value.trim(),
     customExcludeSelector: $('opt-exclude-selector').value.trim(),
     delayMs: Math.max(0, parseInt($('opt-delay').value, 10) || 0),
+    safeMode: $('opt-safe-mode').checked,
+    safeRpm: Math.max(5, Math.min(120, parseInt($('opt-safe-rpm').value, 10) || 22)),
+    safeBatchSize: Math.max(0, Math.min(500, parseInt($('opt-safe-batch').value, 10) || 0)),
+    autoPauseOnRateLimit: $('opt-auto-pause-ratelimit').checked,
+    cacheTtlDays: Number.isNaN(ttlParsed) ? DEFAULT_CACHE_TTL_DAYS : ttlParsed,
     maxChaptersPerEpub: Math.max(1, parseInt($('opt-max-chapters').value, 10) || 10000),
     compressedResolution: Math.max(200, parseInt($('opt-img-res').value, 10) || 1080),
     compressedFormat: $('opt-img-fmt').value,
@@ -599,15 +666,160 @@ function renderAllChapterViews() {
   renderChaptersTable();
 }
 
-function renderLibrary() {
-  const grid = $('library-grid');
+function updateLibraryBadgeCount(sessionsCount = 0) {
+  const total = state.library.length + sessionsCount;
   const badge = $('library-badge');
-  if (state.library.length > 0) {
-    badge.textContent = String(state.library.length);
+  if (total > 0) {
+    badge.textContent = String(total);
     badge.classList.remove('hidden');
   } else {
     badge.classList.add('hidden');
   }
+}
+
+async function renderCacheSessions() {
+  const grid = $('cache-sessions-grid');
+  const pill = $('cache-stats-pill');
+  if (!grid || !pill) return;
+
+  const { sessions, totalChapters, totalBytes } = await cacheStore.listSessionsWithStats();
+  pill.textContent = t('cacheStatsPill', { count: totalChapters, size: formatBytes(totalBytes) });
+  updateLibraryBadgeCount(sessions.length);
+
+  if (sessions.length === 0) {
+    const empty = document.createElement('p');
+    empty.className = 'muted sm';
+    empty.textContent = t('cacheSessionsEmpty');
+    grid.replaceChildren(empty);
+    return;
+  }
+
+  const fragment = document.createDocumentFragment();
+  for (const sess of sessions) {
+    const card = document.createElement('article');
+    card.className = 'lib-card';
+
+    if (sess.metadata?.coverUrl) {
+      const img = document.createElement('img');
+      img.className = 'lib-cover';
+      img.src = sess.metadata.coverUrl;
+      img.alt = '';
+      card.appendChild(img);
+    } else {
+      const noCov = document.createElement('div');
+      noCov.className = 'lib-cover';
+      noCov.textContent = t('noCover');
+      card.appendChild(noCov);
+    }
+
+    const body = document.createElement('div');
+    body.className = 'lib-body';
+
+    const h3 = document.createElement('h3');
+    h3.className = 'lib-title';
+    h3.textContent = sess.metadata?.title || sess.seriesKey;
+    h3.title = sess.metadata?.title || sess.seriesKey;
+
+    const pMeta = document.createElement('p');
+    pMeta.className = 'lib-meta';
+    pMeta.textContent = t('cacheProgressInfo', {
+      cached: sess.cachedCount,
+      total: sess.chapters?.length || 0,
+      size: formatBytes(sess.bytes)
+    });
+
+    const pExp = document.createElement('p');
+    pExp.className = 'lib-meta';
+    pExp.textContent = t('cacheExpiresInfo', { time: formatTimeRemaining(sess.expiresAt) });
+
+    const actions = document.createElement('div');
+    actions.className = 'lib-actions';
+
+    const btnResume = document.createElement('button');
+    btnResume.type = 'button';
+    btnResume.className = 'btn primary sm';
+    btnResume.textContent = t('btnResumeDownload');
+    btnResume.addEventListener('click', () => restoreCachedSession(sess, false));
+
+    const btnPackCached = document.createElement('button');
+    btnPackCached.type = 'button';
+    btnPackCached.className = 'btn secondary sm';
+    btnPackCached.textContent = t('btnPackCachedOnly');
+    btnPackCached.addEventListener('click', () => restoreCachedSession(sess, true));
+
+    const btnPurge = document.createElement('button');
+    btnPurge.type = 'button';
+    btnPurge.className = 'btn ghost sm';
+    btnPurge.textContent = t('btnPurgeSeriesCache');
+    btnPurge.addEventListener('click', async () => {
+      await cacheStore.deleteSeriesCache(sess.seriesKey);
+      for (const ch of sess.chapters || []) {
+        state.chapterCache.delete(getCacheKey(ch.url));
+      }
+      if (getCurrentSeriesKey() === sess.seriesKey) {
+        for (const ch of state.chapters) {
+          ch.status = 'pending';
+        }
+        renderChaptersTable();
+      }
+      await renderCacheSessions();
+    });
+
+    actions.append(btnResume, btnPackCached, btnPurge);
+    body.append(h3, pMeta, pExp, actions);
+    card.appendChild(body);
+    fragment.appendChild(card);
+  }
+
+  grid.replaceChildren(fragment);
+}
+
+async function restoreCachedSession(sess, onlyCached = false) {
+  switchTab('main');
+  state.activeParser = getParserById(sess.parserId) || genericHtmlParser;
+  state.metadata = {
+    ...sess.metadata,
+    filename: sess.metadata?.filename || sanitizeFilename(sess.metadata?.title || 'WebPullBook', true)
+  };
+
+  const keys = (sess.chapters || []).map((c) => getCacheKey(c.url));
+  const diskMap = await cacheStore.hasChapters(keys);
+
+  let cachedHitCount = 0;
+  state.chapters = (sess.chapters || []).map((ch) => {
+    const key = getCacheKey(ch.url);
+    const diskRec = diskMap.get(key);
+    if (diskRec) {
+      state.chapterCache.set(key, {
+        chapterTitle: diskRec.chapterTitle,
+        subtitle: diskRec.subtitle,
+        contentXml: diskRec.contentXml
+      });
+      cachedHitCount++;
+    }
+    const isOk = Boolean(diskRec || state.chapterCache.has(key));
+    return {
+      ...ch,
+      included: onlyCached ? isOk : ch.included !== false,
+      status: isOk ? 'ok' : ch.status === 'error' ? 'error' : 'pending'
+    };
+  });
+
+  state.volumeFilter = null;
+  state.lastClickedIdx = -1;
+  const vols = getVolumeGroups().length;
+  const modeRadio = document.querySelector(`input[name="pack-mode"][value="${vols > 1 ? 'by-volume' : 'single'}"]`);
+  if (modeRadio) modeRadio.checked = true;
+
+  syncMetadataToUi();
+  populateRangeSelects();
+  renderAllChapterViews();
+  showBanner(t('msgSessionRestored', { title: state.metadata.title, cached: cachedHitCount }), 'success');
+}
+
+function renderLibrary() {
+  const grid = $('library-grid');
+  if (!grid) return;
 
   if (state.library.length === 0) {
     const empty = document.createElement('p');
@@ -673,8 +885,8 @@ function renderLibrary() {
     btnRemove.className = 'btn ghost sm';
     btnRemove.textContent = t('btnLibRemove');
     btnRemove.addEventListener('click', async () => {
-      state.library = state.library.filter((x) => x.id !== item.id);
-      await saveLibrary();
+      await saveLibrary({ removeId: item.id });
+      await renderCacheSessions();
       showBanner(t('msgRemovedFromLibrary'), 'info');
     });
 
@@ -695,8 +907,8 @@ async function saveCurrentSeriesToLibrary() {
     return;
   }
 
-  const id = url || `local:${sanitizeFilename(state.metadata.title, true)}`;
-  const existingIdx = state.library.findIndex((item) => item.id === id);
+  const id = getCurrentSeriesKey();
+  const existing = state.library.find((item) => item.id === id);
   const downloadedChapters = state.chapters.filter(
     (c) => c.status === 'ok' || state.chapterCache.has(getCacheKey(c.url))
   );
@@ -715,46 +927,46 @@ async function saveCurrentSeriesToLibrary() {
     parserId: state.activeParser?.id || 'auto',
     totalChapters: state.chapters.length,
     knownUrls: state.chapters.map((c) => normalizeUrl(c.url)),
-    lastDownloadedUrl: lastCh ? normalizeUrl(lastCh.url) : existingIdx >= 0 ? state.library[existingIdx].lastDownloadedUrl : '',
-    lastDownloadedTitle: lastCh ? lastCh.displayTitle : existingIdx >= 0 ? state.library[existingIdx].lastDownloadedTitle : '',
+    lastDownloadedUrl: lastCh ? normalizeUrl(lastCh.url) : existing?.lastDownloadedUrl || '',
+    lastDownloadedTitle: lastCh ? lastCh.displayTitle : existing?.lastDownloadedTitle || '',
     updatedAt: new Date().toISOString()
   };
 
-  if (existingIdx >= 0) {
-    state.library[existingIdx] = entry;
-  } else {
-    state.library.unshift(entry);
-  }
-
-  await saveLibrary();
+  await saveLibrary({ upsertEntry: entry });
+  await renderCacheSessions();
   appendLog(`Biblioteca atualizada: "${entry.title}" (${entry.totalChapters} capítulos).`);
   showBanner(t('msgSavedToLibrary', { title: entry.title, count: entry.totalChapters }), 'success');
 }
 
 async function updateLibraryAfterExport(packagedChapters) {
-  const url = normalizeUrl(state.metadata.startingUrl);
-  if (!url || packagedChapters.length === 0) return;
-  const idx = state.library.findIndex((item) => item.id === url || item.startingUrl === url);
-  if (idx < 0) return;
+  const id = getCurrentSeriesKey();
+  if (!id || packagedChapters.length === 0) return;
+
+  let existing = state.library.find((item) => item.id === id);
+  if (!existing && chrome?.storage?.local) {
+    const res = await chrome.storage.local.get('wpbLibrary');
+    existing = (res?.wpbLibrary || []).find((item) => item.id === id);
+  }
+  if (!existing) return;
 
   const lastPackaged = packagedChapters[packagedChapters.length - 1];
-  const knownSet = new Set(state.library[idx].knownUrls || []);
+  const knownSet = new Set(existing.knownUrls || []);
   for (const ch of state.chapters) {
     knownSet.add(normalizeUrl(ch.url));
   }
 
-  state.library[idx] = {
-    ...state.library[idx],
-    title: state.metadata.title || state.library[idx].title,
-    author: state.metadata.author || state.library[idx].author,
-    coverUrl: state.metadata.coverUrl || state.library[idx].coverUrl,
-    totalChapters: Math.max(state.chapters.length, state.library[idx].totalChapters || 0),
+  const updatedEntry = {
+    ...existing,
+    title: state.metadata.title || existing.title,
+    author: state.metadata.author || existing.author,
+    coverUrl: state.metadata.coverUrl || existing.coverUrl,
+    totalChapters: Math.max(state.chapters.length, existing.totalChapters || 0),
     knownUrls: Array.from(knownSet),
     lastDownloadedUrl: normalizeUrl(lastPackaged.url),
     lastDownloadedTitle: lastPackaged.displayTitle,
     updatedAt: new Date().toISOString()
   };
-  await saveLibrary();
+  await saveLibrary({ upsertEntry: updatedEntry });
 }
 
 async function handleCheckLibrarySeries(entry, selectOnlyNew = true) {
@@ -869,6 +1081,27 @@ async function handleMergeOpenTabs() {
   }
 }
 
+async function hydrateChaptersFromCache(chapters) {
+  const keys = chapters.map((ch) => getCacheKey(ch.url));
+  const diskMap = await cacheStore.hasChapters(keys);
+  return chapters.map((ch) => {
+    const key = getCacheKey(ch.url);
+    const diskRec = diskMap.get(key);
+    if (diskRec) {
+      state.chapterCache.set(key, {
+        chapterTitle: diskRec.chapterTitle,
+        subtitle: diskRec.subtitle,
+        contentXml: diskRec.contentXml
+      });
+    }
+    return {
+      ...ch,
+      status: state.chapterCache.has(key) ? 'ok' : 'pending',
+      errorMsg: ''
+    };
+  });
+}
+
 async function handleLoadSeries(url) {
   hideBanner();
   readOptionsFromUi();
@@ -884,11 +1117,7 @@ async function handleLoadSeries(url) {
       ...series,
       filename: sanitizeFilename(series.title, true)
     };
-    state.chapters = series.chapters.map((ch) => ({
-      ...ch,
-      status: state.chapterCache.has(getCacheKey(ch.url)) ? 'ok' : 'pending',
-      errorMsg: ''
-    }));
+    state.chapters = await hydrateChaptersFromCache(series.chapters);
     state.volumeFilter = null;
     state.lastClickedIdx = -1;
 
@@ -1003,6 +1232,67 @@ async function waitWhilePaused(signal) {
   }
 }
 
+async function enforceSafeThrottle(networkTimestamps, networkFetchCount, signal) {
+  readOptionsFromUi();
+  if (!state.options.safeMode) {
+    if (state.options.delayMs > 0) {
+      await sleep(state.options.delayMs, signal);
+    }
+    return;
+  }
+
+  // Batch cooldown rest every N network chapters
+  const batchN = state.options.safeBatchSize ?? 25;
+  if (batchN > 0 && networkFetchCount > 0 && networkFetchCount % batchN === 0) {
+    $('progress-detail').textContent = `Modo Seguro: pausa curta de respiro (10s)...`;
+    await sleep(10000, signal);
+  }
+
+  // Humanized jitter (1.8s - 3.2s or configured delayMs if larger)
+  const minDelay = Math.max(state.options.delayMs || 0, 1800);
+  const jittered = minDelay + Math.round(Math.random() * 1400);
+  await sleep(jittered, signal);
+
+  // Rolling 60-second RPM ceiling
+  const maxRpm = Math.max(5, state.options.safeRpm || 22);
+  const now = Date.now();
+  while (networkTimestamps.length > 0 && now - networkTimestamps[0] >= 60000) {
+    networkTimestamps.shift();
+  }
+  if (networkTimestamps.length >= maxRpm) {
+    const waitMs = Math.max(500, 60500 - (now - networkTimestamps[0]));
+    $('progress-detail').textContent = `Modo Seguro: aguardando janela RPM (${Math.ceil(waitMs / 1000)}s)...`;
+    await sleep(waitMs, signal);
+  }
+}
+
+async function persistSessionSnapshot() {
+  if (state.options.cacheTtlDays <= 0 || state.chapters.length === 0) return;
+  await cacheStore.putSession({
+    seriesKey: getCurrentSeriesKey(),
+    metadata: state.metadata,
+    parserId: state.activeParser?.id || 'auto',
+    chapters: state.chapters,
+    ttlDays: state.options.cacheTtlDays
+  });
+}
+
+async function getChapterFromCaches(ch, cacheKey) {
+  let rec = state.chapterCache.get(cacheKey);
+  if (!rec && state.options.cacheTtlDays > 0) {
+    const diskRec = await cacheStore.getChapter(cacheKey);
+    if (diskRec) {
+      rec = {
+        chapterTitle: diskRec.chapterTitle,
+        subtitle: diskRec.subtitle,
+        contentXml: diskRec.contentXml
+      };
+      state.chapterCache.set(cacheKey, rec);
+    }
+  }
+  return rec ? hydrateCachedChapter(ch, rec) : null;
+}
+
 async function handlePackEpub() {
   if (state.running) return;
   readMetadataFromUi();
@@ -1027,6 +1317,7 @@ async function handlePackEpub() {
   hideBanner();
 
   await saveOptions();
+  await persistSessionSnapshot();
 
   const mode = document.querySelector('input[name="pack-mode"]:checked')?.value || 'by-volume';
   const jobs = [];
@@ -1081,13 +1372,16 @@ async function handlePackEpub() {
   let filesGenerated = 0;
   let totalOkChapters = 0;
   let totalFailedChapters = 0;
+  let networkFetchCount = 0;
+  const networkTimestamps = [];
   const allPackagedChapters = [];
   const exporter = exporterRegistry.get(state.options.outputFormat);
   const extUpper = exporter.extension.toUpperCase();
+  const seriesKey = getCurrentSeriesKey();
 
   try {
     appendLog(
-      `Iniciando exportação (${exporter.name}): ${jobs.length} arquivo(s) ${extUpper}, ${totalChaptersAll} capítulos no total.`
+      `Iniciando exportação (${exporter.name}): ${jobs.length} arquivo(s) ${extUpper}, ${totalChaptersAll} capítulos no total${state.options.safeMode ? ' [Modo Seguro]' : ''}.`
     );
 
     for (let j = 0; j < jobs.length; j++) {
@@ -1106,11 +1400,11 @@ async function handlePackEpub() {
         $('progress-bar').value = pct;
         $('progress-pct').textContent = `${pct}%`;
 
-        if (state.chapterCache.has(cacheKey)) {
-          const cachedParsed = state.chapterCache.get(cacheKey);
+        const cachedHydrated = await getChapterFromCaches(ch, cacheKey);
+        if (cachedHydrated) {
           ch.status = 'ok';
           ch.errorMsg = '';
-          parsedChapters.push(cachedParsed);
+          parsedChapters.push(cachedHydrated);
           allPackagedChapters.push(ch);
           totalOkChapters++;
           completedGlobal++;
@@ -1120,17 +1414,41 @@ async function handlePackEpub() {
         ch.status = 'downloading';
         renderChaptersTable();
 
+        let shouldPauseForRateLimit = false;
         try {
+          networkTimestamps.push(Date.now());
           const parsed = await downloadAndParseChapter(ch, state.activeParser, state.options, signal);
-          state.chapterCache.set(cacheKey, parsed);
+          networkFetchCount++;
+
+          const cacheRec = {
+            chapterTitle: parsed.chapterTitle,
+            subtitle: parsed.subtitle,
+            contentXml: serializeNodesForCache(parsed.nodes)
+          };
+          state.chapterCache.set(cacheKey, cacheRec);
+          await cacheStore.putChapter({
+            key: cacheKey,
+            seriesKey,
+            chapterUrl: ch.url,
+            chapterTitle: cacheRec.chapterTitle,
+            subtitle: cacheRec.subtitle,
+            nodes: parsed.nodes,
+            ttlDays: state.options.cacheTtlDays
+          });
+
           ch.status = 'ok';
           ch.errorMsg = '';
-          parsedChapters.push(parsed);
+          parsedChapters.push(hydrateCachedChapter(ch, cacheRec));
           allPackagedChapters.push(ch);
           totalOkChapters++;
         } catch (err) {
           if (err.name === 'AbortError') throw err;
-          if (err.status === 404 && state.options.skip404) {
+          if (err.isRateLimit && state.options.autoPauseOnRateLimit !== false) {
+            ch.status = 'error';
+            ch.errorMsg = err.message;
+            shouldPauseForRateLimit = true;
+            appendLog(`BLOQUEIO DE TAXA (${err.status || 503}) detectado em "${ch.displayTitle}" — pausando fila automaticamente!`);
+          } else if (err.status === 404 && state.options.skip404) {
             ch.status = 'skipped';
             ch.errorMsg = 'HTTP 404';
             appendLog(`404 pulado: ${ch.url}`);
@@ -1147,21 +1465,26 @@ async function handlePackEpub() {
           }
         }
 
-        completedGlobal++;
         renderChaptersTable();
+        if (networkFetchCount % 5 === 0 || shouldPauseForRateLimit) {
+          await persistSessionSnapshot();
+        }
 
-        if (state.options.delayMs > 0 && completedGlobal < totalChaptersAll) {
-          await new Promise((resolve, reject) => {
-            const timer = setTimeout(resolve, state.options.delayMs);
-            signal.addEventListener(
-              'abort',
-              () => {
-                clearTimeout(timer);
-                reject(new DOMException('Aborted', 'AbortError'));
-              },
-              { once: true }
-            );
-          });
+        if (shouldPauseForRateLimit) {
+          networkTimestamps.length = 0;
+          state.paused = true;
+          $('btn-pause').textContent = t('btnResume');
+          showBanner(t('msgRateLimitPaused', { status: 503 }), 'error');
+          await renderCacheSessions();
+          await waitWhilePaused(signal);
+          hideBanner();
+          c--; // Retry the exact chapter that hit rate-limit upon resume
+          continue;
+        }
+
+        completedGlobal++;
+        if (completedGlobal < totalChaptersAll) {
+          await enforceSafeThrottle(networkTimestamps, networkFetchCount, signal);
         }
       }
 
@@ -1199,6 +1522,8 @@ async function handlePackEpub() {
     if (allPackagedChapters.length > 0) {
       await updateLibraryAfterExport(allPackagedChapters);
     }
+    await persistSessionSnapshot();
+    await renderCacheSessions();
 
     $('progress-bar').value = 100;
     $('progress-pct').textContent = '100%';
@@ -1227,6 +1552,8 @@ async function handlePackEpub() {
       showBanner(t('msgPackAllFailed', { failed: totalFailedChapters }), 'error');
     }
   } catch (err) {
+    await persistSessionSnapshot();
+    await renderCacheSessions();
     if (err.name === 'AbortError') {
       appendLog('Empacotamento cancelado pelo usuário.');
       showBanner(t('msgPackCancelled'), 'info');
@@ -1245,7 +1572,10 @@ async function handlePackEpub() {
 
 function wireEvents() {
   for (const btn of document.querySelectorAll('.tab-btn')) {
-    btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+    btn.addEventListener('click', () => {
+      switchTab(btn.dataset.tab);
+      if (btn.dataset.tab === 'library') renderCacheSessions();
+    });
   }
 
   $('load-series-form').addEventListener('submit', (e) => {
@@ -1257,6 +1587,41 @@ function wireEvents() {
   $('btn-merge-tabs').addEventListener('click', handleMergeOpenTabs);
   $('btn-save-library').addEventListener('click', saveCurrentSeriesToLibrary);
   $('btn-save-library-tab').addEventListener('click', saveCurrentSeriesToLibrary);
+
+  $('opt-safe-mode-quick').addEventListener('change', async () => {
+    const val = $('opt-safe-mode-quick').checked;
+    $('opt-safe-mode').checked = val;
+    readOptionsFromUi();
+    await saveOptions();
+  });
+  $('opt-safe-mode').addEventListener('change', async () => {
+    const val = $('opt-safe-mode').checked;
+    $('opt-safe-mode-quick').checked = val;
+    readOptionsFromUi();
+    await saveOptions();
+  });
+
+  $('opt-cache-ttl').addEventListener('change', async () => {
+    readOptionsFromUi();
+    await saveOptions();
+    if (state.options.cacheTtlDays <= 0) {
+      await cacheStore.clearAll();
+      state.chapterCache.clear();
+      await renderCacheSessions();
+      renderChaptersTable();
+    }
+  });
+
+  $('btn-clear-all-cache').addEventListener('click', async () => {
+    await cacheStore.clearAll();
+    state.chapterCache.clear();
+    for (const ch of state.chapters) {
+      if (ch.status === 'ok') ch.status = 'pending';
+    }
+    await renderCacheSessions();
+    renderChaptersTable();
+    showBanner(t('msgCacheCleared'), 'info');
+  });
 
   $('ui-lang-top').addEventListener('change', async () => {
     const newLang = $('ui-lang-top').value;
@@ -1504,7 +1869,7 @@ function wireEvents() {
 
   const advInputs = document.querySelectorAll('#tab-advanced input, #tab-advanced select, #tab-advanced textarea');
   for (const el of advInputs) {
-    if (typoIds.includes(el.id) || el.id === 'opt-ui-lang') continue;
+    if (typoIds.includes(el.id) || el.id === 'opt-ui-lang' || el.id === 'opt-safe-mode') continue;
     el.addEventListener('change', async () => {
       readOptionsFromUi();
       applyThemeChoice(state.options.theme);
@@ -1554,6 +1919,16 @@ function wireEvents() {
     downloadBlobToChrome(blob, 'webpullbook-log.txt');
   });
 
+  if (chrome?.storage?.onChanged) {
+    chrome.storage.onChanged.addListener((changes, areaName) => {
+      if (areaName === 'local' && changes.wpbLibrary?.newValue) {
+        state.library = changes.wpbLibrary.newValue;
+        renderLibrary();
+        renderCacheSessions();
+      }
+    });
+  }
+
   window.addEventListener('storage', (e) => {
     if (e.key === 'wpb-color-scheme') {
       const meta = document.querySelector('meta[name="color-scheme"]');
@@ -1565,7 +1940,9 @@ function wireEvents() {
 async function init() {
   populateRegistries();
   await loadOptions();
+  await cacheStore.pruneExpired();
   await loadLibrary();
+  await renderCacheSessions();
   wireEvents();
 
   const params = new URLSearchParams(window.location.search);

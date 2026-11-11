@@ -228,14 +228,30 @@ export function extractCleanSynopsis(container) {
   return lines.join('\n\n');
 }
 
+const RATE_LIMIT_TEXT_RX =
+  /wordfence|rate[\s_-]?limit|too many requests|exceeded the maximum|acesso.+limitado|temporarily blocked|locked out/i;
+
 export async function fetchHtmlDocument(url, signal) {
   const response = await fetch(url, {
     credentials: 'include',
     signal
   });
   if (!response.ok) {
+    let bodySnippet = '';
+    try {
+      bodySnippet = (await response.text()).slice(0, 2500);
+    } catch {
+      bodySnippet = '';
+    }
     const err = new Error(`HTTP ${response.status} ao carregar ${url}`);
     err.status = response.status;
+    const retryAfterRaw = response.headers?.get?.('Retry-After');
+    if (retryAfterRaw && /^\d+$/.test(retryAfterRaw.trim())) {
+      err.retryAfterSec = parseInt(retryAfterRaw.trim(), 10);
+    }
+    err.isRateLimit =
+      response.status === 429 ||
+      (response.status === 503 && RATE_LIMIT_TEXT_RX.test(bodySnippet));
     throw err;
   }
   const html = await response.text();
@@ -266,10 +282,12 @@ export async function fetchWithRetry(url, { retries = 2, signal } = {}) {
       return await fetchHtmlDocument(url, signal);
     } catch (err) {
       if (err.name === 'AbortError') throw err;
-      const retryable = !err.status || err.status === 429 || err.status >= 500;
+      // Do not hammer rate-limiting firewalls with rapid retries
+      if (err.isRateLimit) throw err;
+      const retryable = !err.status || err.status >= 500;
       if (!retryable || attempt >= retries) throw err;
       attempt += 1;
-      await sleep(800 * attempt, signal);
+      await sleep(1200 * attempt, signal);
     }
   }
 }

@@ -22,6 +22,8 @@ export const I18N_DICTIONARY = {
     modeSingleDesc: 'Todos os capítulos selecionados em 1 livro (com sumário por volume)',
     btnPackEpub: 'Empacotar EPUB',
     btnExportFmt: 'Exportar {ext}',
+    safeModeQuickTitle: 'Modo Seguro (Anti-Bloqueio)',
+    safeModeQuickDesc: 'Limita o ritmo (~22 págs/min) + pausa curta entre lotes para sites com firewall',
     btnRetryFailed: 'Tentar Falhos ({count})',
     btnPause: 'Pausar',
     btnResume: 'Retomar',
@@ -79,9 +81,26 @@ export const I18N_DICTIONARY = {
     statusCached: 'Em Cache',
     statusError: 'Falhou',
     statusSkipped: 'Pulado',
-    libraryHeading: 'Biblioteca & Lista de Leitura',
+    cacheSessionsHeading: 'Downloads Recentes & Cache Local',
+    cacheSessionsSub:
+      'Capítulos baixados ficam salvos temporariamente em IndexedDB para retomar downloads interrompidos sem perder progresso.',
+    cacheStatsPill: '{count} caps em cache ({size})',
+    cacheTtlOff: 'Cache desativado',
+    cacheTtl1d: 'Expira em 1 dia',
+    cacheTtl3d: 'Expira em 3 dias',
+    cacheTtl7d: 'Expira em 7 dias',
+    cacheTtl14d: 'Expira em 14 dias',
+    btnClearAllCache: 'Limpar Cache',
+    cacheSessionsEmpty:
+      'Nenhum download em cache no momento. Quando você baixar uma obra, o progresso fica salvo aqui temporariamente.',
+    cacheProgressInfo: '{cached} / {total} capítulos em cache ({size})',
+    cacheExpiresInfo: 'Expira em {time}',
+    btnResumeDownload: 'Retomar Download',
+    btnPackCachedOnly: 'Empacotar Só Baixados',
+    btnPurgeSeriesCache: 'Apagar Cache',
+    libraryHeading: 'Obras Acompanhadas (Novos Capítulos)',
     librarySub:
-      'Salve suas obras acompanhadas para checar novos capítulos e selecionar automaticamente apenas o que saiu desde o último download.',
+      'Salve séries em andamento para checar e marcar automaticamente apenas os capítulos novos desde o último download.',
     btnSaveCurrentToLib: '+ Salvar Obra Atual',
     libraryEmpty: 'Nenhuma obra salva na Biblioteca ainda. Carregue uma obra e clique em "Salvar na Biblioteca".',
     libChaptersInfo: '{total} capítulos registrados',
@@ -108,6 +127,10 @@ export const I18N_DICTIONARY = {
     labelParser: 'Seleção de Parser',
     parserAutoOption: 'Automático (Pontuação DOM)',
     labelDelay: 'Delay entre capítulos (ms)',
+    labelSafeRpm: 'Máx. req/min (Modo Seguro)',
+    labelSafeBatch: 'Pausa a cada N caps (Modo Seguro)',
+    optSafeMode: 'Modo Seguro (Anti-Bloqueio): limitar req/min, jitter aleatório e pausa entre lotes',
+    optAutoPauseRateLimit: 'Pausar fila automaticamente ao detectar bloqueio HTTP 429 / 503 (proteção anti-ban)',
     labelMaxChapters: 'Máx. capítulos por EPUB (modo único)',
     labelImgRes: 'Resolução máxima das imagens (px)',
     labelImgFmt: 'Formato ao comprimir imagens',
@@ -174,7 +197,11 @@ export const I18N_DICTIONARY = {
     msgSavedToLibrary: '"{title}" salvo na Biblioteca ({count} capítulos).',
     msgRemovedFromLibrary: 'Obra removida da Biblioteca.',
     msgNewChaptersFound: '{newCount} novo(s) capítulo(s) encontrado(s) e selecionado(s) automaticamente!',
-    msgNoNewChapters: 'Nenhum capítulo novo desde o último registro ({total} capítulos no total).'
+    msgNoNewChapters: 'Nenhum capítulo novo desde o último registro ({total} capítulos no total).',
+    msgRateLimitPaused:
+      'Limite de taxa detectado no servidor (HTTP {status}). Fila pausada automaticamente para proteger seu acesso — os capítulos já baixados estão salvos no cache local. Aguarde alguns minutos, ative o Modo Seguro e clique em Retomar.',
+    msgSessionRestored: 'Sessão de "{title}" restaurada do cache ({cached} capítulos já prontos em disco!).',
+    msgCacheCleared: 'Cache local limpo com sucesso.'
   },
   en: {
     brandSub: 'Volume-aware web book extractor & EPUB packager for offline reading',
@@ -199,6 +226,8 @@ export const I18N_DICTIONARY = {
     modeSingleDesc: 'All selected chapters in 1 book (with nested volume TOC)',
     btnPackEpub: 'Pack EPUB',
     btnExportFmt: 'Export {ext}',
+    safeModeQuickTitle: 'Safe Mode (Anti-Block)',
+    safeModeQuickDesc: 'Caps rate (~22 pages/min) + short batch rests for rate-limited websites',
     btnRetryFailed: 'Retry Failed ({count})',
     btnPause: 'Pause',
     btnResume: 'Resume',
@@ -256,9 +285,26 @@ export const I18N_DICTIONARY = {
     statusCached: 'Cached',
     statusError: 'Failed',
     statusSkipped: 'Skipped',
-    libraryHeading: 'Library & Reading List',
+    cacheSessionsHeading: 'Recent Downloads & Local Cache',
+    cacheSessionsSub:
+      'Downloaded chapters are temporarily saved in IndexedDB so you can resume interrupted downloads without losing progress.',
+    cacheStatsPill: '{count} chs cached ({size})',
+    cacheTtlOff: 'Cache disabled',
+    cacheTtl1d: 'Expires in 1 day',
+    cacheTtl3d: 'Expires in 3 days',
+    cacheTtl7d: 'Expires in 7 days',
+    cacheTtl14d: 'Expires in 14 days',
+    btnClearAllCache: 'Clear Cache',
+    cacheSessionsEmpty:
+      'No cached downloads yet. Once you download a series, partial progress is temporarily saved here.',
+    cacheProgressInfo: '{cached} / {total} chapters cached ({size})',
+    cacheExpiresInfo: 'Expires in {time}',
+    btnResumeDownload: 'Resume Download',
+    btnPackCachedOnly: 'Pack Cached Only',
+    btnPurgeSeriesCache: 'Delete Cache',
+    libraryHeading: 'Tracked Series (New Chapters)',
     librarySub:
-      'Save tracked series to check for new chapters and automatically select only chapters released since your last download.',
+      'Save ongoing series to check and automatically select only chapters published since your last download.',
     btnSaveCurrentToLib: '+ Save Current Series',
     libraryEmpty: 'No series saved in your Library yet. Load a series and click "Save to Library".',
     libChaptersInfo: '{total} chapters tracked',
@@ -285,6 +331,10 @@ export const I18N_DICTIONARY = {
     labelParser: 'Parser Selection',
     parserAutoOption: 'Automatic (DOM Scoring)',
     labelDelay: 'Delay between chapters (ms)',
+    labelSafeRpm: 'Max req/min (Safe Mode)',
+    labelSafeBatch: 'Rest every N chs (Safe Mode)',
+    optSafeMode: 'Safe Mode (Anti-Block): limit req/min, random jitter & batch cooldowns',
+    optAutoPauseRateLimit: 'Automatically pause queue on HTTP 429 / 503 rate-limit blocks',
     labelMaxChapters: 'Max chapters per EPUB (single mode)',
     labelImgRes: 'Max image resolution (px)',
     labelImgFmt: 'Compressed image format',
@@ -351,7 +401,11 @@ export const I18N_DICTIONARY = {
     msgSavedToLibrary: 'Saved "{title}" to Library ({count} chapters).',
     msgRemovedFromLibrary: 'Removed series from Library.',
     msgNewChaptersFound: 'Found and automatically selected {newCount} new chapter(s)!',
-    msgNoNewChapters: 'No new chapters since last check ({total} total chapters).'
+    msgNoNewChapters: 'No new chapters since last check ({total} total chapters).',
+    msgRateLimitPaused:
+      'Rate limit detected on server (HTTP {status}). Queue automatically paused to prevent lockout — downloaded chapters are saved in local cache. Wait a few minutes, enable Safe Mode, and click Resume.',
+    msgSessionRestored: 'Restored "{title}" from local cache ({cached} chapters already ready on disk!).',
+    msgCacheCleared: 'Local cache cleared.'
   }
 };
 

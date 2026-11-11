@@ -3,7 +3,7 @@
 **🇧🇷 Português** | [🇺🇸 English](README.en.md)
 
 [![Manifest V3](https://img.shields.io/badge/Manifest-V3-4338ca?style=flat-square)](manifest.json)
-[![Versão](https://img.shields.io/badge/Vers%C3%A3o-1.0.2-0ea5e9?style=flat-square)](https://github.com/WiltonGabriel/WebPullBook/releases)
+[![Versão](https://img.shields.io/badge/Vers%C3%A3o-1.1.0-0ea5e9?style=flat-square)](https://github.com/WiltonGabriel/WebPullBook/releases)
 [![Dependências](https://img.shields.io/badge/Depend%C3%AAncias-Zero-16a34a?style=flat-square)](src/core/zip.js)
 [![Licença: MIT](https://img.shields.io/badge/Licen%C3%A7a-MIT-f59e0b?style=flat-square)](LICENSE)
 [![CI Validation](https://github.com/WiltonGabriel/WebPullBook/actions/workflows/ci.yml/badge.svg)](https://github.com/WiltonGabriel/WebPullBook/actions/workflows/ci.yml)
@@ -20,7 +20,8 @@ Ler obras longas com centenas de capítulos no navegador dificulta a leitura off
 
 - **Detecção Automática e Divisão por Volumes:** Identifica volumes por seções recolhíveis, prefixos de capítulo ou slugs de URL, permitindo gerar **1 Arquivo por Volume** (com metadados padrão de série e índice de volume) ou um **Arquivo Único** com sumário aninhado por volume e capítulo.
 - **Editor Manual de Volumes:** Divida automaticamente a cada *N* capítulos, defina faixas (`do # ao #`), atribua aos capítulos selecionados, edite direto na tabela ou aplique regras em lote (ex.: `1-24: Volume 01`).
-- **Resiliência a Falhas Parciais & Cache de Capítulos:** Se 1 capítulo falhar no meio de um lote grande, o download continua sem perder o progresso. Os capítulos já baixados ficam em cache na sessão e o botão **Tentar Falhos** baixa apenas os que faltaram antes de reempacotar o livro.
+- **Cache Persistente Auto-Expirável (`IndexedDB`) & Retomada:** Capítulos baixados ficam salvos localmente com expiração configurável (padrão de **7 dias**) e limite de tamanho, permitindo retomar downloads interrompidos na aba **Biblioteca** mesmo após fechar o navegador, sem ocupar espaço para sempre.
+- **Modo Seguro (Anti-Bloqueio) & Auto-Pausa em Rate Limit:** Toggle dedicado para limitar requisições por minuto (RPM), variar o intervalo (*jitter*) e fazer pausas curtas entre lotes quando necessário, além de **detecção automática de bloqueios `HTTP 429`/`503`** que pausa a fila na hora sem desperdiçar tentativas.
 - **Modo SPA / JavaScript (Renderização via Aba):** Suporta páginas dinâmicas em React/Vue/Next.js abrindo uma aba em segundo plano (`chrome.tabs` + `chrome.scripting`) para hidratar o DOM automaticamente quando o `fetch` estático não encontra o texto.
 - **Modo Juntar Abas Abertas (Estilo EpubPress):** Capture todas as abas abertas na janela atual do navegador e compile os artigos ou capítulos abertos em um único ebook com 1 clique.
 - **Biblioteca & Lista de Leitura Integrada:** Salve obras acompanhadas na aba **Biblioteca** (`chrome.storage.local`) e use **Carregar & Marcar Novos** para detectar e selecionar automaticamente apenas os capítulos lançados desde o seu último download.
@@ -94,6 +95,7 @@ WebPullBook/
     ├── background/
     │   └── service-worker.js     # Abre o workspace ao clicar no ícone da barra
     ├── core/
+    │   ├── cache-store.js        # Cache persistente em IndexedDB com expiração (TTL)
     │   ├── epub-builder.js       # Geração de OPF, NCX, NAV, capa e capítulos XHTML
     │   ├── parser-engine.js      # BaseParser (OOP), modo SPA em aba, CSS e retries
     │   ├── sanitizer.js          # HtmlSanitizer -> XHTML válido com estilos semânticos

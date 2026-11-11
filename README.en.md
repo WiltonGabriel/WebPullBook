@@ -3,7 +3,7 @@
 [🇧🇷 Português](README.md) | **🇺🇸 English**
 
 [![Manifest V3](https://img.shields.io/badge/Manifest-V3-4338ca?style=flat-square)](manifest.json)
-[![Version](https://img.shields.io/badge/Version-1.0.2-0ea5e9?style=flat-square)](https://github.com/WiltonGabriel/WebPullBook/releases)
+[![Version](https://img.shields.io/badge/Version-1.1.0-0ea5e9?style=flat-square)](https://github.com/WiltonGabriel/WebPullBook/releases)
 [![Dependencies](https://img.shields.io/badge/Dependencies-Zero-16a34a?style=flat-square)](src/core/zip.js)
 [![License: MIT](https://img.shields.io/badge/License-MIT-f59e0b?style=flat-square)](LICENSE)
 [![CI Validation](https://github.com/WiltonGabriel/WebPullBook/actions/workflows/ci.yml/badge.svg)](https://github.com/WiltonGabriel/WebPullBook/actions/workflows/ci.yml)
@@ -20,7 +20,8 @@ Reading long serialized works in a browser tab is inconvenient offline or on e-i
 
 - **Automatic Volume Detection & Splitting:** Detects volume boundaries from collapsible sections, chapter labels, or URL patterns, letting you export either **1 File per Volume** (with standard series and volume index metadata) or a **Single File** with a nested volume/chapter Table of Contents.
 - **Manual Volume Editor:** Split chapters every *N* chapters, assign ranges (`from # to #`), tag checked rows, edit inline in the table, or apply batch rules (e.g., `1-24: Volume 01`).
-- **Partial Failure Resilience & Chapter Cache:** If 1 chapter fails mid-download across a 300-chapter batch, WebPullBook records the failure and continues. Already-downloaded chapters remain cached in memory so clicking **Retry Failed** fetches *only* the missing chapters before repackaging.
+- **Self-Expiring Persistent Cache (`IndexedDB`) & Resume:** Downloaded chapters are saved locally with configurable expiration (**7 days** default) and storage caps, letting you resume interrupted downloads from the **Library** tab even after closing the browser without permanent bloat.
+- **Safe Mode (Anti-Block) & Automatic Rate-Limit Guard:** Dedicated toggle for RPM capping, randomized request jitter, and short batch cooldowns when desired—plus **automatic `HTTP 429`/`503` detection** that pauses the queue immediately without hammering rate-limited servers.
 - **SPA / JavaScript Tab Rendering Mode:** Supports dynamic React/Vue/Next.js pages by rendering them in a background browser tab (`chrome.tabs` + `chrome.scripting`) when static `fetch()` finds no chapter links or prose content.
 - **Merge Open Tabs Mode (EpubPress Style):** Grab all open tabs in your current browser window and compile their readable article content into a single ebook with 1 click.
 - **Built-in Library & Reading List:** Save tracked series in the **Library** tab (`chrome.storage.local`) and click **Load & Select New** to automatically detect and select only chapters published since your last download.
@@ -94,6 +95,7 @@ WebPullBook/
     ├── background/
     │   └── service-worker.js     # Opens workspace tab on toolbar action click
     ├── core/
+    │   ├── cache-store.js        # IndexedDB persistent cache with automatic TTL cleanup
     │   ├── epub-builder.js       # OPF, NCX, NAV, cover, and XHTML packaging
     │   ├── parser-engine.js      # BaseParser (OOP), SPA tab renderer, CSS, retries
     │   ├── sanitizer.js          # HtmlSanitizer -> valid XHTML with semantic styles

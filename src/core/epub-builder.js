@@ -1,6 +1,6 @@
 import { createZipBlob } from './zip.js';
 import { escapeXml } from './sanitizer.js';
-import { extractVolumeNumber } from './parser-engine.js';
+import { extractVolumeNumber, toHighResCoverUrl } from './parser-engine.js';
 
 function randomUuid() {
   if (crypto?.randomUUID) return crypto.randomUUID();
@@ -437,7 +437,24 @@ export async function buildEpubBlob({
       try {
         let imgRec = imageCache.get(imgInfo.originalUrl);
         if (!imgRec) {
-          const { blob, mime } = await fetchImageBytes(imgInfo.originalUrl, signal);
+          let fetched = null;
+          const imgCandidates = [imgInfo.originalUrl];
+          const unproxied = toHighResCoverUrl(imgInfo.originalUrl);
+          if (unproxied && unproxied !== imgInfo.originalUrl) {
+            imgCandidates.push(unproxied);
+          }
+          let lastImgErr = null;
+          for (const candidateUrl of imgCandidates) {
+            try {
+              fetched = await fetchImageBytes(candidateUrl, signal);
+              break;
+            } catch (e) {
+              if (e.name === 'AbortError') throw e;
+              lastImgErr = e;
+            }
+          }
+          if (!fetched) throw lastImgErr || new Error('Failed to fetch image');
+          const { blob, mime } = fetched;
           let bytes;
           let finalMime = mime;
           if (options.compressImages) {

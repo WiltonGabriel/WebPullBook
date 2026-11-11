@@ -110,6 +110,14 @@
             </label>
           </fieldset>
 
+          <label class="safe-mode-card">
+            <input type="checkbox" id="opt-safe-mode-quick">
+            <span>
+              <strong data-i18n="safeModeQuickTitle">Modo Seguro (Anti-Bloqueio)</strong>
+              <small data-i18n="safeModeQuickDesc">Limita o ritmo (~22 págs/min) + pausa curta entre lotes para sites com firewall</small>
+            </span>
+          </label>
+
           <div class="pack-actions">
             <button type="button" id="btn-pack-epub" class="btn primary lg" disabled data-i18n="btnPackEpub">Empacotar EPUB</button>
             <button type="button" id="btn-retry-failed" class="btn secondary hidden">Tentar Falhos (0)</button>
@@ -263,14 +271,37 @@
       </section>
     </section>
 
-    <!-- TAB 2: LIBRARY -->
+    <!-- TAB 2: LIBRARY & CACHE -->
     <section id="tab-library" class="tab-panel hidden">
       <section class="card">
         <div class="card-header">
           <div>
-            <h2 data-i18n="libraryHeading">Biblioteca &amp; Lista de Leitura</h2>
+            <h2 data-i18n="cacheSessionsHeading">Downloads Recentes &amp; Cache Local</h2>
+            <p class="muted sm mt-xs" data-i18n="cacheSessionsSub">
+              Capítulos baixados ficam salvos temporariamente em IndexedDB para retomar downloads interrompidos sem perder progresso.
+            </p>
+          </div>
+          <div class="row-gap">
+            <span id="cache-stats-pill" class="pill">0 caps (0 KB)</span>
+            <select id="opt-cache-ttl" class="lang-select" aria-label="Expiração do cache">
+              <option value="0" data-i18n="cacheTtlOff">Cache desativado</option>
+              <option value="1" data-i18n="cacheTtl1d">Expira em 1 dia</option>
+              <option value="3" data-i18n="cacheTtl3d">Expira em 3 dias</option>
+              <option value="7" selected data-i18n="cacheTtl7d">Expira em 7 dias</option>
+              <option value="14" data-i18n="cacheTtl14d">Expira em 14 dias</option>
+            </select>
+            <button type="button" id="btn-clear-all-cache" class="btn ghost sm" data-i18n="btnClearAllCache">Limpar Cache</button>
+          </div>
+        </div>
+        <div id="cache-sessions-grid" class="library-grid"></div>
+      </section>
+
+      <section class="card mt-md">
+        <div class="card-header">
+          <div>
+            <h2 data-i18n="libraryHeading">Obras Acompanhadas (Novos Capítulos)</h2>
             <p class="muted sm mt-xs" data-i18n="librarySub">
-              Salve suas obras acompanhadas para checar novos capítulos e selecionar automaticamente apenas o que saiu desde o último download.
+              Salve séries em andamento para checar e marcar automaticamente apenas os capítulos novos desde o último download.
             </p>
           </div>
           <button type="button" id="btn-save-library-tab" class="btn primary sm" data-i18n="btnSaveCurrentToLib">+ Salvar Obra Atual</button>
@@ -351,6 +382,14 @@
               <input id="opt-delay" type="number" min="0" max="10000" step="50" value="350">
             </div>
             <div class="field">
+              <label for="opt-safe-rpm" data-i18n="labelSafeRpm">Máx. req/min (Modo Seguro)</label>
+              <input id="opt-safe-rpm" type="number" min="5" max="120" step="1" value="22">
+            </div>
+            <div class="field">
+              <label for="opt-safe-batch" data-i18n="labelSafeBatch">Pausa a cada N caps (Modo Seguro)</label>
+              <input id="opt-safe-batch" type="number" min="0" max="500" step="5" value="25">
+            </div>
+            <div class="field">
               <label for="opt-max-chapters" data-i18n="labelMaxChapters">Máx. capítulos por EPUB (modo único)</label>
               <input id="opt-max-chapters" type="number" min="1" max="10000" value="10000">
             </div>
@@ -380,6 +419,14 @@
           </div>
 
           <div class="checks-col">
+            <label class="checkbox-row">
+              <input type="checkbox" id="opt-safe-mode">
+              <span data-i18n="optSafeMode">Modo Seguro (Anti-Bloqueio): limitar req/min, jitter aleatório e pausa entre lotes</span>
+            </label>
+            <label class="checkbox-row">
+              <input type="checkbox" id="opt-auto-pause-ratelimit" checked>
+              <span data-i18n="optAutoPauseRateLimit">Pausar fila automaticamente ao detectar bloqueio HTTP 429 / 503 (proteção anti-ban)</span>
+            </label>
             <label class="checkbox-row">
               <input type="checkbox" id="opt-continue-on-error" checked>
               <span data-i18n="optContinueOnError">Continuar baixando mesmo se algum capítulo falhar (Resiliência Parcial)</span>
