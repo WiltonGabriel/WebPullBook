@@ -2,6 +2,14 @@
 
 Todas as mudanças notáveis do **WebPullBook** serão documentadas neste arquivo.
 
+## [1.2.1] - 2026-11-11 (Beta)
+
+### Novidades & Melhorias / Improvements
+- **Links clicáveis nos Logs:** URLs `http(s)://` dentro das linhas na aba **Logs** agora abrem diretamente em nova aba (`rel="noopener noreferrer"`), facilitando inspecionar páginas de capítulos ou mídias que falharam.
+- **Botões diretos no Relatório & Tabela:** o relatório pós-empacotamento exibe **`Abrir capítulo ↗`** e **`Abrir imagem ↗`** por ocorrência (além de `Ver no log`), e a tabela de capítulos mostra **`Abrir página ↗`** ao lado de erros/avisos.
+- **Contexto completo em avisos de imagem:** os logs de falha de mídia passam a registrar tanto a URL da página do capítulo quanto a URL da imagem.
+- **Pipeline de Release automatizado:** notas da release geradas automaticamente a partir do `CHANGELOG.md` com validação completa (`lint`, `23` testes + `EPUBCheck v5.4.0` e E2E Playwright) antes de publicar o pacote `.zip`.
+
 ## [1.2.0] - 2026-11-11 (Beta)
 
 ### Novidades / New Features

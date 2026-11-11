@@ -1,6 +1,6 @@
 {
   "name": "webpullbook",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "private": true,
   "type": "module",
   "description": "Zero-dependency Manifest V3 browser extension that extracts serialized web fiction into EPUB 2/3, HTML, Markdown, and TXT.",
