@@ -876,10 +876,18 @@ function updateTypographyPreview() {
   el.classList.toggle('indent', indent);
 }
 
+function updateReaderPresetWarning() {
+  const warnEl = $('legacy-preset-warning');
+  if (!warnEl) return;
+  const isLegacy = ($('reader-preset')?.value || state.options.readerPreset) === 'legacy';
+  warnEl.classList.toggle('hidden', !isLegacy);
+}
+
 function applyReaderPreset(presetKey) {
   const cfg = READER_PRESETS[presetKey];
   if (!cfg) {
     state.options.readerPreset = 'custom';
+    updateReaderPresetWarning();
     return;
   }
   state.options = { ...state.options, ...cfg, readerPreset: presetKey };
@@ -1007,6 +1015,7 @@ function syncOptionsToUi() {
   $('opt-paragraph-indent').checked = Boolean(o.paragraphIndent);
   $('opt-stylesheet').value = o.stylesheet;
   $('reader-preset').value = detectMatchingReaderPreset(o);
+  updateReaderPresetWarning();
   updateTypographyPreview();
   updatePackButtonLabel();
   updateSaveLocationUi();
@@ -1071,6 +1080,7 @@ function readOptionsFromUi() {
   };
   state.options.readerPreset = detectMatchingReaderPreset(state.options);
   $('reader-preset').value = state.options.readerPreset;
+  updateReaderPresetWarning();
   if (state.options.parserId !== 'auto') {
     state.activeParser = getParserById(state.options.parserId) || state.activeParser;
   }

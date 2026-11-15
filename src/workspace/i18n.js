@@ -279,6 +279,8 @@ export const I18N_DICTIONARY = {
     presetTextOnly: 'Somente Texto',
     presetLegacy: '⚠️ Padrão Antigo',
     presetLegacyTitle: 'Recomendado apenas para aparelhos antigos ou leitores que não abrem livros modernos',
+    presetLegacyWarning:
+      '⚠️ Atenção: Padrão Antigo gera EPUB 2 clássico (sem navegação moderna nav.xhtml e com recursos HTML5/CSS3 limitados). Use apenas em aparelhos antigos ou leitores que não abrem EPUB 3.',
     presetCustom: 'Personalizado',
     optGrayscaleImages: 'Converter imagens e capa para escala de cinza (otimizado para E-Ink)',
     btnPreviewChapter: 'Pré-visualizar',
@@ -624,6 +626,8 @@ export const I18N_DICTIONARY = {
     presetTextOnly: 'Text Only',
     presetLegacy: '⚠️ Legacy Default',
     presetLegacyTitle: 'Recommended only for older devices or e-readers that cannot open modern books',
+    presetLegacyWarning:
+      '⚠️ Notice: Legacy Default generates classic EPUB 2 (no modern nav.xhtml TOC and limited HTML5/CSS3 support). Use only for older devices or e-readers that cannot open EPUB 3.',
     presetCustom: 'Custom',
     optGrayscaleImages: 'Convert images and cover to grayscale (optimized for E-Ink)',
     btnPreviewChapter: 'Preview',

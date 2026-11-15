@@ -1546,6 +1546,21 @@ dialog.wide-dialog {
   word-break: break-all;
 }
 
+.inline-warn-note {
+  margin-top: 0.35rem;
+  padding: 0.45rem 0.65rem;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--warn) 55%, transparent);
+  background: color-mix(in srgb, var(--warn) 13%, transparent);
+  color: var(--warn);
+  font-size: 0.8rem;
+  line-height: 1.38;
+}
+
+.inline-warn-note:not(.hidden) {
+  animation: wpbBannerDrop 0.18s ease-out;
+}
+
 @keyframes wpbTabEnter {
   from {
     opacity: 0;

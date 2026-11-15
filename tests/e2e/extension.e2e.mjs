@@ -165,10 +165,20 @@ async function runE2E() {
     assert.equal(await page.isChecked('#opt-epub3'), false, 'Kindle preset should switch to EPUB 2');
     await page.selectOption('#reader-preset', 'legacy');
     assert.equal(await page.isChecked('#opt-epub3'), false, 'Legacy preset should switch to EPUB 2');
+    assert.equal(
+      await page.evaluate(() => !document.getElementById('legacy-preset-warning').classList.contains('hidden')),
+      true,
+      'Legacy warning note should be visible when legacy preset is active'
+    );
     await page.selectOption('#reader-preset', 'kobo');
     assert.equal(await page.isChecked('#opt-grayscale-images'), true, 'Kobo preset should enable E-Ink grayscale');
     await page.selectOption('#reader-preset', 'modern');
     assert.equal(await page.isChecked('#opt-epub3'), true, 'Modern preset should re-enable EPUB 3');
+    assert.equal(
+      await page.evaluate(() => document.getElementById('legacy-preset-warning').classList.contains('hidden')),
+      true,
+      'Legacy warning note should hide when modern preset is selected'
+    );
     assert.equal(await page.isChecked('#opt-grayscale-images'), false);
 
     // 3. Test Auto Cover generator, then restore mock cover URL for pack verification
