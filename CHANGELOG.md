@@ -2,6 +2,26 @@
 
 Todas as mudanças notáveis do **WebPullBook** serão documentadas neste arquivo.
 
+## [1.3.0] - 2026-11-15 (Beta)
+
+### Novidades & Compatibilidade / New Features & Compatibility
+- **Suporte ao Mozilla Firefox (128+):** Manifest V3 cross-browser (`background.scripts` + `browser_specific_settings.gecko`) e remoção automática do cabeçalho `Origin: moz-extension://` via `declarativeNetRequest` em `service-worker.js`, evitando bloqueios CORS ao buscar capítulos e capas no Firefox.
+- **Assistente Heurístico de Seletores CSS:** novo botão **Auto-detectar seletores** em **Opções Avançadas** que analisa o DOM do índice e de um capítulo de amostra (com fallback para Modo SPA) para sugerir automaticamente os seletores de lista, conteúdo e exclusões.
+- **Melhorias no Núcleo Genérico & Sanitizador:**
+  - Regra *"Innermost Node Wins"* em `GenericHtmlParser.findChapterContentRoot()` para priorizar o bloco real de prosa sobre containers externos com menus/notas.
+  - Detecção expandida em `BaseParser` para metadados JSON-LD (`genre`, `creativeWorkStatus`), listas `<dl>` (`Autor`, `Status`), sinopses (`[data-testid*="synopsis"]`, `[itemprop="description"]`), remoção de `<time>` dos títulos de capítulos, limpeza de `.sr-only` em `<h1>` e inferência de volumes a partir de cabeçalhos ancestrais.
+  - Preservação seletiva de âncoras intra-capítulo (`#id`) para notas de rodapé no `HtmlSanitizer` e remoção de classes *decoy* ocultas declaradas em `<style>` top-level.
+- **Novos Adaptadores Verificados:**
+  - **Royal Road** (`royalroad.js`), **Novel Mania** (`novelmania.js`) e **Scribble Hub** (`scribblehub.js`), incluindo paginação, ordenação cronológica, detecção de desafio anti-bot e fixtures/snapshots completos.
+
+### Interface & Experiência / UI & Accessibility
+- **Layout em 2 Colunas & Abas Acessíveis:** painel principal reorganizado em sidebar lateral (capa, metadados e configurações) e coluna de capítulos para eliminar espaços vazios, com abas renomeadas (`Obra`, `Biblioteca`, `Opções Avançadas`, `Logs`), navegação via teclado (`role="tablist"`/`tabpanel`) e responsividade aprimorada.
+- **Seletor Rápido com 4 Temas:** novos temas **Sépia** e **Meia-noite** somados a **Claro** e **Escuro** diretamente na barra superior ao lado do seletor de idioma.
+
+### Documentação & Qualidade / Docs & Testing
+- Documentação atualizada para incluir instalação no Firefox, novo layout/temas, lista completa de adaptadores e a filosofia **General Compatibility First** no `CONTRIBUTING.md` e `docs/COMPATIBILITY.md`.
+- Suíte ampliada para `30` testes passando (lint, sintaxe, CSP MV3, paridade i18n de 228 chaves, regressões de todos os adaptadores e validação real em Chromium e Mozilla Firefox 160).
+
 ## [1.2.1] - 2026-11-11 (Beta)
 
 ### Novidades & Melhorias / Improvements

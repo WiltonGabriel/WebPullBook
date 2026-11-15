@@ -3,7 +3,7 @@
 **🇧🇷 Português** | [🇺🇸 English](README.en.md)
 
 [![Manifest V3](https://img.shields.io/badge/Manifest-V3-4338ca?style=flat-square)](manifest.json)
-[![Versão](https://img.shields.io/badge/Vers%C3%A3o-1.2.1--beta-0ea5e9?style=flat-square)](https://github.com/WiltonGabriel/WebPullBook/releases)
+[![Versão](https://img.shields.io/badge/Vers%C3%A3o-1.3.0--beta-0ea5e9?style=flat-square)](https://github.com/WiltonGabriel/WebPullBook/releases)
 [![Dependências](https://img.shields.io/badge/Depend%C3%AAncias-Zero-16a34a?style=flat-square)](src/core/zip.js)
 [![Licença: MIT](https://img.shields.io/badge/Licen%C3%A7a-MIT-f59e0b?style=flat-square)](LICENSE)
 [![CI Validation](https://github.com/WiltonGabriel/WebPullBook/actions/workflows/ci.yml/badge.svg)](https://github.com/WiltonGabriel/WebPullBook/actions/workflows/ci.yml)
@@ -25,7 +25,7 @@ Ler obras longas com centenas de capítulos no navegador dificulta a leitura off
 - **Biblioteca & Detecção de Novos Capítulos:** Salve obras na aba **Biblioteca** (`chrome.storage.local`) e use **Carregar & Marcar Novos** para baixar apenas os capítulos lançados desde o último pacote.
 - **Modo Juntar Abas Abertas:** Capture abas HTTP/HTTPS abertas na janela atual e compile artigos ou capítulos em um único ebook.
 - **EPUB Limpo para Leitores Digitais:** Sanitização XHTML estrita ([sanitizer.js](src/core/sanitizer.js)) que preserva negrito, itálico, citações, alinhamentos e âncoras internas (como notas de rodapé) sem travar tamanhos em `px` ou cores que quebram o modo escuro, além de capa e otimização opcional de imagens.
-- **Multi-Navegador & Sem Dependências:** Funciona em **Chrome/Chromium** e **Mozilla Firefox 128+** em Manifest V3 puro, bilíngue (**pt-BR** / **en**) e com tema claro/escuro adaptativo.
+- **Multi-Navegador, Layout em 2 Colunas & 4 Temas:** Funciona em **Chrome/Chromium** e **Mozilla Firefox 128+** em Manifest V3 puro, com layout em 2 colunas (metadados e lista de capítulos lado a lado), abas acessíveis via teclado (`Obra`, `Biblioteca`, `Opções Avançadas`, `Logs`), interface bilíngue (**pt-BR** / **en**) e **4 temas** (**Claro**, **Escuro**, **Sépia** e **Meia-noite**) com seletor direto no topo.
 
 ---
 

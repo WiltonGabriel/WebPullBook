@@ -3,7 +3,7 @@
 [🇧🇷 Português](README.md) | **🇺🇸 English**
 
 [![Manifest V3](https://img.shields.io/badge/Manifest-V3-4338ca?style=flat-square)](manifest.json)
-[![Version](https://img.shields.io/badge/Version-1.2.1--beta-0ea5e9?style=flat-square)](https://github.com/WiltonGabriel/WebPullBook/releases)
+[![Version](https://img.shields.io/badge/Version-1.3.0--beta-0ea5e9?style=flat-square)](https://github.com/WiltonGabriel/WebPullBook/releases)
 [![Dependencies](https://img.shields.io/badge/Dependencies-Zero-16a34a?style=flat-square)](src/core/zip.js)
 [![License: MIT](https://img.shields.io/badge/License-MIT-f59e0b?style=flat-square)](LICENSE)
 [![CI Validation](https://github.com/WiltonGabriel/WebPullBook/actions/workflows/ci.yml/badge.svg)](https://github.com/WiltonGabriel/WebPullBook/actions/workflows/ci.yml)
@@ -25,7 +25,7 @@ Reading long serialized works in a browser tab is inconvenient offline or on e-i
 - **Built-in Library & New-Chapter Tracking:** Save series in the **Library** tab (`chrome.storage.local`) and click **Load & Select New** to pick only chapters published since your last export.
 - **Merge Open Tabs:** Capture open HTTP/HTTPS tabs in the current window and compile them into a single ebook.
 - **Clean E-Reader-First XHTML:** Strict XHTML sanitization ([sanitizer.js](src/core/sanitizer.js)) preserves bold, italic, quotes, alignments, and intra-chapter anchors (such as footnotes) without locking `px` font sizes or colors that break Dark Mode, plus cover extraction and optional image compression.
-- **Cross-Browser & Zero Dependencies:** Runs on **Chrome/Chromium** and **Mozilla Firefox 128+** as a pure Manifest V3 extension with bilingual (**PT-BR** / **EN**) and light/dark UI.
+- **Cross-Browser, 2-Column Layout & 4 Themes:** Runs on **Chrome/Chromium** and **Mozilla Firefox 128+** as a zero-dependency Manifest V3 extension, featuring a responsive 2-column workspace (metadata sidebar + chapters panel), keyboard-accessible ARIA tabs (`Series`, `Library`, `Advanced Options`, `Logs`), bilingual UI (**PT-BR** / **EN**), and a **4-theme** quick picker (**Light**, **Dark**, **Sepia**, **Midnight**) in the top bar.
 
 ---
 
