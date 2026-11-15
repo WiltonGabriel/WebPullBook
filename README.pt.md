@@ -27,14 +27,14 @@ Ler obras longas, artigos ou séries com centenas de capítulos no navegador dif
 
 ### Principais Funcionalidades
 
-- **Motor Universal Inteligente (`Universal Smart Extractor`) & Regras por Domínio:** Extrai séries automaticamente a partir de padrões universais (JSON-LD/Schema.org, Open Graph, listas semânticas, densidade de texto no estilo Readability e rastreamento automático de links *"Próximo Capítulo"* quando não há sumário). Nas **Opções Avançadas**, você conta com **assistente heurístico de seletores CSS**, **filtro de texto / Regex** para limpar assinaturas ou avisos repetitivos, e **regras reutilizáveis por domínio** (além da escolha manual de parser).
-- **Pré-visualização de Capítulo (*Dry-Run*) & Capa Flexível:** Pré-visualize qualquer capítulo limpo antes de baixar toda a obra, envie uma **capa local** (`.jpg`/`.png`/`.webp`) ou use o **gerador automático de capa** em tela cheia quando o site não fornece imagem.
-- **Perfis Rápidos de Leitor & Detecção Automática de Volumes:** Escolha com 1 clique perfis prontos (**Padrão Moderno**, **Kindle**, **Kobo e Leitores Digitais** com escala de cinza E-Ink, **Somente Texto** ou **Padrão Antigo** para aparelhos legados). Os volumes são detectados por seções recolhíveis, cabeçalhos, prefixos ou URLs (com botão **Tentar novamente** e editor manual por faixas/lotes).
+- **Fallback SPA Automático, Auto-detecção Inteligente & Captura Visual (`🎯 Apontar`):** Extrai séries automaticamente a partir de padrões universais (JSON-LD/Schema.org, Open Graph, listas semânticas, densidade de texto no estilo Readability e rastreamento de *"Próximo Capítulo"*). Se a página carregar vazia em JS (`#root`, `#app`, `#__next`) ou com zero capítulos no HTML estático, o **Modo SPA / JavaScript** é ativado automaticamente e os **seletores CSS** são preenchidos sem esforço manual. Para ajuste fino, clique em **🎯 Apontar** na página real, use **filtros / Regex** e **regras salvas por domínio**.
+- **Pré-visualização, Edição Rápida, Mesclagem de Capítulos & Capa Flexível:** Pré-visualize capítulos limpos antes de baixar, clique em **Editar Capítulo** dentro da prévia para corrigir texto/título direto no cache (com selo `Editado`), use **Mesclar Selecionados** para unir capítulos, envie uma **capa local** (`.jpg`/`.png`/`.webp`/`.avif` com conversão automática para JPEG) ou gere capa automaticamente.
+- **Perfis Coloridos de Leitor, Notas Pop-up EPUB 3 & Volumes:** Aplique perfis em 1 clique (**Padrão Moderno**, **Kindle**, **Kobo e Leitores Digitais** preservando todas as cores para leitores P&B ou E-Ink colorido, **Somente Texto** e **Padrão Antigo** com aviso de compatibilidade). Ative **Notas Pop-up EPUB 3** (`epub:type="noteref"` + `<aside>`) e ajuste volumes automaticamente ou por faixas/lotes.
 - **Juntar Abas Abertas Interativo:** Ao clicar em **Juntar Abas**, um modal lista as abas HTTP/HTTPS detectadas já selecionadas, com **pré-visualização (👁️)**, reordenação, alternância entre janela atual ou todas as janelas e escolha entre **Mesmo livro**, **Mesmo livro dividido em Volumes** ou **Livros diferentes (1 EPUB separado por aba)**.
-- **Velocidade Paralela, Cache Local (`IndexedDB`) & Modo Seguro:** Ajuste **downloads simultâneos (1x a 6x)** para sites rápidos ou ative/desative o **Modo Seguro** a qualquer momento (limite de RPM, *jitter* aleatório e pausa automática em `HTTP 429`/`503`). Capítulos baixados ficam em cache local (**7 dias** por padrão) para retomar downloads interrompidos.
-- **Destino Personalizado & Organização de Pastas:** Salve na pasta **Downloads** ou escolha **qualquer pasta do computador** (`File System Access API`), defina o **nome da pasta principal**, escolha layouts prontos (`Pasta / Título`, `Pasta / Autor / Título`, `Autor / Título`, `Formato`, sem subpastas ou modelo personalizado com tokens como `%Root%/%Author%/%Title%`) e veja a **prévia ao vivo do caminho salvo**.
-- **Tipografia ao Vivo & Backup Modular:** Personalize fonte base, alinhamento, entrelinha e recuo com **pré-visualização ao vivo** e editor completo de CSS, além de exportação/importação de backup JSON (`opções + regras de domínio`) e confirmação de restauração por seção (**Restaurar Padrão**) ou global (**Restaurar Tudo**).
-- **Biblioteca & Checagem em Lote:** Salve obras na aba **Biblioteca** (`chrome.storage.local`), verifique todas de uma vez com **Verificar Todas** e use **Checar Novos** para selecionar apenas capítulos lançados desde o último pacote.
+- **Pausa/Cancelamento Sempre Visíveis, Cache (`IndexedDB`) & Modo Seguro:** Ajuste **downloads simultâneos (1x a 6x)** ou ative o **Modo Seguro** a qualquer momento (limite de RPM, *jitter* e pausa automática em `HTTP 429`/`503`). Pause, retome ou cancele exportações simples ou em lote pelo painel principal; capítulos baixados ficam em cache (**7 dias** padrão).
+- **Destino Personalizado & Organização de Pastas:** Salve na pasta **Downloads** ou escolha **qualquer pasta do computador** (`File System Access API`), defina o **nome da pasta principal**, escolha layouts prontos (`Pasta / Título`, `Pasta / Autor / Título`, `Autor / Título`, `Formato`, sem subpastas ou modelo `%Root%/%Author%/%Title%`) e veja a **prévia ao vivo do caminho**.
+- **Logs de Diagnóstico Detalhados & Tipografia ao Vivo:** Acompanhe logs técnicos `[NET]`, `[SPA]`, `[PARSER]`, `[BUILD]` e `[AUTO]` com filtros (**Todos**, **Avisos**, **Erros**), **Copiar Log** e **Baixar Log**. Personalize tipografia e CSS com prévia ao vivo e restauração confirmada por seção ou global.
+- **Biblioteca & Download Automático de Atualizações:** Salve obras na aba **Biblioteca** (`chrome.storage.local`), escaneie todas com **Verificar Todas**, selecione só lançamentos novos com **Checar Novos** ou baixe automaticamente todas as obras com capítulos novos em **Baixar Todas as Atualizações**.
 - **Multi-Navegador, Layout em 2 Colunas & 4 Temas:** Funciona em **Chrome/Chromium** e **Mozilla Firefox 128+** em Manifest V3 puro, com layout responsivo em 2 colunas, abas acessíveis via teclado, interface bilíngue (**pt-BR** / **en**) e seletor direto no topo (**Auto**, **Claro**, **Escuro**, **Sépia** e **Meia-noite**).
 
 ---
@@ -77,7 +77,7 @@ Compatível com **Firefox 128+** (Manifest V3):
 
 ### Configurando Qualquer Site sem Programar
 
-Caso um site utilize um layout HTML incomum ou renderize via JavaScript, abra **Opções Avançadas**, ative o **Modo SPA / JavaScript** se necessário e clique em **Auto-detectar seletores** para a heurística preencher os campos automaticamente (ou edite os seletores CSS manualmente se precisar refinar):
+Ao abrir um site desconhecido, o WebPullBook detecta automaticamente quando precisa ativar o **Modo SPA / JavaScript** e tenta preencher os seletores CSS sugeridos sem você precisar configurar nada. Se quiser ajustar manualmente em **Opções Avançadas**, use **🎯 Apontar** na página ou clique em **Auto-detectar seletores**:
 
 ```text
 Seleção de Parser:                   Genérico (Qualquer página HTML)
@@ -131,11 +131,19 @@ WebPullBook/
     │   ├── scribblehub.js        # Adaptador com paginação/AJAX e detecção anti-bot
     │   └── novelmania.js         # Adaptador para índice paginado via API e volumes
     └── workspace/
+        ├── chapters-ui.js        # Tabela de capítulos, volumes, edição na prévia e mesclagem
+        ├── export-runner.js      # Fila de exportação, Pausar/Cancelar, Modo Seguro e saída
         ├── i18n.js               # Dicionários e tradução da interface (PT / EN)
+        ├── library-ui.js         # Biblioteca salva, sessões de cache e lote de atualizações
+        ├── logger.js             # Logs de diagnóstico, filtros e relatório pós-exportação
+        ├── options-storage.js    # Opções persistentes, regras de domínio, perfis e prévia
+        ├── series-loader.js      # Carregamento da obra, auto-SPA e auto-seletores CSS
+        ├── state.js              # Estado centralizado, perfis e utilitários compartilhados
+        ├── tab-picker.js         # Modal de juntar abas e seletor visual ponto-a-ponto
         ├── theme-init.js         # Inicialização de tema sem FOUC
+        ├── workspace.css         # Estilos adaptativos claro/escuro/sépia/meia-noite
         ├── workspace.html        # Interface principal, Biblioteca e modais nativos
-        ├── workspace.css         # Estilos adaptativos claro/escuro
-        └── workspace.js          # Estado, cache, resiliência parcial e fila de download
+        └── workspace.js          # Orquestrador enxuto ligando eventos e ciclo de vida
 ```
 
 ---
@@ -152,9 +160,9 @@ WebPullBook/
 
 ## Perguntas Frequentes (FAQ)
 
-- **Funciona no Kindle e no Kobo?** Sim! Você pode selecionar o perfil **Kindle** (gera EPUB 2 clássico com JPEG otimizado, ideal para *Send to Kindle* e Calibre) ou **Kobo e Leitores Digitais** (converte capa e imagens internas para escala de cinza E-Ink).
+- **Funciona no Kindle e no Kobo?** Sim! Selecione o perfil **Kindle** (gera EPUB 2 clássico com JPEG otimizado, ideal para *Send to Kindle* e Calibre) ou **Kobo e Leitores Digitais** (EPUB 3 com imagens otimizadas mantendo todas as cores para leitores P&B ou E-Ink colorido).
 - **Os dados passam por algum servidor externo?** Não. Todo o download, limpeza HTML e empacotamento ZIP/EPUB acontece 100% localmente dentro do seu navegador, usando cookies da sua própria sessão apenas quando necessário.
-- **Um site específico não carregou os capítulos. O que fazer?** Clique em **Opções Avançadas → Auto-detectar seletores**, ative **Modo SPA / JavaScript** se o conteúdo carregar via script e salve uma **Regra por Domínio**. Você também pode abrir uma issue usando o template de suporte a sites!
+- **Um site específico não carregou os capítulos. O que fazer?** O WebPullBook já tenta SPA automático e heurística na hora do carregamento; para ajustes finos em sites exóticos, use **🎯 Apontar** nas **Opções Avançadas**, clique em **Auto-detectar seletores** e salve uma **Regra por Domínio** — ou abra uma issue!
 
 ---
 

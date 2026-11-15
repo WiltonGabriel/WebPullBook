@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { installDomGlobals } from './helpers/dom-shim.js';
-import { BaseParser, buildOutputPath, isAntiBotChallengeDocument, sanitizePathSegment } from '../src/core/parser-engine.js';
+import { BaseParser, buildOutputPath, generateCssSelector, isAntiBotChallengeDocument, sanitizePathSegment } from '../src/core/parser-engine.js';
 import { ParserRegistry, loadSeriesWithParser, parserRegistry } from '../src/parsers/index.js';
 import { wpLightNovelParser } from '../src/parsers/wp-lightnovel.js';
 import { madaraThemeParser } from '../src/parsers/madara-theme.js';
@@ -793,4 +793,39 @@ test('buildOutputPath and sanitizePathSegment handle custom root folders, preset
     }),
     'João/Saga/Saga.epub'
   );
+});
+
+test('generateCssSelector produces reusable list, content, and exclude selectors', () => {
+  const doc = new DOMParser().parseFromString(
+    `<html><body>
+      <main id="reader-shell">
+        <ul class="chapters-nav">
+          <li><a href="/c1">Capítulo 1</a></li>
+          <li><a href="/c2">Capítulo 2</a></li>
+          <li><a href="/c3">Capítulo 3</a></li>
+        </ul>
+        <article class="chapter-body">
+          <div class="promo-banner active">Anúncio</div>
+          <p class="story-line">Era uma vez.</p>
+        </article>
+      </main>
+    </body></html>`,
+    'text/html'
+  );
+
+  const firstLink = doc.querySelector('.chapters-nav a');
+  const articleEl = doc.querySelector('.chapter-body');
+  const adBanner = doc.querySelector('.promo-banner');
+
+  const listSel = generateCssSelector(firstLink, 'list');
+  assert.equal(listSel, 'ul.chapters-nav a');
+  assert.equal(doc.querySelectorAll(listSel).length, 3);
+
+  const contentSel = generateCssSelector(articleEl, 'content');
+  assert.equal(contentSel, 'article.chapter-body');
+  assert.equal(doc.querySelectorAll(contentSel).length, 1);
+
+  const excludeSel = generateCssSelector(adBanner, 'exclude');
+  assert.equal(excludeSel, 'div.promo-banner');
+  assert.equal(doc.querySelectorAll(excludeSel).length, 1);
 });

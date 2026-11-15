@@ -25,7 +25,7 @@ WebPullBook uses native ES modules and browser APIs with **zero build steps or n
 - [src/core/epub-builder.js](src/core/epub-builder.js) — EPUB 2/3 packaging (`content.opf`, `toc.ncx`, `nav.xhtml`, cover conversion).
 - [src/exporters/](src/exporters/index.js) — `BaseExporter` and `ExporterRegistry` (`epub`, `html`, `md`, `txt`).
 - [src/parsers/](src/parsers/index.js) — `ParserRegistry` and `BaseParser` subclasses.
-- [src/workspace/](src/workspace/workspace.html) — Adaptive light/dark UI, volume editor, and download manager.
+- [src/workspace/](src/workspace/workspace.html) — Modular MV3 workspace (`state.js`, `logger.js`, `options-storage.js`, `chapters-ui.js`, `series-loader.js`, `export-runner.js`, `library-ui.js`, `tab-picker.js`, and `workspace.js`) with adaptive themes, volume/chapter editor, and download manager.
 
 ## Adding a Parser Adapter
 

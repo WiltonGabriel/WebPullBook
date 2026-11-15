@@ -27,14 +27,14 @@ Reading long serialized works, documentation, or multi-part articles in browser 
 
 ### Key Features
 
-- **Universal Smart Extractor & Saved Domain Rules:** Automatically extracts series from universal web patterns (JSON-LD/Schema.org, Open Graph, semantic lists, Readability-style prose scoring, and sequential *"Next Chapter"* link crawling when no TOC page exists). In **Advanced Options**, use the **heuristic CSS selector assistant**, **text / Regex strip filters** to remove repetitive notices, and **saved per-domain rules** (with optional manual parser override).
-- **Chapter Dry-Run Preview & Flexible Cover Tools:** Preview any sanitized chapter before downloading a full book, **upload a local cover** (`.jpg`/`.png`/`.webp`), or use the **built-in cover generator** when a site provides no artwork.
-- **Quick Reader Profiles & Automatic Volume Detection:** Apply one-click reader profiles (**Modern Default**, **Kindle**, **Kobo & E-Readers** with E-Ink grayscale conversion, **Text Only**, or **Legacy Default**). Volumes are inferred from collapsible sections, headings, chapter labels, or URLs (with one-click **Re-detect Volumes** and manual range/batch tools).
+- **Automatic SPA Fallback, Smart Selector Prefill & Visual Picker:** Automatically extracts series using universal web patterns (JSON-LD/Schema.org, Open Graph, semantic lists, Readability-style prose scoring, and sequential *"Next Chapter"* crawling). When a site is an empty JS shell (`#root`, `#app`, `#__next`) or returns zero static chapters, **SPA / JavaScript Tab Mode** triggers automatically, and unknown sites automatically pre-fill **CSS selectors** cleanly. Need fine-tuning? Use **🎯 Point** to click elements visually on the page, **text / Regex strip filters**, or **saved per-domain rules**.
+- **Chapter Dry-Run Preview, Quick Edit & Chapter Merge:** Preview any sanitized chapter before downloading, switch to **Edit Chapter** inside the preview modal to fix typos or edit titles/content locally (saved to cache with an `Edited` badge), **Merge Selected** chapters into one, **upload a local cover** (`.jpg`/`.png`/`.webp`/`.avif` with auto JPEG conversion), or generate a cover automatically.
+- **Color-Safe Reader Profiles, EPUB 3 Pop-up Footnotes & Volume Detection:** Apply one-click reader profiles (**Modern Default**, **Kindle**, **Kobo & E-Readers** preserving full color for both monochrome and color E-Ink devices, **Text Only**, or **Legacy Default** with inline compatibility notice). Optionally convert footnotes into **EPUB 3 Pop-up Footnotes** (`epub:type="noteref"` + `<aside>`). Volumes are auto-inferred with **Re-detect Volumes** and range/batch editors.
 - **Interactive Merge Open Tabs Modal:** Clicking **Merge Tabs** lists detected HTTP/HTTPS tabs pre-selected by default with **per-tab preview (👁️)**, reordering, current/all-window scope toggle, and three organization modes (**Same Book**, **Same Book Split into Volumes**, or **Separate Books — 1 standalone EPUB per tab**).
-- **Parallel Concurrency, Local Cache (`IndexedDB`) & Safe Mode:** Configure **concurrent downloads (1x–6x)** for fast sites or toggle **Safe Mode** at any time (RPM throttling, jitter, and automatic pause on `HTTP 429`/`503`). Fetched chapters stay cached locally (**7 days** default TTL) for instant resume.
+- **Always-Available Pause/Cancel, Concurrency & Local Cache (`IndexedDB`):** Configure **concurrent downloads (1x–6x)** or toggle **Safe Mode** at any time (RPM throttling, jitter, and automatic pause on `HTTP 429`/`503`). Use the always-visible **Pause / Resume** and **Cancel** buttons during single or batch runs; fetched chapters stay cached locally (**7 days** default TTL) for instant resume.
 - **Custom Output Destination & Folder Organization:** Save into browser **Downloads** or pick **any local folder on your PC** (`File System Access API`), customize the **root folder name**, choose subfolder layouts (`Root / Title`, `Root / Author / Title`, `Author / Title`, `Format`, flat, or custom `%Root%/%Author%/%Title%` templates), and inspect a **live output path preview**.
-- **Live Typography Preview & Modular Backup:** Customize font family, alignment, line height, and indentation with a **live typography preview** and full EPUB CSS editor, plus full JSON backup (`options + domain rules`) and **confirmed** per-section **Restore Default** or global **Restore All** resets.
-- **Built-in Library & Batch Update Checking:** Save series in the **Library** tab (`chrome.storage.local`), run **Check All** to scan every tracked book in one click, and use **Check New** to select only chapters published since your last export.
+- **Diagnostic Execution Logs & Live Typography Preview:** Inspect detailed `[NET]`, `[SPA]`, `[PARSER]`, `[BUILD]`, and `[AUTO]` execution traces with **All / Warnings / Errors** filters, **Copy Log**, and **Download Log**. Customize font family, alignment, line height, and indentation with live preview, CSS editor, and confirmed modular resets.
+- **Built-in Library & One-Click Batch Updates:** Save series in the **Library** tab (`chrome.storage.local`), run **Check All** to scan every tracked book, select only unread releases with **Check New**, or click **Download All Updates** to check and export all updated series in a single queued batch.
 - **Cross-Browser, 2-Column Layout & 4 Themes:** Runs on **Chrome/Chromium** and **Mozilla Firefox 128+** in pure Manifest V3 with a responsive 2-column layout, keyboard-accessible ARIA tabs, bilingual UI (**PT-BR** / **EN**), and a top-bar theme picker (**Auto**, **Light**, **Dark**, **Sepia**, **Midnight**).
 
 ---
@@ -77,7 +77,7 @@ Compatible with **Firefox 128+** (Manifest V3):
 
 ### Customizing Any Website Without Code
 
-If a site uses an uncommon HTML layout or client-side JavaScript rendering, open **Advanced Options**, enable **SPA / JavaScript Mode** if needed, and click **Auto-detect selectors** so the heuristic scanner fills in the fields automatically (or refine CSS selectors manually):
+When you load an unknown site, WebPullBook automatically checks whether **SPA / JavaScript Mode** is needed and pre-fills suggested CSS selectors whenever possible. To override or refine manually in **Advanced Options**, use **🎯 Point** directly on the page or click **Auto-detect selectors**:
 
 ```text
 Parser Selection:                    Generic (Any HTML page)
@@ -131,11 +131,19 @@ WebPullBook/
     │   ├── scribblehub.js        # Adapter with AJAX/tab TOC & anti-bot challenge check
     │   └── novelmania.js         # Adapter for API-paginated TOC & volume grouping
     └── workspace/
+        ├── chapters-ui.js        # Chapter table, volumes, preview quick-edit & merge modal
+        ├── export-runner.js      # Export queue, Pause/Cancel, Safe Mode & file output
         ├── i18n.js               # Bilingual UI dictionary & DOM translator (PT / EN)
+        ├── library-ui.js         # Saved series library, cache sessions & batch updates
+        ├── logger.js             # Diagnostic execution logs, filters & issue report
+        ├── options-storage.js    # Persistent options, domain rules, presets & path preview
+        ├── series-loader.js      # Series loading, automatic SPA & selector detection
+        ├── state.js              # Centralized state, presets & shared utilities
+        ├── tab-picker.js         # Merge open tabs modal & visual point-and-click picker
         ├── theme-init.js         # Zero-FOUC theme bootstrapper
+        ├── workspace.css         # Adaptive light/dark/sepia/midnight styling
         ├── workspace.html        # Workspace UI layout, Library & native dialogs
-        ├── workspace.css         # Adaptive light/dark styling
-        └── workspace.js          # State, chapter cache, partial resilience & queue
+        └── workspace.js          # Thin event/lifecycle entrypoint wiring workspace modules
 ```
 
 ---
@@ -152,9 +160,9 @@ WebPullBook/
 
 ## Frequently Asked Questions (FAQ)
 
-- **Does it work with Kindle and Kobo?** Yes! Select the **Kindle** profile (classic EPUB 2 with optimized JPEG, ideal for *Send to Kindle* and Calibre) or **Kobo & E-Readers** (converts covers and inline images to E-Ink grayscale).
+- **Does it work with Kindle and Kobo?** Yes! Select the **Kindle** profile (classic EPUB 2 with optimized JPEG covers/images, ideal for *Send to Kindle* and Calibre) or **Kobo & E-Readers** (EPUB 3 with optimized image sizing and full color preserved for monochrome and color E-Ink readers).
 - **Does any data leave my browser?** No. All fetching, HTML sanitization, and ZIP/EPUB packaging run 100% locally in your browser using your own session cookies only when required.
-- **What if a website fails to load chapters automatically?** Open **Advanced Options → Auto-detect selectors**, enable **SPA / JavaScript Mode** if the site renders client-side, and save a **Domain Rule**—or open an issue using our site-support template!
+- **What if a website fails to load chapters automatically?** WebPullBook tries automatic SPA rendering and heuristic selector detection automatically; for custom tweaks, use **🎯 Point** in **Advanced Options**, **Auto-detect selectors**, or save a **Domain Rule**—or open an issue using our site-support template!
 
 ---
 

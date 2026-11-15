@@ -215,3 +215,30 @@ test('HtmlSanitizer preserves referenced intra-chapter footnote anchors and drop
   assert.doesNotMatch(xhtml, /_Toc452663782/);
   assert.doesNotMatch(xhtml, /id="unused"/);
 });
+
+test('serializeChapterXhtml converts footnote targets to EPUB 3 pop-up aside elements when popupFootnotes=true', () => {
+  const root = parseHtmlBodyFragment(`
+    <p>Texto principal<a id="fnref1"></a><a href="#fn1">[1]</a> com detalhes.</p>
+    <p id="fn1"><a href="#fnref1">1</a> – Detalhe da nota de rodapé.</p>
+  `);
+
+  const { xmlDoc, nodes } = sanitizeChapterContent(root, 'https://example.com/cap-1');
+  const xhtml = serializeChapterXhtml({
+    title: 'Notas Pop-up',
+    xmlDoc,
+    nodes,
+    epub3: true,
+    popupFootnotes: true
+  });
+
+  const parsed = new DOMParser().parseFromString(xhtml, 'application/xhtml+xml');
+  assert.equal(parsed.querySelector('parsererror'), null);
+
+  assert.match(xhtml, /xmlns:epub="http:\/\/www\.idpf\.org\/2007\/ops"/);
+  assert.match(xhtml, /epub:type="noteref"/);
+  assert.match(xhtml, /<aside\b[^>]*epub:type="footnote"[^>]*id="fn1"/);
+
+  // Ensure ID is not duplicated on both <aside> and inner elements
+  const fn1Matches = xhtml.match(/\bid="fn1"/g) || [];
+  assert.equal(fn1Matches.length, 1);
+});

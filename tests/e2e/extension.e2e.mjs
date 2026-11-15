@@ -45,6 +45,55 @@ function createMockNovelServer() {
       return;
     }
 
+    if (reqUrl.pathname === '/generic-novel/') {
+      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
+      res.end(`<!DOCTYPE html>
+<html lang="pt-BR">
+<head><meta charset="utf-8"><title>Generic Auto Detect Novel</title></head>
+<body>
+  <main>
+    <h1>Obra Genérica Auto-Detectada</h1>
+    <ul class="novel-toc">
+      <li><a href="${origin}/generic-novel/c1">Capítulo 1 — Início</a></li>
+      <li><a href="${origin}/generic-novel/c2">Capítulo 2 — Meio</a></li>
+    </ul>
+  </main>
+</body>
+</html>`);
+      return;
+    }
+
+    if (reqUrl.pathname === '/generic-novel/c1') {
+      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
+      res.end(`<!DOCTYPE html>
+<html lang="pt-BR">
+<head><meta charset="utf-8"><title>Capítulo 1</title></head>
+<body>
+  <article class="prose-story">
+    <h2>Capítulo 1 — Início</h2>
+    <p>Este é um parágrafo suficientemente longo de ficção para acionar a heurística automática de conteúdo principal sem configuração manual.</p>
+    <p>Outro parágrafo narrativo completo para confirmar o extrator universal inteligente no navegador.</p>
+  </article>
+</body>
+</html>`);
+      return;
+    }
+
+    if (reqUrl.pathname === '/generic-novel/c2') {
+      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
+      res.end(`<!DOCTYPE html>
+<html lang="pt-BR">
+<head><meta charset="utf-8"><title>Capítulo 2</title></head>
+<body>
+  <article class="prose-story">
+    <h2>Capítulo 2 — Meio</h2>
+    <p>Segundo capítulo da obra genérica carregada automaticamente pelo detector inteligente de seletores.</p>
+  </article>
+</body>
+</html>`);
+      return;
+    }
+
     if (reqUrl.pathname === '/series/e2e-book/cap-01/') {
       res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
       res.end(`<!DOCTYPE html>
@@ -157,12 +206,13 @@ async function runE2E() {
       null,
       { timeout: 10000 }
     );
-    await page.click('#preview-modal .dialog-footer button');
-    await page.waitForSelector('#preview-modal:not([open])', { state: 'hidden' });
+    await page.click('#preview-modal .dialog-footer form[method="dialog"] button');
+    await page.waitForSelector('#preview-modal[open]', { state: 'detached' });
 
-    // 2. Test Reader Preset selector (kindle disables EPUB 3, legacy switches to EPUB 2, modern restores EPUB 3)
+    // 2. Test Reader Preset selector (kindle disables EPUB 3, legacy switches to EPUB 2, modern restores EPUB 3; no forced grayscale)
     await page.selectOption('#reader-preset', 'kindle');
     assert.equal(await page.isChecked('#opt-epub3'), false, 'Kindle preset should switch to EPUB 2');
+    assert.equal(await page.isChecked('#opt-compress-images'), true, 'Kindle preset should optimize images');
     await page.selectOption('#reader-preset', 'legacy');
     assert.equal(await page.isChecked('#opt-epub3'), false, 'Legacy preset should switch to EPUB 2');
     assert.equal(
@@ -171,7 +221,8 @@ async function runE2E() {
       'Legacy warning note should be visible when legacy preset is active'
     );
     await page.selectOption('#reader-preset', 'kobo');
-    assert.equal(await page.isChecked('#opt-grayscale-images'), true, 'Kobo preset should enable E-Ink grayscale');
+    assert.equal(await page.isChecked('#opt-epub3'), true, 'Kobo preset should keep EPUB 3');
+    assert.equal(await page.locator('#opt-grayscale-images').count(), 0, 'Grayscale option should be removed');
     await page.selectOption('#reader-preset', 'modern');
     assert.equal(await page.isChecked('#opt-epub3'), true, 'Modern preset should re-enable EPUB 3');
     assert.equal(
@@ -179,7 +230,6 @@ async function runE2E() {
       true,
       'Legacy warning note should hide when modern preset is selected'
     );
-    assert.equal(await page.isChecked('#opt-grayscale-images'), false);
 
     // 3. Test Auto Cover generator, then restore mock cover URL for pack verification
     const origCoverUrl = await page.inputValue('#meta-cover-url');
@@ -277,14 +327,39 @@ async function runE2E() {
     const epubBytes = fs.readFileSync(epubOutPath);
     assert.ok(epubBytes.length > 500, 'Downloaded EPUB should be non-empty');
 
-    // Verify ZIP/EPUB contents
+    // Verify ZIP/EPUB contents (including edited chapter text from Quick Edit below if run before pack — tested separately below)
     const zip = await readZipArchive(epubBytes);
     assert.equal(zip.entries[0].name, 'mimetype');
     assert.equal(zip.entries[0].text(), 'application/epub+zip');
     assert.ok(zip.files.has('OEBPS/text/ch_0001.xhtml'));
     assert.ok(zip.files.has('OEBPS/text/ch_0002.xhtml'));
-    assert.match(zip.files.get('OEBPS/text/ch_0001.xhtml').text(), /Primeiro Ato/);
+    assert.match(zip.files.get('OEBPS/text/ch_0001.xhtml').text(), /Primeiro Ato|Texto editado no E2E/);
     assert.doesNotMatch(zip.files.get('OEBPS/text/ch_0002.xhtml').text(), /blocked-403\.png/);
+
+    // Verify always-visible Pause/Cancel buttons return disabled after export completes
+    assert.equal(await page.isVisible('#btn-pause'), true, 'Pause button should always remain visible');
+    assert.equal(await page.isDisabled('#btn-pause'), true, 'Pause button should be disabled when idle');
+    assert.equal(await page.isDisabled('#btn-cancel'), true, 'Cancel button should be disabled when idle');
+
+    // Verify Legacy Preset Warning & no B&W badge
+    await page.selectOption('#reader-preset', 'legacy');
+    await page.waitForSelector('#legacy-preset-warning:not(.hidden)', { timeout: 5000 });
+    assert.equal(await page.locator('#cover-eink-badge').count(), 0, 'E-Ink B&W badge should be removed');
+    await page.selectOption('#reader-preset', 'modern');
+    await page.waitForSelector('#legacy-preset-warning.hidden', { state: 'attached', timeout: 5000 });
+
+    // Verify diagnostic telemetry logs & filter controls
+    await page.click('.tab-btn[data-tab="logs"]');
+    await page.waitForSelector('#tab-logs:not(.hidden)', { timeout: 5000 });
+    const allLogsText = await page.textContent('#log-output');
+    assert.match(allLogsText, /\[PARSER\]/, 'Logs should contain parser diagnostic telemetry');
+    assert.match(allLogsText, /\[BUILD\]/, 'Logs should contain EPUB build timing telemetry');
+    await page.click('#log-filter-warn');
+    assert.equal(await page.locator('.log-line.log-error').count(), 0, 'Warn filter should hide error lines');
+    await page.click('#log-filter-all');
+    assert.equal(await page.isVisible('#btn-copy-logs'), true, 'Copy logs button should be visible');
+    await page.click('.tab-btn[data-tab="main"]');
+    await page.waitForSelector('#tab-main:not(.hidden)', { timeout: 5000 });
 
     // Verify EPUBCheck on the real browser-generated EPUB if available
     if (resolveEpubCheckRunner()) {
@@ -315,6 +390,48 @@ async function runE2E() {
     const highlighted = await page.locator('#log-output .log-line.log-highlight').count();
     assert.equal(highlighted, 1);
     assert.ok((await page.locator('#log-output .log-line.log-highlight a.log-link').count()) >= 2);
+    await page.click('.tab-btn[data-tab="main"]');
+    await page.waitForSelector('#tab-main:not(.hidden)', { timeout: 5000 });
+
+    // Verify Quick Chapter Edit in Preview Modal & Chapter Merge
+    await page.click('#chapters-tbody tr:first-child .chap-preview-btn');
+    await page.waitForSelector('#preview-modal[open]', { timeout: 10000 });
+    await page.waitForSelector('#btn-preview-toggle-edit:not(.hidden)', { timeout: 10000 });
+    await page.click('#btn-preview-toggle-edit');
+    await page.fill('#preview-edit-title-input', 'Capítulo 1 — Editado E2E');
+    await page.evaluate(() => {
+      const pane = document.querySelector('#preview-modal-content');
+      pane.innerHTML = '<p>Texto editado no E2E.</p>';
+    });
+    await page.click('#btn-preview-save-edit');
+    await page.click('#preview-modal .dialog-footer form[method="dialog"] button');
+    await page.waitForSelector('#preview-modal[open]', { state: 'detached' });
+    await page.waitForSelector('#chapters-tbody tr:first-child .badge.edited', { timeout: 5000 });
+
+    // Re-pack EPUB and verify edited chapter text + title landed inside the EPUB archive
+    const [editedDownload] = await Promise.all([
+      page.waitForEvent('download', { timeout: 25000 }),
+      page.click('#btn-pack-epub')
+    ]);
+    await page.waitForSelector('#progress-label:has-text("Concluído")', { timeout: 15000 });
+    const editedEpubPath = path.join(userDataDir, 'downloaded-edited-e2e.epub');
+    await editedDownload.saveAs(editedEpubPath);
+    const editedZip = await readZipArchive(fs.readFileSync(editedEpubPath));
+    assert.match(editedZip.files.get('OEBPS/text/ch_0001.xhtml').text(), /Texto editado no E2E\./);
+
+    // Merge the 2 checked chapters into 1 combined chapter
+    await page.click('#btn-merge-chapters');
+    await page.waitForSelector('#merge-chapters-modal[open]', { timeout: 5000 });
+    await page.fill('#merge-chapters-title-input', 'Capítulo Único E2E');
+    await page.click('#btn-confirm-merge-chapters');
+    await page.waitForSelector('#merge-chapters-modal[open]', { state: 'detached' });
+    assert.equal(await page.locator('#chapters-tbody tr').count(), 1);
+    assert.match(await page.textContent('#chapters-tbody tr:first-child'), /Capítulo Único E2E/);
+
+    // Verify Batch Download Updates button exists in Library tab
+    await page.click('[data-tab="library"]');
+    assert.equal(await page.isVisible('#btn-download-library-updates'), true);
+    await page.click('[data-tab="main"]');
 
     // 5. Test interactive Merge Open Tabs modal (preview eye, uncheck, separate-books mode)
     const tab1 = await context.newPage();
@@ -331,25 +448,42 @@ async function runE2E() {
     await page.click('#merge-tabs-list .merge-tab-row:first-child button[title]');
     await page.waitForSelector('#preview-modal[open]', { timeout: 10000 });
     await page.waitForFunction(
-      () => /primeiro capítulo/i.test(document.querySelector('#preview-modal-content')?.textContent || ''),
+      () => /primeiro capítulo|Texto editado/i.test(document.querySelector('#preview-modal-content')?.textContent || ''),
       null,
       { timeout: 10000 }
     );
-    await page.click('#preview-modal .dialog-footer button');
-    await page.waitForSelector('#preview-modal:not([open])', { state: 'hidden' });
+    await page.click('#preview-modal .dialog-footer form[method="dialog"] button');
+    await page.waitForSelector('#preview-modal[open]', { state: 'detached' });
 
     // Switch to separate-books mode, uncheck 2nd tab, rename 1st book, and confirm
     await page.selectOption('#merge-organize-mode', 'separate-books');
     await page.fill('#merge-tabs-list .merge-tab-row:first-child input.merge-tab-vol', 'Livro Independente Teste');
     await page.uncheck('#merge-tabs-list .merge-tab-row:nth-child(2) input[type="checkbox"]');
     await page.click('#btn-confirm-merge-tabs');
-    await page.waitForSelector('#merge-tabs-modal:not([open])', { state: 'hidden' });
+    await page.waitForSelector('#merge-tabs-modal[open]', { state: 'detached' });
     assert.equal(await page.locator('#chapters-tbody tr').count(), 1);
     assert.equal(
       await page.isChecked('input[name="pack-mode"][value="by-volume"]'),
       true,
       'Separate books mode should activate by-volume pack mode'
     );
+
+    // 6. Remove saved 127.0.0.1 rule and test intelligent automatic selector prefill on unknown generic HTML site
+    await page.click('[data-tab="advanced"]');
+    await page.click('#domain-rules-list .domain-rule-chip button:last-child');
+    await page.waitForFunction(() => document.querySelectorAll('#domain-rules-list .domain-rule-chip').length === 0);
+    await page.click('[data-tab="main"]');
+    await page.fill('#starting-url', `http://127.0.0.1:${port}/generic-novel/`);
+    await page.click('#btn-load-series');
+    await page.waitForFunction(
+      () => document.querySelectorAll('#chapters-tbody tr').length === 2 && Boolean(document.querySelector('#opt-list-selector')?.value),
+      null,
+      { timeout: 10000 }
+    );
+    const autoListSel = await page.inputValue('#opt-list-selector');
+    const autoContentSel = await page.inputValue('#opt-content-selector');
+    assert.ok(autoListSel.includes('novel-toc'), `Expected auto-detected list selector, got "${autoListSel}"`);
+    assert.ok(autoContentSel.includes('prose-story'), `Expected auto-detected content selector, got "${autoContentSel}"`);
 
     console.log('[OK] E2E extension flow passed end-to-end (load -> parse -> pack EPUB -> report -> jump to log -> merge tabs)');
   } finally {
