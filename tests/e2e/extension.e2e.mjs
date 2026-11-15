@@ -254,6 +254,14 @@ async function runE2E() {
     await page.selectOption('#adv-reader-preset', 'kindle-modern');
     assert.equal(await page.inputValue('#reader-preset'), 'kindle-modern', 'Main preset should sync from Advanced');
     assert.equal(await page.isChecked('#opt-epub3'), true);
+    // Presets are fixed: ANY advanced option edit (even one outside the preset fields) switches to Custom
+    await page.selectOption('#adv-reader-preset', 'kobo');
+    assert.equal(await page.inputValue('#reader-preset'), 'kobo');
+    await page.fill('#opt-delay', '123');
+    await page.dispatchEvent('#opt-delay', 'change');
+    assert.equal(await page.inputValue('#adv-reader-preset'), 'custom', 'Editing delay must switch Advanced preset to custom');
+    assert.equal(await page.inputValue('#reader-preset'), 'custom', 'Editing delay must switch Main preset to custom');
+    await page.selectOption('#adv-reader-preset', 'kindle-modern');
     await page.fill('#opt-img-res', '900');
     await page.dispatchEvent('#opt-img-res', 'change');
     assert.equal(await page.inputValue('#adv-reader-preset'), 'custom', 'Manual change should switch Advanced preset to custom');

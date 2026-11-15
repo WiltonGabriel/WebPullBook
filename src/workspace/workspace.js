@@ -179,7 +179,7 @@ function wireEvents() {
   $('opt-safe-mode').addEventListener('change', async () => {
     const val = $('opt-safe-mode').checked;
     $('opt-safe-mode-quick').checked = val;
-    readOptionsFromUi();
+    readOptionsFromUi({ markCustom: true });
     await saveOptions();
   });
 
@@ -511,7 +511,7 @@ function wireEvents() {
   const typoIds = ['opt-font-family', 'opt-text-align', 'opt-line-height', 'opt-paragraph-indent'];
   for (const tid of typoIds) {
     $(tid).addEventListener('change', async () => {
-      readOptionsFromUi();
+      readOptionsFromUi({ markCustom: true });
       const regenerated = buildEpubStylesheet({
         fontFamily: state.options.fontFamily,
         textAlign: state.options.textAlign,
@@ -527,9 +527,9 @@ function wireEvents() {
 
   const advInputs = document.querySelectorAll('#tab-advanced input, #tab-advanced select, #tab-advanced textarea');
   for (const el of advInputs) {
-    if (typoIds.includes(el.id) || el.id === 'opt-safe-mode' || el.id === 'adv-reader-preset') continue;
+    if (typoIds.includes(el.id) || el.id === 'opt-safe-mode' || el.id === 'adv-reader-preset' || el.type === 'file') continue;
     el.addEventListener('change', async () => {
-      readOptionsFromUi();
+      readOptionsFromUi({ markCustom: true });
       await saveOptions();
     });
   }

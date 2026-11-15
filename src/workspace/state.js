@@ -6,7 +6,7 @@ import { translate } from './i18n.js';
 export const DEFAULT_OPTIONS = {
   uiLang: 'pt',
   theme: 'system',
-  readerPreset: 'custom',
+  readerPreset: 'modern',
   outputFormat: 'epub',
   saveTargetMode: 'downloads',
   customDirName: '',
@@ -185,10 +185,25 @@ export function t(key, vars = {}) {
 
 export function detectMatchingReaderPreset(opts) {
   for (const [key, cfg] of Object.entries(READER_PRESETS)) {
-    const matches = Object.entries(cfg).every(([field, expected]) => opts[field] === expected);
-    if (matches) return key;
+    if (presetMatches(key, opts)) return key;
   }
   return 'custom';
+}
+
+function presetMatches(key, opts) {
+  const cfg = READER_PRESETS[key];
+  return Boolean(cfg) && Object.entries(cfg).every(([field, expected]) => opts[field] === expected);
+}
+
+/**
+ * Presets are fixed. A preset stays selected only while every one of its fields still matches;
+ * 'custom' is sticky until the user explicitly picks a preset again.
+ */
+export function resolveReaderPreset(opts) {
+  const key = opts.readerPreset;
+  if (key === 'custom') return 'custom';
+  if (presetMatches(key, opts)) return key;
+  return detectMatchingReaderPreset(opts);
 }
 
 export function normalizeRuleDomain(rawUrl) {

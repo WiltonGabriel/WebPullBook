@@ -6,7 +6,7 @@ import {
   $,
   DEFAULT_OPTIONS,
   READER_PRESETS,
-  detectMatchingReaderPreset,
+  resolveReaderPreset,
   normalizeRuleDomain,
   state,
   t
@@ -543,7 +543,8 @@ export function syncOptionsToUi() {
   $('opt-line-height').value = o.lineHeight ?? 1.55;
   $('opt-paragraph-indent').checked = Boolean(o.paragraphIndent);
   $('opt-stylesheet').value = o.stylesheet;
-  const detectedPreset = detectMatchingReaderPreset(o);
+  const detectedPreset = resolveReaderPreset(o);
+  o.readerPreset = detectedPreset;
   $('reader-preset').value = detectedPreset;
   if ($('adv-reader-preset')) $('adv-reader-preset').value = detectedPreset;
   updateReaderPresetWarning();
@@ -554,13 +555,15 @@ export function syncOptionsToUi() {
   updateCoverPreview();
 }
 
-export function readOptionsFromUi() {
+export function readOptionsFromUi({ markCustom = false } = {}) {
+  const prevPreset = state.options.readerPreset;
   const ttlParsed = parseInt($('opt-cache-ttl').value, 10);
   const concurrencyParsed = parseInt($('opt-concurrency').value, 10);
   const retriesParsed = parseInt($('opt-retries').value, 10);
   const renderWaitParsed = parseInt($('opt-render-wait-ms').value, 10);
   const qualityParsed = parseInt($('opt-image-quality').value, 10);
   state.options = {
+    readerPreset: markCustom ? 'custom' : prevPreset,
     uiLang: $('ui-lang-top').value || 'pt',
     theme: $('ui-theme-top').value || 'system',
     outputFormat: $('output-format').value || 'epub',
@@ -611,7 +614,7 @@ export function readOptionsFromUi() {
     paragraphIndent: $('opt-paragraph-indent').checked,
     stylesheet: $('opt-stylesheet').value
   };
-  state.options.readerPreset = detectMatchingReaderPreset(state.options);
+  state.options.readerPreset = resolveReaderPreset(state.options);
   $('reader-preset').value = state.options.readerPreset;
   if ($('adv-reader-preset')) $('adv-reader-preset').value = state.options.readerPreset;
   updateReaderPresetWarning();
