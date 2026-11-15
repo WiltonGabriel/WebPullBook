@@ -374,11 +374,13 @@ export function extractCleanSynopsis(container) {
 const RATE_LIMIT_TEXT_RX =
   /wordfence|rate[\s_-]?limit|too many requests|exceeded the maximum|acesso.+limitado|temporarily blocked|locked out/i;
 
-export async function fetchHtmlDocument(url, signal) {
+export async function fetchHtmlDocument(url, signal, onLog = null) {
+  const startedAt = Date.now();
   const response = await fetch(url, {
     credentials: 'include',
     signal
   });
+  const elapsedMs = Date.now() - startedAt;
   if (!response.ok) {
     let bodySnippet = '';
     try {
@@ -395,9 +397,13 @@ export async function fetchHtmlDocument(url, signal) {
     err.isRateLimit =
       response.status === 429 ||
       (response.status === 503 && RATE_LIMIT_TEXT_RX.test(bodySnippet));
+    onLog?.(`[NET] HTTP ${response.status} (${elapsedMs} ms) -> ${url}`, err.isRateLimit ? 'warn' : 'debug');
     throw err;
   }
   const html = await response.text();
+  const kb = (html.length / 1024).toFixed(1);
+  const redirectedNote = response.url && response.url !== url ? ` -> redirecionado para ${response.url}` : '';
+  onLog?.(`[NET] HTTP ${response.status} (${kb} KB, ${elapsedMs} ms) ${url}${redirectedNote}`, 'debug');
   return new DOMParser().parseFromString(html, 'text/html');
 }
 
@@ -418,11 +424,11 @@ export function sleep(ms, signal) {
   });
 }
 
-export async function fetchWithRetry(url, { retries = 2, signal } = {}) {
+export async function fetchWithRetry(url, { retries = 2, signal, onLog = null } = {}) {
   let attempt = 0;
   while (true) {
     try {
-      return await fetchHtmlDocument(url, signal);
+      return await fetchHtmlDocument(url, signal, onLog);
     } catch (err) {
       if (err.name === 'AbortError') throw err;
       // Do not hammer rate-limiting firewalls with rapid retries
@@ -430,7 +436,9 @@ export async function fetchWithRetry(url, { retries = 2, signal } = {}) {
       const retryable = !err.status || err.status >= 500;
       if (!retryable || attempt >= retries) throw err;
       attempt += 1;
-      await sleep(1200 * attempt, signal);
+      const waitMs = 1200 * attempt;
+      onLog?.(`[NET] Retry ${attempt}/${retries} para ${url} (${err.status ? `HTTP ${err.status}` : err.message}); aguardando ${waitMs}ms`, 'warn');
+      await sleep(waitMs, signal);
     }
   }
 }
@@ -602,7 +610,9 @@ export async function fetchRenderedTabDocument(url, { waitMs = 950, tabId = null
 }
 
 export async function fetchDocumentWithOptions(url, options = {}, signal) {
+  const onLog = typeof options.onLog === 'function' ? options.onLog : null;
   if (options.renderWithTab && canUseTabScripting()) {
+    onLog?.(`[SPA] Renderizando via aba ativa: ${url}`, 'debug');
     return fetchRenderedTabDocument(url, {
       waitMs: options.renderWaitMs ?? 950,
       tabId: options.tabId ?? null,
@@ -613,7 +623,7 @@ export async function fetchDocumentWithOptions(url, options = {}, signal) {
     ? Math.max(0, Math.min(5, Number(options.maxRetries)))
     : 2;
   try {
-    return await fetchWithRetry(url, { retries: maxRetries, signal });
+    return await fetchWithRetry(url, { retries: maxRetries, signal, onLog });
   } catch (err) {
     if (
       options.autoFallbackTab !== false &&
@@ -621,6 +631,7 @@ export async function fetchDocumentWithOptions(url, options = {}, signal) {
       !err.isRateLimit &&
       (err.status === 403 || err.status === 503)
     ) {
+      onLog?.(`[SPA] HTTP ${err.status} em ${url} -> alternando para captura via aba renderizada`, 'debug');
       return fetchRenderedTabDocument(url, {
         waitMs: options.renderWaitMs ?? 1100,
         tabId: options.tabId ?? null,
@@ -980,9 +991,11 @@ export class BaseParser {
   }
 
   async downloadChapter(chapter, options = {}, signal) {
+    const onLog = typeof options.onLog === 'function' ? options.onLog : null;
     const useTabFirst = Boolean(options.renderWithTab || (chapter.tabId && options.preferOpenTabDom));
     let doc;
     if (useTabFirst) {
+      onLog?.(`[SPA] Capturando capítulo via aba: ${chapter.url}`, 'debug');
       doc = await fetchRenderedTabDocument(chapter.url, {
         waitMs: options.renderWaitMs ?? 950,
         tabId: chapter.tabId ?? null,
@@ -993,7 +1006,7 @@ export class BaseParser {
         ? Math.max(0, Math.min(5, Number(options.maxRetries)))
         : 2;
       try {
-        doc = await fetchWithRetry(chapter.url, { retries: maxRetries, signal });
+        doc = await fetchWithRetry(chapter.url, { retries: maxRetries, signal, onLog });
       } catch (err) {
         if (
           options.autoFallbackTab !== false &&
@@ -1001,6 +1014,7 @@ export class BaseParser {
           !err.isRateLimit &&
           (err.status === 403 || err.status === 503)
         ) {
+          onLog?.(`[SPA] HTTP ${err.status} em capítulo -> tentando via aba: ${chapter.url}`, 'debug');
           doc = await fetchRenderedTabDocument(chapter.url, {
             waitMs: options.renderWaitMs ?? 1100,
             tabId: chapter.tabId ?? null,
@@ -1018,6 +1032,7 @@ export class BaseParser {
     const hasReadableText =
       extracted?.contentRoot && normalizeSpaces(extracted.contentRoot.textContent).length >= 25;
     if (!hasReadableText && !useTabFirst && options.autoFallbackTab !== false && canUseTabScripting()) {
+      onLog?.(`[SPA] Conteúdo curto/ausente no HTML estático -> re-tentando via aba: ${chapter.url}`, 'debug');
       try {
         const renderedDoc = await fetchRenderedTabDocument(chapter.url, {
           waitMs: options.renderWaitMs ?? 1100,
@@ -1041,6 +1056,9 @@ export class BaseParser {
     }
 
     const hiddenClasses = extractHiddenClassesFromStyles(doc);
+    if (hiddenClasses.size > 0) {
+      onLog?.(`[PARSE] ${hiddenClasses.size} classe(s) CSS oculta(s) filtrada(s) em "${chapter.displayTitle || chapter.url}"`, 'debug');
+    }
     const sanitizer = new HtmlSanitizer({
       skipImages: Boolean(options.skipImages),
       removeNavLinks: options.removeNavLinks !== false,
@@ -1055,14 +1073,15 @@ export class BaseParser {
       chapterTitle: extracted.chapterTitle,
       subtitle: extracted.subtitle,
       ...sanitized,
-      serialize(stylesheetHref, epub3) {
+      serialize(stylesheetHref, epub3, { popupFootnotes = false } = {}) {
         return serializeChapterXhtml({
           title: extracted.chapterTitle,
           subtitle: extracted.subtitle,
           xmlDoc: sanitized.xmlDoc,
           nodes: sanitized.nodes,
           stylesheetHref,
-          epub3
+          epub3,
+          popupFootnotes
         });
       }
     };
@@ -1127,4 +1146,84 @@ function applyCustomTextStripPatterns(nodes, rawPatterns) {
 
 export async function downloadAndParseChapter(chapter, parser, options = {}, signal) {
   return parser.downloadChapter(chapter, options, signal);
+}
+
+function escapeCssIdent(ident) {
+  const s = String(ident || '');
+  if (typeof globalThis.CSS !== 'undefined' && typeof globalThis.CSS.escape === 'function') {
+    return globalThis.CSS.escape(s);
+  }
+  return s.replace(/([^\w-])/g, '\\$1');
+}
+
+function isStableCssClass(cls) {
+  if (!cls || cls.length > 48) return false;
+  if (/^(?:active|selected|current|open|closed|show|hide|hidden|hover|focus|wpb-)/i.test(cls)) return false;
+  if (/^js-/i.test(cls) || /\d{5,}/.test(cls)) return false;
+  return /^[a-zA-Z_-][a-zA-Z0-9_-]*$/.test(cls);
+}
+
+function describeSingleElement(el) {
+  const tag = el.tagName?.toLowerCase() || 'div';
+  const id = (el.getAttribute?.('id') || '').trim();
+  if (id && !/\d{5,}/.test(id)) {
+    return `#${escapeCssIdent(id)}`;
+  }
+  const rawClass = typeof el.className === 'string' ? el.className : el.getAttribute?.('class') || '';
+  const classTokens = rawClass.trim() ? rawClass.trim().split(/\s+/) : Array.from(el.classList || []);
+  const classes = classTokens.filter(isStableCssClass).slice(0, 2);
+  if (classes.length > 0) {
+    return `${tag}.${classes.map(escapeCssIdent).join('.')}`;
+  }
+  return tag;
+}
+
+/**
+ * Generates a concise, reusable CSS selector for an element picked interactively on a page.
+ */
+export function generateCssSelector(targetEl, mode = 'content') {
+  if (!targetEl || !targetEl.ownerDocument) return '';
+  const doc = targetEl.ownerDocument;
+  let el = targetEl;
+
+  if (mode === 'list') {
+    const anchor = el.closest?.('a') || (el.tagName?.toLowerCase() === 'a' ? el : null);
+    if (anchor) {
+      let cur = anchor.parentElement;
+      for (let depth = 0; depth < 4 && cur && cur !== doc.body && cur !== doc.documentElement; depth++) {
+        const tag = cur.tagName?.toLowerCase();
+        if (tag === 'ul' || tag === 'ol' || cur.querySelectorAll('a[href]').length >= 3) {
+          const base = describeSingleElement(cur);
+          if (base !== tag || tag === 'nav' || tag === 'ul' || tag === 'ol') {
+            return `${base} a`;
+          }
+        }
+        cur = cur.parentElement;
+      }
+      const aDesc = describeSingleElement(anchor);
+      if (aDesc !== 'a') return aDesc;
+    }
+  }
+
+  const parts = [];
+  let cur = el;
+  for (let depth = 0; depth < 4 && cur && cur !== doc.body && cur !== doc.documentElement; depth++) {
+    const seg = describeSingleElement(cur);
+    parts.unshift(seg);
+    const candidate = parts.join(' > ');
+    try {
+      const matched = doc.querySelectorAll(candidate);
+      if (seg.startsWith('#') || (mode !== 'exclude' && matched.length === 1)) {
+        return candidate;
+      }
+      if (mode === 'exclude' && matched.length >= 1 && seg.includes('.')) {
+        return seg;
+      }
+    } catch {
+      // ignore invalid selector attempt
+    }
+    cur = cur.parentElement;
+  }
+
+  return parts.join(' > ') || describeSingleElement(el);
 }

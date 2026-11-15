@@ -422,6 +422,7 @@ export async function buildEpubBlob({
   onWarning = () => {},
   signal
 }) {
+  const buildStartedAt = Date.now();
   const epub3 = options.createEpub3 !== false;
   const uuid = randomUuid();
   const entries = [
@@ -455,10 +456,11 @@ export async function buildEpubBlob({
       const { blob, mime } = await fetchImageBytes(cUrl, signal);
       let bytes;
       let finalMime = mime;
-      if (options.restrictCoverJpeg || options.compressImages || options.grayscaleImages) {
+      const needsCoverCompat = /^image\/avif$/i.test(mime) || (!epub3 && /^image\/webp$/i.test(mime));
+      if (options.restrictCoverJpeg || needsCoverCompat || options.compressImages || options.grayscaleImages) {
         const conv = await convertImageViaCanvas(blob, {
           maxDim: options.compressImages ? (options.compressedResolution || 1200) : 1600,
-          forceJpeg: Boolean(options.restrictCoverJpeg),
+          forceJpeg: Boolean(options.restrictCoverJpeg) || needsCoverCompat,
           quality: customImageQuality ?? 0.9,
           grayscale: Boolean(options.grayscaleImages)
         });
@@ -544,7 +546,7 @@ export async function buildEpubBlob({
           const { blob, mime } = fetched;
           let bytes;
           let finalMime = mime;
-          const needsEpub2Convert = !epub3 && /^image\/(?:webp|avif)$/i.test(mime);
+          const needsEpub2Convert = /^image\/avif$/i.test(mime) || (!epub3 && /^image\/webp$/i.test(mime));
           if (options.compressImages || needsEpub2Convert || options.grayscaleImages) {
             const forceJpeg = needsEpub2Convert || (options.compressedFormat || 'jpg') === 'jpg';
             const conv = await convertImageViaCanvas(blob, {
@@ -593,7 +595,9 @@ export async function buildEpubBlob({
 
     const chNum = String(i + 1).padStart(4, '0');
     const href = `text/ch_${chNum}.xhtml`;
-    const xhtml = parsed.serialize('../styles/stylesheet.css', epub3);
+    const xhtml = parsed.serialize('../styles/stylesheet.css', epub3, {
+      popupFootnotes: epub3 && options.popupFootnotes !== false
+    });
     entries.push({ name: `OEBPS/${href}`, data: xhtml });
 
     const navTitle = parsed.chapter.displayTitle || parsed.chapterTitle;
@@ -645,5 +649,11 @@ export async function buildEpubBlob({
     })
   });
 
-  return await createZipBlob(entries);
+  const zipBlob = await createZipBlob(entries);
+  const buildMs = Date.now() - buildStartedAt;
+  onLog?.(
+    `[BUILD] EPUB ${epub3 ? '3' : '2'} empacotado em ${buildMs}ms (${chapterRecords.length} caps, ${imageRecords.length} imagem(ns), ${(zipBlob.size / 1024).toFixed(1)} KB)`,
+    'debug'
+  );
+  return zipBlob;
 }

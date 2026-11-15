@@ -47,14 +47,15 @@ export function hydrateCachedChapter(chapter, record) {
     xmlDoc,
     nodes,
     images,
-    serialize(stylesheetHref, epub3) {
+    serialize(stylesheetHref, epub3, { popupFootnotes = false } = {}) {
       return serializeChapterXhtml({
         title: record.chapterTitle || chapter.displayTitle || chapter.url,
         subtitle: record.subtitle || '',
         xmlDoc,
         nodes,
         stylesheetHref,
-        epub3
+        epub3,
+        popupFootnotes
       });
     }
   };
