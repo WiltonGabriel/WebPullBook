@@ -3,7 +3,37 @@
   "version": "1.3.0",
   "private": true,
   "type": "module",
-  "description": "Zero-dependency Manifest V3 browser extension that extracts serialized web fiction into EPUB 2/3, HTML, Markdown, and TXT.",
+  "description": "Zero-dependency Manifest V3 browser extension for Chrome & Firefox that converts web novels, serialized fiction, articles, and open tabs into clean EPUB 2/3, HTML, Markdown, and TXT ebooks.",
+  "homepage": "https://github.com/WiltonGabriel/WebPullBook",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/WiltonGabriel/WebPullBook.git"
+  },
+  "bugs": {
+    "url": "https://github.com/WiltonGabriel/WebPullBook/issues"
+  },
+  "license": "MIT",
+  "keywords": [
+    "epub",
+    "epub2",
+    "epub3",
+    "web-to-epub",
+    "html-to-epub",
+    "ebook-converter",
+    "webnovel",
+    "light-novel",
+    "chrome-extension",
+    "firefox-extension",
+    "web-extension",
+    "manifest-v3",
+    "kindle",
+    "kobo",
+    "calibre",
+    "e-ink",
+    "offline-reading",
+    "readability",
+    "browser-extension"
+  ],
   "scripts": {
     "lint": "node scripts/check.mjs",
     "lint:fix": "node scripts/check.mjs --fix",

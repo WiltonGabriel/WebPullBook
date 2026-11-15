@@ -19,4 +19,4 @@ Fixes #(issue)
 - [ ] Verified no inline `<script>` or inline `on*` event handlers were added in HTML (MV3 CSP compliance).
 - [ ] Verified generated `.epub` / exported output passes `EPUBCheck` (`REQUIRE_EPUBCHECK=1 npm run test:epubcheck`) and/or `npm run test:e2e`.
 - [ ] Confirmed no unrelated third-party domains or brand names are hardcoded inside `src/`.
-- [ ] Updated `README.md` / `README.en.md` / `docs/COMPATIBILITY.md` / `tests/fixtures/` if parser behavior or compatibility changed.
+- [ ] Updated `README.md` / `README.pt.md` / `docs/COMPATIBILITY.md` / `tests/fixtures/` if parser behavior or compatibility changed.

@@ -66,6 +66,6 @@ jobs:
 
       - name: Dry-run extension ZIP package
         run: |
-          zip -r WebPullBook-preview.zip manifest.json icons src LICENSE README.md README.en.md docs
+          zip -r WebPullBook-preview.zip manifest.json icons src LICENSE README.md README.pt.md docs
           unzip -t WebPullBook-preview.zip
           rm -f WebPullBook-preview.zip

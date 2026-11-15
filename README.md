@@ -1,147 +1,169 @@
-# WebPullBook
+# <img src="icons/icon.svg" width="32" height="32" align="absmiddle" alt="WebPullBook"> WebPullBook
 
-**🇧🇷 Português** | [🇺🇸 English](README.en.md)
+**🇺🇸 English** | [🇧🇷 Português](README.pt.md)
 
 [![Manifest V3](https://img.shields.io/badge/Manifest-V3-4338ca?style=flat-square)](manifest.json)
-[![Versão](https://img.shields.io/badge/Vers%C3%A3o-1.3.0--beta-0ea5e9?style=flat-square)](https://github.com/WiltonGabriel/WebPullBook/releases)
-[![Dependências](https://img.shields.io/badge/Depend%C3%AAncias-Zero-16a34a?style=flat-square)](src/core/zip.js)
-[![Licença: MIT](https://img.shields.io/badge/Licen%C3%A7a-MIT-f59e0b?style=flat-square)](LICENSE)
+[![Chrome & Firefox](https://img.shields.io/badge/Browsers-Chrome%20%7C%20Edge%20%7C%20Firefox%20128%2B-2563eb?style=flat-square)](#-getting-started)
+[![Version](https://img.shields.io/badge/Version-1.3.0--beta-0ea5e9?style=flat-square)](https://github.com/WiltonGabriel/WebPullBook/releases)
+[![Dependencies](https://img.shields.io/badge/Dependencies-Zero-16a34a?style=flat-square)](src/core/zip.js)
+[![License: MIT](https://img.shields.io/badge/License-MIT-f59e0b?style=flat-square)](LICENSE)
 [![CI Validation](https://github.com/WiltonGabriel/WebPullBook/actions/workflows/ci.yml/badge.svg)](https://github.com/WiltonGabriel/WebPullBook/actions/workflows/ci.yml)
 
-**WebPullBook** é uma extensão de navegador open source e sem dependências externas que extrai obras seriadas, webnovels, páginas com múltiplos capítulos e abas abertas diretamente para arquivos **EPUB 2 / EPUB 3** (além de **HTML**, **Markdown** e **TXT**) limpos e organizados por volume no próprio navegador.
+**WebPullBook** is a zero-dependency, open-source browser extension (Chrome, Edge, Brave, and Firefox 128+) for **converting web pages into EPUB** (**Web-to-EPUB**): extract web novels, light novels, serialized fiction, fanfiction, blogs, documentation, and open tabs into clean, volume-organized **EPUB 2 / EPUB 3** ebooks (plus **HTML**, **Markdown**, and **TXT**) for **Kindle**, **Kobo**, **Calibre**, and mobile readers.
+
+[Features](#-key-features) • [Installation](#-getting-started) • [Compatibility](#-compatibility) • [FAQ](#-frequently-asked-questions-faq) • [Contribute](#-maintainers--contributing)
 
 ---
 
-## Por que usar o WebPullBook?
+## Why WebPullBook?
 
-Ler obras longas com centenas de capítulos no navegador dificulta a leitura offline e em leitores digitais, enquanto converter PDFs individuais de capítulos costuma gerar quebras de linha erradas e sujeira de paginação. O WebPullBook extrai o HTML limpo diretamente das páginas e empacota ebooks fluídos, com capa, sumário navegável e metadados completos de série e volume no padrão EPUB.
+Reading long serialized works, documentation, or multi-part articles in browser tabs is inconvenient offline or on E-Ink devices, and printing chapter-by-chapter PDFs introduces broken line wraps and page-break clutter. WebPullBook fetches clean HTML directly inside your browser (no third-party servers) and packages structured, reflowable ebooks with cover art, nested Table of Contents, and standard EPUB series metadata.
 
-### Principais Funcionalidades
+### Popular Use Cases
 
-- **Compatibilidade Geral com Heurística DOM:** Extrai séries automaticamente a partir de padrões universais (JSON-LD/Schema.org, Open Graph, listas semânticas e densidade de texto no estilo Readability) em vez de depender apenas de regras por domínio. Quando um layout foge do padrão, um **assistente heurístico** nas Opções Avançadas sugere seletores CSS automaticamente (com edição manual opcional).
-- **Detecção Automática de Volumes:** Identifica volumes por seções recolhíveis, cabeçalhos, prefixos de capítulo ou URLs para gerar **1 Arquivo por Volume** ou **Arquivo Único** com sumário aninhado. Caso o site não agrupe os volumes, você pode ajustá-los manualmente (divisão a cada *N* capítulos, faixas ou regras em lote).
-- **Modo SPA / JavaScript (Renderização via Aba):** Páginas dinâmicas em React/Vue/Next.js que chegam vazias no `fetch` estático são renderizadas automaticamente via aba em segundo plano (`chrome.tabs` + `chrome.scripting`).
-- **Cache Local (`IndexedDB`), Retomada & Guarda Anti-Bloqueio:** Capítulos baixados ficam salvos temporariamente no navegador (expiração padrão de **7 dias**) para retomar downloads interrompidos sem desperdiçar requisições, além de **Modo Seguro** (limite de RPM e *jitter*) e pausa automática em `HTTP 429`/`503`.
-- **Biblioteca & Detecção de Novos Capítulos:** Salve obras na aba **Biblioteca** (`chrome.storage.local`) e use **Carregar & Marcar Novos** para baixar apenas os capítulos lançados desde o último pacote.
-- **Modo Juntar Abas Abertas:** Capture abas HTTP/HTTPS abertas na janela atual e compile artigos ou capítulos em um único ebook.
-- **EPUB Limpo para Leitores Digitais:** Sanitização XHTML estrita ([sanitizer.js](src/core/sanitizer.js)) que preserva negrito, itálico, citações, alinhamentos e âncoras internas (como notas de rodapé) sem travar tamanhos em `px` ou cores que quebram o modo escuro, além de capa e otimização opcional de imagens.
-- **Multi-Navegador, Layout em 2 Colunas & 4 Temas:** Funciona em **Chrome/Chromium** e **Mozilla Firefox 128+** em Manifest V3 puro, com layout em 2 colunas (metadados e lista de capítulos lado a lado), abas acessíveis via teclado (`Obra`, `Biblioteca`, `Opções Avançadas`, `Logs`), interface bilíngue (**pt-BR** / **en**) e **4 temas** (**Claro**, **Escuro**, **Sépia** e **Meia-noite**) com seletor direto no topo.
+- **Web Novels, Light Novels & Fanfiction:** Save multi-chapter series grouped by volume in EPUB 3 or Kindle-ready EPUB 2 (*Send to Kindle*, Kobo, Calibre).
+- **Articles, Blogs & Docs:** Open multiple tabs and use **Merge Tabs** to preview, reorder, and export a single anthology or multiple standalone ebooks.
+- **Dynamic Sites / Sequential Chapters:** Use automatic **"Next Chapter"** link crawling or **SPA / JavaScript Tab Mode** when sites render dynamically or lack a table-of-contents page.
+
+### Key Features
+
+- **Universal Smart Extractor & Saved Domain Rules:** Automatically extracts series from universal web patterns (JSON-LD/Schema.org, Open Graph, semantic lists, Readability-style prose scoring, and sequential *"Next Chapter"* link crawling when no TOC page exists). In **Advanced Options**, use the **heuristic CSS selector assistant**, **text / Regex strip filters** to remove repetitive notices, and **saved per-domain rules** (with optional manual parser override).
+- **Chapter Dry-Run Preview & Flexible Cover Tools:** Preview any sanitized chapter before downloading a full book, **upload a local cover** (`.jpg`/`.png`/`.webp`), or use the **built-in cover generator** when a site provides no artwork.
+- **Quick Reader Profiles & Automatic Volume Detection:** Apply one-click reader profiles (**Modern Default**, **Kindle**, **Kobo & E-Readers** with E-Ink grayscale conversion, **Text Only**, or **Legacy Default**). Volumes are inferred from collapsible sections, headings, chapter labels, or URLs (with one-click **Re-detect Volumes** and manual range/batch tools).
+- **Interactive Merge Open Tabs Modal:** Clicking **Merge Tabs** lists detected HTTP/HTTPS tabs pre-selected by default with **per-tab preview (👁️)**, reordering, current/all-window scope toggle, and three organization modes (**Same Book**, **Same Book Split into Volumes**, or **Separate Books — 1 standalone EPUB per tab**).
+- **Parallel Concurrency, Local Cache (`IndexedDB`) & Safe Mode:** Configure **concurrent downloads (1x–6x)** for fast sites or toggle **Safe Mode** at any time (RPM throttling, jitter, and automatic pause on `HTTP 429`/`503`). Fetched chapters stay cached locally (**7 days** default TTL) for instant resume.
+- **Custom Output Destination & Folder Organization:** Save into browser **Downloads** or pick **any local folder on your PC** (`File System Access API`), customize the **root folder name**, choose subfolder layouts (`Root / Title`, `Root / Author / Title`, `Author / Title`, `Format`, flat, or custom `%Root%/%Author%/%Title%` templates), and inspect a **live output path preview**.
+- **Live Typography Preview & Modular Backup:** Customize font family, alignment, line height, and indentation with a **live typography preview** and full EPUB CSS editor, plus full JSON backup (`options + domain rules`) and **confirmed** per-section **Restore Default** or global **Restore All** resets.
+- **Built-in Library & Batch Update Checking:** Save series in the **Library** tab (`chrome.storage.local`), run **Check All** to scan every tracked book in one click, and use **Check New** to select only chapters published since your last export.
+- **Cross-Browser, 2-Column Layout & 4 Themes:** Runs on **Chrome/Chromium** and **Mozilla Firefox 128+** in pure Manifest V3 with a responsive 2-column layout, keyboard-accessible ARIA tabs, bilingual UI (**PT-BR** / **EN**), and a top-bar theme picker (**Auto**, **Light**, **Dark**, **Sepia**, **Midnight**).
 
 ---
 
-## Compatibilidade
+## Compatibility
 
-A lista simples de sites verificados, possíveis compatíveis e incompatíveis fica em [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md) (qualquer pessoa pode editar a tabela via Pull Request conforme testar novos sites).
+The compatibility table (**Verified Compatible**, **Potentially Compatible**, and **Not Compatible**) lives in [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md) and is designed to be easily updated via Pull Request as new sites are tested.
 
 ---
 
-## Primeiros Passos
+## Getting Started
 
-### Instalação (Chrome / Chromium)
+### Installation (Chrome / Chromium)
 
-Não é necessário compilar código nem instalar pacotes.
+No build step or package manager is required.
 
-1. Baixe o pacote `WebPullBook-v*.zip` na página de [Releases](https://github.com/WiltonGabriel/WebPullBook/releases) e extraia a pasta, **ou** clone este repositório:
+1. Download the latest `WebPullBook-v*.zip` package from [Releases](https://github.com/WiltonGabriel/WebPullBook/releases) and extract it, **or** clone this repository:
    ```bash
    git clone https://github.com/WiltonGabriel/WebPullBook.git
    ```
-2. Abra `chrome://extensions/` no Google Chrome (ou navegador baseado em Chromium).
-3. Ative o **Modo do desenvolvedor** no canto superior direito.
-4. Clique em **Carregar sem compactação** (*Load unpacked*) e selecione a pasta `WebPullBook/` contendo o [manifest.json](manifest.json).
+2. Open `chrome://extensions/` in Google Chrome (or any Chromium-based browser).
+3. Enable **Developer mode** in the top-right corner.
+4. Click **Load unpacked** and select the `WebPullBook/` directory containing [manifest.json](manifest.json).
 
-### Instalação (Mozilla Firefox)
+### Installation (Mozilla Firefox)
 
-Compatível com **Firefox 128+** (Manifest V3):
+Compatible with **Firefox 128+** (Manifest V3):
 
-1. Baixe e extraia o pacote `WebPullBook-v*.zip` (ou clone este repositório).
-2. Abra `about:debugging#/runtime/this-firefox` no Firefox.
-3. Clique em **Carregar extensão temporária...** (*Load Temporary Add-on...*) e selecione o arquivo [manifest.json](manifest.json) (ou diretamente o `.zip`).
+1. Download and extract `WebPullBook-v*.zip` (or clone this repository).
+2. Open `about:debugging#/runtime/this-firefox` in Firefox.
+3. Click **Load Temporary Add-on...** and select [manifest.json](manifest.json) (or the `.zip` archive directly).
 
-### Uso Rápido
+### Quick Usage
 
-1. Abra no navegador a página de índice de capítulos (ou qualquer capítulo) da obra desejada.
-2. Clique no ícone do **WebPullBook** na barra do navegador para abrir a aba de trabalho — os metadados e capítulos são carregados automaticamente.
-3. Escolha **1 Arquivo por Volume** ou **Arquivo Único**, selecione o formato de saída (**EPUB**, **HTML**, **MD** ou **TXT**) e ajuste o intervalo de capítulos se desejar.
-4. Clique em **Empacotar EPUB**. Os arquivos gerados serão salvos em `Downloads/WebPullBook/<Título>/`.
-5. Para acompanhar lançamentos futuros, clique em **Salvar na Biblioteca**.
+1. Navigate to a book's table of contents (or any chapter page) in your browser.
+2. Click the **WebPullBook** toolbar icon to open the workspace tab—metadata and chapters load automatically.
+3. Choose **1 File per Volume** or **Single File**, pick your output format (**EPUB**, **HTML**, **MD**, or **TXT**), and adjust chapter ranges if needed.
+4. Click **Pack EPUB**. Output files are saved under `Downloads/WebPullBook/<Title>/` by default—or in any custom folder and subfolder layout configured under **Advanced Options → Files & EPUB Standard**.
+5. To track future chapter releases, click **Save to Library**.
 
-### Configurando Qualquer Site sem Programar
+### Customizing Any Website Without Code
 
-Caso um site utilize um layout HTML incomum ou renderize via JavaScript, abra **Opções Avançadas**, ative o **Modo SPA / JavaScript** se necessário e clique em **Auto-detectar seletores** para a heurística preencher os campos automaticamente (ou edite os seletores CSS manualmente se precisar refinar):
+If a site uses an uncommon HTML layout or client-side JavaScript rendering, open **Advanced Options**, enable **SPA / JavaScript Mode** if needed, and click **Auto-detect selectors** so the heuristic scanner fills in the fields automatically (or refine CSS selectors manually):
 
 ```text
-Seleção de Parser:                   Genérico (Qualquer página HTML)
-Seletor CSS da lista de capítulos:   .chapter-list a
-Seletor CSS do conteúdo:             article .chapter-body
-Seletor CSS de elementos a excluir:  .ads, .translator-note
+Parser Selection:                    Generic (Any HTML page)
+Chapter list CSS selector:           .chapter-list a
+Chapter content CSS selector:        article .chapter-body
+Excluded elements CSS selector:      .ads, .translator-note
 ```
 
-### Formatos de Saída
+### Output Formats
 
-- **EPUB 2 / EPUB 3 (`.epub`):** Empacotamento OCF completo (`META-INF/container.xml`, `content.opf`, `toc.ncx`, `nav.xhtml` e capítulos em XHTML estrito) com capa e metadados de série/volume para uso em leitores digitais, celulares ou computadores.
-- **HTML Único (`.html`), Markdown (`.md`) e Texto Puro (`.txt`):** Alternativas leves para leitura offline direta no navegador, editores de texto ou arquivamento.
+- **EPUB 2 / EPUB 3 (`.epub`):** Standard OCF archive (`META-INF/container.xml`, `content.opf`, `toc.ncx`, `nav.xhtml`, and strict XHTML chapters) with cover art and series/volume metadata compatible with e-readers, mobile apps, and desktop viewers.
+- **Single-File HTML (`.html`), Markdown (`.md`), and Plain Text (`.txt`):** Lightweight formats for direct offline reading or archiving.
 
 ---
 
-## Estrutura do Projeto
+## Project Structure
 
 ```text
 WebPullBook/
-├── .github/                      # Templates de Issue/PR, Segurança, Conduta e CI/Release
-├── manifest.json                 # Manifesto da extensão (MV3)
-├── LICENSE                       # Licença MIT
-├── CONTRIBUTING.md               # Guia de desenvolvimento e criação de parsers
-├── README.md                     # Documentação (Português)
-├── README.en.md                  # Documentação (English)
+├── .github/                      # Issue/PR templates, Security, CoC & CI/Release workflows
+├── manifest.json                 # Extension manifest (MV3)
+├── LICENSE                       # MIT License
+├── CONTRIBUTING.md               # Development setup and parser authoring guide
+├── README.md                     # Documentation (English)
+├── README.pt.md                  # Documentação (Português)
 ├── docs/
-│   └── COMPATIBILITY.md          # Tabela de compatibilidade (editável via PR)
-├── icons/                        # Ícones da extensão
+│   └── COMPATIBILITY.md          # Compatibility table (PR-friendly)
+├── icons/                        # Extension toolbar and store icons
 └── src/
     ├── background/
-    │   └── service-worker.js     # Abre o workspace ao clicar no ícone da barra
+    │   └── service-worker.js     # Opens workspace tab on toolbar action click
     ├── core/
-    │   ├── cache-store.js        # Cache persistente em IndexedDB com expiração (TTL)
-    │   ├── epub-builder.js       # Geração de OPF, NCX, NAV, capa e capítulos XHTML
-    │   ├── parser-engine.js      # BaseParser (OOP), modo SPA em aba, CSS e retries
-    │   ├── sanitizer.js          # HtmlSanitizer -> XHTML válido com estilos semânticos
-    │   └── zip.js                # Empacotador ZIP nativo via CompressionStream
+    │   ├── cache-store.js        # IndexedDB persistent cache with automatic TTL cleanup
+    │   ├── epub-builder.js       # OPF, NCX, NAV, cover, and XHTML packaging
+    │   ├── parser-engine.js      # BaseParser (OOP), SPA tab renderer, CSS, retries
+    │   ├── sanitizer.js          # HtmlSanitizer -> valid XHTML with semantic styles
+    │   └── zip.js                # Native CompressionStream ZIP archive builder
     ├── exporters/
     │   ├── index.js              # ExporterRegistry (EPUB, HTML, Markdown, TXT)
-    │   ├── base-exporter.js      # BaseExporter com conversão DOM -> Markdown/TXT
-    │   ├── epub-exporter.js      # Exportador EPUB 2/3
-    │   ├── html-exporter.js      # Exportador HTML único offline
-    │   ├── markdown-exporter.js  # Exportador Markdown (.md)
-    │   └── txt-exporter.js       # Exportador Texto Puro (.txt)
+    │   ├── base-exporter.js      # BaseExporter with DOM -> Markdown/TXT helpers
+    │   ├── epub-exporter.js      # EPUB 2/3 exporter
+    │   ├── html-exporter.js      # Single-file offline HTML exporter
+    │   ├── markdown-exporter.js  # Markdown (.md) exporter
+    │   └── txt-exporter.js       # Plain text (.txt) exporter
     ├── parsers/
-    │   ├── index.js              # ParserRegistry com ranking por pontuação DOM
-    │   ├── generic-html.js       # Extrator heurístico, detecção de seletores e paginação
-    │   ├── wp-lightnovel.js      # Adaptador estrutural para temas WordPress de ficção
-    │   ├── madara-theme.js       # Adaptador estrutural para temas estilo Madara
-    │   ├── royalroad.js          # Adaptador para fictions, volumes e notas ocultas
-    │   ├── scribblehub.js        # Adaptador com paginação/AJAX e detecção anti-bot
-    │   └── novelmania.js         # Adaptador para índice paginado via API e volumes
+    │   ├── index.js              # ParserRegistry ranking adapters by DOM score
+    │   ├── generic-html.js       # Heuristic extractor, selector scanner & pagination
+    │   ├── wp-lightnovel.js      # WordPress serialized fiction theme adapter
+    │   ├── madara-theme.js       # Madara-style chapter/novel theme adapter
+    │   ├── royalroad.js          # Adapter for fiction TOC, volumes & hidden CSS rules
+    │   ├── scribblehub.js        # Adapter with AJAX/tab TOC & anti-bot challenge check
+    │   └── novelmania.js         # Adapter for API-paginated TOC & volume grouping
     └── workspace/
-        ├── i18n.js               # Dicionários e tradução da interface (PT / EN)
-        ├── theme-init.js         # Inicialização de tema sem FOUC
-        ├── workspace.html        # Interface principal, Biblioteca e modais nativos
-        ├── workspace.css         # Estilos adaptativos claro/escuro
-        └── workspace.js          # Estado, cache, resiliência parcial e fila de download
+        ├── i18n.js               # Bilingual UI dictionary & DOM translator (PT / EN)
+        ├── theme-init.js         # Zero-FOUC theme bootstrapper
+        ├── workspace.html        # Workspace UI layout, Library & native dialogs
+        ├── workspace.css         # Adaptive light/dark styling
+        └── workspace.js          # State, chapter cache, partial resilience & queue
 ```
 
 ---
 
-## Onde Obter Ajuda
+## Getting Help
 
-- **Logs de execução:** Acesse a aba **Logs** dentro da própria extensão e clique em **Baixar Log** para salvar o registro detalhado de rede ou extração.
-- **Matriz de compatibilidade:** Veja [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md) para consultar os sites e temas suportados.
-- **Reportar bugs ou sugerir suporte a layouts:** Abra uma issue na aba **Issues** do repositório no GitHub descrevendo a estrutura HTML (seletores da lista de capítulos e do texto) junto com o log correspondente.
-- **Documentação para desenvolvedores & testes:** Consulte [CONTRIBUTING.md](CONTRIBUTING.md) para detalhes da arquitetura, suíte de testes (`node:test`, `EPUBCheck`, Playwright E2E) e instruções para criar novos adaptadores de parser.
-- **Segurança:** Leia [SECURITY.md](.github/SECURITY.md) para reportar vulnerabilidades de forma privada.
+- **Inspect execution logs:** Open the **Logs** tab inside the extension workspace and click **Download Log** to save a timestamped trace of network or parsing errors.
+- **Compatibility table:** Check [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md) for verified and potentially compatible site structures.
+- **Bug reports & site requests:** Open an issue in the repository's GitHub **Issues** tab describing the HTML structure (container classes for chapter list and chapter text) and attach any relevant log output.
+- **Developer documentation & tests:** See [CONTRIBUTING.md](CONTRIBUTING.md) for architecture details, the automated test suite (`node:test`, `EPUBCheck`, Playwright E2E), and instructions on adding new parser adapters.
+- **Security:** See [SECURITY.md](.github/SECURITY.md) for privately reporting security vulnerabilities.
 
 ---
 
-## Mantenedores e Contribuições
+## Frequently Asked Questions (FAQ)
 
-O WebPullBook é um projeto open source mantido pelos **WebPullBook Contributors** sob a [Licença MIT](LICENSE) e segue nosso [Código de Conduta](.github/CODE_OF_CONDUCT.md).
+- **Does it work with Kindle and Kobo?** Yes! Select the **Kindle** profile (classic EPUB 2 with optimized JPEG, ideal for *Send to Kindle* and Calibre) or **Kobo & E-Readers** (converts covers and inline images to E-Ink grayscale).
+- **Does any data leave my browser?** No. All fetching, HTML sanitization, and ZIP/EPUB packaging run 100% locally in your browser using your own session cookies only when required.
+- **What if a website fails to load chapters automatically?** Open **Advanced Options → Auto-detect selectors**, enable **SPA / JavaScript Mode** if the site renders client-side, and save a **Domain Rule**—or open an issue using our site-support template!
 
-Contribuições são muito bem-vindas — especialmente novos adaptadores estruturais em [src/parsers/](src/parsers/index.js), melhorias na interface e expansão da matriz em [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md). Leia [CONTRIBUTING.md](CONTRIBUTING.md) antes de abrir um pull request.
+---
+
+## Maintainers & Contributing
+
+WebPullBook is an open-source project maintained by the **WebPullBook Contributors** under the [MIT License](LICENSE) and follows our [Code of Conduct](.github/CODE_OF_CONDUCT.md).
+
+### Ways to Help (Code & Non-Code)
+
+- **Test websites & expand compatibility:** Open a PR updating the table in [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md).
+- **Report layouts or bugs:** Open an issue in [Issues](https://github.com/WiltonGabriel/WebPullBook/issues) and attach the file saved via **Logs → Download Log**.
+- **Build parser adapters or UI improvements:** Read [CONTRIBUTING.md](CONTRIBUTING.md) to add structural adapters in [src/parsers/](src/parsers/index.js), improve generic heuristics, or add translations ([i18n.js](src/workspace/i18n.js)).

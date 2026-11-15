@@ -86,7 +86,7 @@ console.log('[OK] EPUB container media-type check');
 // 5. Relative markdown links check
 const mdFiles = [
   'README.md',
-  'README.en.md',
+  'README.pt.md',
   'CONTRIBUTING.md',
   'CHANGELOG.md',
   '.github/SECURITY.md',

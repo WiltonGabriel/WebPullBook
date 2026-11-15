@@ -3,7 +3,7 @@
 List of websites and structural patterns tested with **WebPullBook**.
 Contributions are welcome—feel free to open a pull request adding sites you have tested.
 
-> **Contributor guideline:** List **only the site name** in the `Site / Source` column below—do **not** include URLs, links, or domain names (e.g., use `Site Name`, never `example.com` or `https://...`). Do **not** list compatible site names or URLs in `README.md` or `README.en.md` either.
+> **Contributor guideline:** List **only the site name** in the `Site / Source` column below—do **not** include URLs, links, or domain names (e.g., use `Site Name`, never `example.com` or `https://...`). Do **not** list compatible site names or URLs in `README.md` or `README.pt.md` either.
 >
 > **Architecture note:** WebPullBook prioritizes **general structural compatibility** (`BaseParser`, `GenericHtmlParser`, `HtmlSanitizer`) over brittle domain- or URL-specific logic. When testing a new site, prefer improving generic heuristics first so compatibility holds even if a site changes domains or URLs.
 
