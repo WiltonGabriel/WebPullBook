@@ -18,17 +18,14 @@ Ler obras longas com centenas de capítulos no navegador dificulta a leitura off
 
 ### Principais Funcionalidades
 
-- **Detecção Automática e Divisão por Volumes:** Identifica volumes por seções recolhíveis, prefixos de capítulo ou slugs de URL, permitindo gerar **1 Arquivo por Volume** (com metadados padrão de série e índice de volume) ou um **Arquivo Único** com sumário aninhado por volume e capítulo.
-- **Editor Manual de Volumes:** Divida automaticamente a cada *N* capítulos, defina faixas (`do # ao #`), atribua aos capítulos selecionados, edite direto na tabela ou aplique regras em lote (ex.: `1-24: Volume 01`).
-- **Cache Persistente Auto-Expirável (`IndexedDB`) & Retomada:** Capítulos baixados ficam salvos localmente com expiração configurável (padrão de **7 dias**) e limite de tamanho, permitindo retomar downloads interrompidos na aba **Biblioteca** mesmo após fechar o navegador, sem ocupar espaço para sempre.
-- **Modo Seguro (Anti-Bloqueio) & Auto-Pausa em Rate Limit:** Toggle dedicado para limitar requisições por minuto (RPM), variar o intervalo (*jitter*) e fazer pausas curtas entre lotes quando necessário, além de **detecção automática de bloqueios `HTTP 429`/`503`** que pausa a fila na hora sem desperdiçar tentativas.
-- **Modo SPA / JavaScript (Renderização via Aba):** Suporta páginas dinâmicas em React/Vue/Next.js abrindo uma aba em segundo plano (`chrome.tabs` + `chrome.scripting`) para hidratar o DOM automaticamente quando o `fetch` estático não encontra o texto.
-- **Modo Juntar Abas Abertas (Estilo EpubPress):** Capture todas as abas abertas na janela atual do navegador e compile os artigos ou capítulos abertos em um único ebook com 1 clique.
-- **Biblioteca & Lista de Leitura Integrada:** Salve obras acompanhadas na aba **Biblioteca** (`chrome.storage.local`) e use **Carregar & Marcar Novos** para detectar e selecionar automaticamente apenas os capítulos lançados desde o seu último download.
-- **Arquitetura Modular Orientada a Objetos:** O `ParserRegistry` ([src/parsers/](src/parsers/index.js)) ranqueia adaptadores que herdam de `BaseParser` por pontuação de estrutura DOM, enquanto o `ExporterRegistry` ([src/exporters/](src/exporters/index.js)) exporta em **EPUB 2/3**, **HTML Único offline**, **Markdown (.md)** e **Texto Puro (.txt)**.
-- **Sanitização XHTML & Tipografia Inteligente:** O `HtmlSanitizer` ([src/core/sanitizer.js](src/core/sanitizer.js)) preserva negrito, itálico, sublinhado, tachado, alinhamentos (`wpb-center`, `wpb-right`), escalas relativas (`<big>`, `<small>`) e blocos de citação sem travar fontes fixas em `px` ou cores que quebram temas escuros em leitores digitais.
-- **Otimização de Capa e Imagens:** Extrai a capa em alta resolução (com conversão para JPEG otimizado via `<canvas>` para ampla compatibilidade) e oferece redimensionamento/compressão opcional para ilustrações internas.
-- **Interface Bilíngue e Adaptativa:** Interface completa em **Português (pt-BR)** e **Inglês (en)**, com tema claro, escuro e automático do sistema.
+- **Compatibilidade Geral com Heurística DOM:** Extrai séries automaticamente a partir de padrões universais (JSON-LD/Schema.org, Open Graph, listas semânticas e densidade de texto no estilo Readability) em vez de depender apenas de regras por domínio. Quando um layout foge do padrão, um **assistente heurístico** nas Opções Avançadas sugere seletores CSS automaticamente (com edição manual opcional).
+- **Detecção Automática de Volumes:** Identifica volumes por seções recolhíveis, cabeçalhos, prefixos de capítulo ou URLs para gerar **1 Arquivo por Volume** ou **Arquivo Único** com sumário aninhado. Caso o site não agrupe os volumes, você pode ajustá-los manualmente (divisão a cada *N* capítulos, faixas ou regras em lote).
+- **Modo SPA / JavaScript (Renderização via Aba):** Páginas dinâmicas em React/Vue/Next.js que chegam vazias no `fetch` estático são renderizadas automaticamente via aba em segundo plano (`chrome.tabs` + `chrome.scripting`).
+- **Cache Local (`IndexedDB`), Retomada & Guarda Anti-Bloqueio:** Capítulos baixados ficam salvos temporariamente no navegador (expiração padrão de **7 dias**) para retomar downloads interrompidos sem desperdiçar requisições, além de **Modo Seguro** (limite de RPM e *jitter*) e pausa automática em `HTTP 429`/`503`.
+- **Biblioteca & Detecção de Novos Capítulos:** Salve obras na aba **Biblioteca** (`chrome.storage.local`) e use **Carregar & Marcar Novos** para baixar apenas os capítulos lançados desde o último pacote.
+- **Modo Juntar Abas Abertas:** Capture abas HTTP/HTTPS abertas na janela atual e compile artigos ou capítulos em um único ebook.
+- **EPUB Limpo para Leitores Digitais:** Sanitização XHTML estrita ([sanitizer.js](src/core/sanitizer.js)) que preserva negrito, itálico, citações, alinhamentos e âncoras internas (como notas de rodapé) sem travar tamanhos em `px` ou cores que quebram o modo escuro, além de capa e otimização opcional de imagens.
+- **Multi-Navegador & Sem Dependências:** Funciona em **Chrome/Chromium** e **Mozilla Firefox 128+** em Manifest V3 puro, bilíngue (**pt-BR** / **en**) e com tema claro/escuro adaptativo.
 
 ---
 
@@ -52,6 +49,14 @@ Não é necessário compilar código nem instalar pacotes.
 3. Ative o **Modo do desenvolvedor** no canto superior direito.
 4. Clique em **Carregar sem compactação** (*Load unpacked*) e selecione a pasta `WebPullBook/` contendo o [manifest.json](manifest.json).
 
+### Instalação (Mozilla Firefox)
+
+Compatível com **Firefox 128+** (Manifest V3):
+
+1. Baixe e extraia o pacote `WebPullBook-v*.zip` (ou clone este repositório).
+2. Abra `about:debugging#/runtime/this-firefox` no Firefox.
+3. Clique em **Carregar extensão temporária...** (*Load Temporary Add-on...*) e selecione o arquivo [manifest.json](manifest.json) (ou diretamente o `.zip`).
+
 ### Uso Rápido
 
 1. Abra no navegador a página de índice de capítulos (ou qualquer capítulo) da obra desejada.
@@ -62,7 +67,7 @@ Não é necessário compilar código nem instalar pacotes.
 
 ### Configurando Qualquer Site sem Programar
 
-Caso um site utilize um layout HTML diferente ou renderize via JavaScript, abra **Opções Avançadas** e ajuste os seletores CSS ou ative o **Modo SPA / JavaScript**:
+Caso um site utilize um layout HTML incomum ou renderize via JavaScript, abra **Opções Avançadas**, ative o **Modo SPA / JavaScript** se necessário e clique em **Auto-detectar seletores** para a heurística preencher os campos automaticamente (ou edite os seletores CSS manualmente se precisar refinar):
 
 ```text
 Seleção de Parser:                   Genérico (Qualquer página HTML)
@@ -109,9 +114,12 @@ WebPullBook/
     │   └── txt-exporter.js       # Exportador Texto Puro (.txt)
     ├── parsers/
     │   ├── index.js              # ParserRegistry com ranking por pontuação DOM
-    │   ├── wp-lightnovel.js      # Adaptador para temas WordPress de ficção seriada
-    │   ├── madara-theme.js       # Adaptador para temas estilo Madara
-    │   └── generic-html.js       # Extrator heurístico estilo Readability + paginação
+    │   ├── generic-html.js       # Extrator heurístico, detecção de seletores e paginação
+    │   ├── wp-lightnovel.js      # Adaptador estrutural para temas WordPress de ficção
+    │   ├── madara-theme.js       # Adaptador estrutural para temas estilo Madara
+    │   ├── royalroad.js          # Adaptador para fictions, volumes e notas ocultas
+    │   ├── scribblehub.js        # Adaptador com paginação/AJAX e detecção anti-bot
+    │   └── novelmania.js         # Adaptador para índice paginado via API e volumes
     └── workspace/
         ├── i18n.js               # Dicionários e tradução da interface (PT / EN)
         ├── theme-init.js         # Inicialização de tema sem FOUC

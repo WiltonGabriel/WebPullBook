@@ -7,6 +7,8 @@ import {
 import { wpLightNovelParser } from './wp-lightnovel.js';
 import { madaraThemeParser } from './madara-theme.js';
 import { royalRoadParser } from './royalroad.js';
+import { scribbleHubParser } from './scribblehub.js';
+import { novelManiaParser } from './novelmania.js';
 import { genericHtmlParser } from './generic-html.js';
 
 /**
@@ -52,6 +54,8 @@ export const parserRegistry = new ParserRegistry([
   wpLightNovelParser,
   madaraThemeParser,
   royalRoadParser,
+  scribbleHubParser,
+  novelManiaParser,
   genericHtmlParser
 ]);
 
@@ -67,26 +71,51 @@ export function selectParser(doc, parserId = 'auto', url = '') {
 
 export async function loadSeriesWithParser(inputUrl, options = {}, signal) {
   const initialUrl = normalizeUrl(inputUrl);
-  let initialDoc = await fetchDocumentWithOptions(initialUrl, options, signal);
+  let effectiveOptions = { ...options };
+  let initialDoc;
+
+  try {
+    initialDoc = await fetchDocumentWithOptions(initialUrl, effectiveOptions, signal);
+    if (initialDoc?._wpbRenderedByTab) {
+      effectiveOptions = { ...effectiveOptions, renderWithTab: true, _usedTabFallback: true };
+    }
+  } catch (err) {
+    if (
+      !effectiveOptions.renderWithTab &&
+      effectiveOptions.autoFallbackTab !== false &&
+      canUseTabScripting() &&
+      !err.isRateLimit &&
+      (err.status === 403 || err.status === 503)
+    ) {
+      initialDoc = await fetchRenderedTabDocument(initialUrl, {
+        waitMs: effectiveOptions.renderWaitMs ?? 1100,
+        signal
+      });
+      effectiveOptions = { ...effectiveOptions, renderWithTab: true, _usedTabFallback: true };
+    } else {
+      throw err;
+    }
+  }
 
   if (
-    !options.renderWithTab &&
-    options.autoFallbackTab !== false &&
+    !effectiveOptions.renderWithTab &&
+    effectiveOptions.autoFallbackTab !== false &&
     canUseTabScripting() &&
     initialDoc.querySelectorAll('a[href]').length < 2
   ) {
     try {
       initialDoc = await fetchRenderedTabDocument(initialUrl, {
-        waitMs: options.renderWaitMs ?? 1100,
+        waitMs: effectiveOptions.renderWaitMs ?? 1100,
         signal
       });
+      effectiveOptions = { ...effectiveOptions, renderWithTab: true, _usedTabFallback: true };
     } catch {
       // Continue with static document if tab render fails
     }
   }
 
-  const parser = parserRegistry.detect(initialDoc, initialUrl, options.parserId || 'auto');
-  const series = await parser.loadSeries(initialUrl, options, signal, initialDoc);
+  const parser = parserRegistry.detect(initialDoc, initialUrl, effectiveOptions.parserId || 'auto');
+  const series = await parser.loadSeries(initialUrl, effectiveOptions, signal, initialDoc);
 
   return {
     parser,

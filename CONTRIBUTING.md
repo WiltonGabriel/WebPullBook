@@ -11,10 +11,9 @@ WebPullBook uses native ES modules and browser APIs with **zero build steps or n
    git clone https://github.com/WiltonGabriel/WebPullBook.git
    cd WebPullBook
    ```
-2. Open `chrome://extensions/` in Chrome or a Chromium-based browser.
-3. Enable **Developer mode** and click **Load unpacked**.
-4. Select the `WebPullBook/` root folder.
-5. After editing any file under `src/`, click the **Reload** icon on the extension card in `chrome://extensions/` (and reload open extension workspace tabs).
+2. **Chrome / Chromium:** Open `chrome://extensions/`, enable **Developer mode**, click **Load unpacked**, and select the `WebPullBook/` root folder.
+3. **Firefox (128+):** Open `about:debugging#/runtime/this-firefox`, click **Load Temporary Add-on...**, and select [manifest.json](manifest.json).
+4. After editing any file under `src/`, reload the extension on the respective extensions page (and reload open workspace tabs).
 
 ## Project Architecture
 
@@ -30,7 +29,18 @@ WebPullBook uses native ES modules and browser APIs with **zero build steps or n
 
 ## Adding a Parser Adapter
 
-Keep parsers focused on **structural DOM patterns** rather than hardcoding third-party brand names or domains unless explicitly required.
+### Design Philosophy: General Compatibility First
+
+WebPullBook aims to be **as un-specific as possible**, prioritizing **general compatibility** across arbitrary websites over brittle per-site rules. Domains, subdomains, URL paths, and CSS class names frequently change; adapters that hardcode them break silently.
+
+Before writing a new site-specific parser (or adding site-specific logic to an existing one), always prefer improving the shared generic layer first:
+
+1. **Extend shared helpers & generic heuristics first:** Check [src/core/parser-engine.js](src/core/parser-engine.js) (`BaseParser`), [src/parsers/generic-html.js](src/parsers/generic-html.js) (`GenericHtmlParser`), and [src/core/sanitizer.js](src/core/sanitizer.js) (`HtmlSanitizer`) for standard web patterns (Schema.org/JSON-LD, Open Graph, `<dl>` metadata, `data-testid`/`itemprop` semantics, `<time>` stripping, container scoring, `.sr-only` cleanup, safe intra-chapter anchors).
+2. **Only add a dedicated adapter when generic DOM parsing cannot succeed:** E.g., paginated JSON APIs that omit chapters from initial HTML, custom encrypted/obfuscated content payloads, non-standard SPA hydration, or interactive tab fetching.
+3. **Keep adapters structural and minimal:**
+   - Detect pages primarily via **structural DOM signals** (e.g., `#reader-chapter-title`, `data-testid`, theme classes) rather than relying heavily on hostnames or fixed URL paths, so mirror domains and URL migrations keep working.
+   - Inherit from `BaseParser` and reuse its extraction/cleaning methods instead of reimplementing them.
+   - Avoid hardcoding third-party brand names or domains unless explicitly required.
 
 1. Create a module in `src/parsers/<adapter-name>.js` extending `BaseParser` from [src/core/parser-engine.js](src/core/parser-engine.js):
 

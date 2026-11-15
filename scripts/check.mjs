@@ -37,6 +37,13 @@ try {
   if (!fs.existsSync(manifest.background?.service_worker || '')) {
     fail(`manifest.json: missing service_worker ${manifest.background?.service_worker}`);
   }
+  const bgScripts = manifest.background?.scripts;
+  if (!Array.isArray(bgScripts) || bgScripts.length === 0 || !bgScripts.every((s) => fs.existsSync(s))) {
+    fail('manifest.json: background.scripts must reference existing files for Firefox MV3 compatibility');
+  }
+  if (!manifest.browser_specific_settings?.gecko?.id) {
+    fail('manifest.json: browser_specific_settings.gecko.id is required for Firefox compatibility');
+  }
   console.log(`[OK] manifest.json & package.json: ${manifest.name} v${manifest.version}`);
 } catch (err) {
   fail(`manifest.json error: ${err.message}`);

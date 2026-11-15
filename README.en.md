@@ -18,17 +18,14 @@ Reading long serialized works in a browser tab is inconvenient offline or on e-i
 
 ### Key Features
 
-- **Automatic Volume Detection & Splitting:** Detects volume boundaries from collapsible sections, chapter labels, or URL patterns, letting you export either **1 File per Volume** (with standard series and volume index metadata) or a **Single File** with a nested volume/chapter Table of Contents.
-- **Manual Volume Editor:** Split chapters every *N* chapters, assign ranges (`from # to #`), tag checked rows, edit inline in the table, or apply batch rules (e.g., `1-24: Volume 01`).
-- **Self-Expiring Persistent Cache (`IndexedDB`) & Resume:** Downloaded chapters are saved locally with configurable expiration (**7 days** default) and storage caps, letting you resume interrupted downloads from the **Library** tab even after closing the browser without permanent bloat.
-- **Safe Mode (Anti-Block) & Automatic Rate-Limit Guard:** Dedicated toggle for RPM capping, randomized request jitter, and short batch cooldowns when desired—plus **automatic `HTTP 429`/`503` detection** that pauses the queue immediately without hammering rate-limited servers.
-- **SPA / JavaScript Tab Rendering Mode:** Supports dynamic React/Vue/Next.js pages by rendering them in a background browser tab (`chrome.tabs` + `chrome.scripting`) when static `fetch()` finds no chapter links or prose content.
-- **Merge Open Tabs Mode (EpubPress Style):** Grab all open tabs in your current browser window and compile their readable article content into a single ebook with 1 click.
-- **Built-in Library & Reading List:** Save tracked series in the **Library** tab (`chrome.storage.local`) and click **Load & Select New** to automatically detect and select only chapters published since your last download.
-- **Object-Oriented Modular Engine:** `ParserRegistry` ([src/parsers/](src/parsers/index.js)) ranks adapters extending `BaseParser` by DOM structure confidence, while `ExporterRegistry` ([src/exporters/](src/exporters/index.js)) exports to **EPUB 2/3**, **Single-File Offline HTML**, **Markdown (.md)**, and **Plain Text (.txt)**.
-- **Clean XHTML & E-Reader-First Typography:** `HtmlSanitizer` ([src/core/sanitizer.js](src/core/sanitizer.js)) preserves bold, italic, underline, strikethrough, alignment (`wpb-center`, `wpb-right`), relative size scaling (`<big>`, `<small>`), and blockquotes without locking fixed `px` font sizes or colors that break Dark Mode in e-readers.
-- **Cover & Image Optimization:** Extracts high-resolution covers (converting to optimized JPEG via `<canvas>` when enabled) and supports optional resizing/compression for inline chapter illustrations.
-- **Bilingual & Adaptive UI:** Full interface in **Portuguese (`pt-BR`)** and **English (`en`)**, with system, light, and dark color schemes.
+- **General Compatibility via DOM Heuristics:** Extracts series from universal web patterns (JSON-LD/Schema.org, Open Graph, semantic lists, and Readability-style prose scoring) instead of relying solely on per-domain rules. For non-standard layouts, a **built-in heuristic scanner** in Advanced Options can auto-suggest CSS selectors (with manual override available).
+- **Automatic Volume Detection:** Identifies volumes from collapsible sections, headings, chapter labels, or URL patterns to export **1 File per Volume** or a **Single File** with a nested TOC. If a source lacks volume groupings, manual range/batch rules remain available as a fallback.
+- **SPA / JavaScript Tab Rendering:** Dynamic React/Vue/Next.js pages that return empty HTML on static `fetch()` are automatically hydrated via a background browser tab (`chrome.tabs` + `chrome.scripting`).
+- **Local Cache (`IndexedDB`), Resume & Rate-Limit Guard:** Downloaded chapters stay cached locally (**7 days** default TTL) so interrupted runs can resume without re-fetching, backed by **Safe Mode** (RPM throttling and jitter) and automatic pause on `HTTP 429`/`503`.
+- **Built-in Library & New-Chapter Tracking:** Save series in the **Library** tab (`chrome.storage.local`) and click **Load & Select New** to pick only chapters published since your last export.
+- **Merge Open Tabs:** Capture open HTTP/HTTPS tabs in the current window and compile them into a single ebook.
+- **Clean E-Reader-First XHTML:** Strict XHTML sanitization ([sanitizer.js](src/core/sanitizer.js)) preserves bold, italic, quotes, alignments, and intra-chapter anchors (such as footnotes) without locking `px` font sizes or colors that break Dark Mode, plus cover extraction and optional image compression.
+- **Cross-Browser & Zero Dependencies:** Runs on **Chrome/Chromium** and **Mozilla Firefox 128+** as a pure Manifest V3 extension with bilingual (**PT-BR** / **EN**) and light/dark UI.
 
 ---
 
@@ -52,6 +49,14 @@ No build step or package manager is required.
 3. Enable **Developer mode** in the top-right corner.
 4. Click **Load unpacked** and select the `WebPullBook/` directory containing [manifest.json](manifest.json).
 
+### Installation (Mozilla Firefox)
+
+Compatible with **Firefox 128+** (Manifest V3):
+
+1. Download and extract `WebPullBook-v*.zip` (or clone this repository).
+2. Open `about:debugging#/runtime/this-firefox` in Firefox.
+3. Click **Load Temporary Add-on...** and select [manifest.json](manifest.json) (or the `.zip` archive directly).
+
 ### Quick Usage
 
 1. Navigate to a book's table of contents (or any chapter page) in your browser.
@@ -62,7 +67,7 @@ No build step or package manager is required.
 
 ### Customizing Any Website Without Code
 
-If a site uses an uncommon HTML layout or client-side JavaScript rendering, open **Advanced Options** to set custom CSS selectors or enable **SPA / JavaScript Mode**:
+If a site uses an uncommon HTML layout or client-side JavaScript rendering, open **Advanced Options**, enable **SPA / JavaScript Mode** if needed, and click **Auto-detect selectors** so the heuristic scanner fills in the fields automatically (or refine CSS selectors manually):
 
 ```text
 Parser Selection:                    Generic (Any HTML page)
@@ -109,9 +114,12 @@ WebPullBook/
     │   └── txt-exporter.js       # Plain text (.txt) exporter
     ├── parsers/
     │   ├── index.js              # ParserRegistry ranking adapters by DOM score
+    │   ├── generic-html.js       # Heuristic extractor, selector scanner & pagination
     │   ├── wp-lightnovel.js      # WordPress serialized fiction theme adapter
     │   ├── madara-theme.js       # Madara-style chapter/novel theme adapter
-    │   └── generic-html.js       # Readability-inspired fallback & pagination adapter
+    │   ├── royalroad.js          # Adapter for fiction TOC, volumes & hidden CSS rules
+    │   ├── scribblehub.js        # Adapter with AJAX/tab TOC & anti-bot challenge check
+    │   └── novelmania.js         # Adapter for API-paginated TOC & volume grouping
     └── workspace/
         ├── i18n.js               # Bilingual UI dictionary & DOM translator (PT / EN)
         ├── theme-init.js         # Zero-FOUC theme bootstrapper

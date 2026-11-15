@@ -113,5 +113,61 @@
         "volume": "Vol. 2 Ascent"
       }
     ]
+  },
+  "novelmania": {
+    "parserId": "novelmania",
+    "startingUrl": "https://novelmania.com.br/novels/cronicas-da-nevoa",
+    "title": "Crônicas da Névoa",
+    "author": "L. Vasconcelos",
+    "language": "pt",
+    "status": "Ativo",
+    "genres": ["Ação", "Fantasia", "Sci-fi"],
+    "coverUrl": "https://assets.novelmania.com.br/uploads/novel/cover/99/hero_nevoa.jpg",
+    "synopsis": "Na fronteira coberta por névoa, uma unidade esquecida defende o último farol.\n\nCada transmissão carrega um segredo sobre o império.",
+    "chapters": [
+      {
+        "url": "https://novelmania.com.br/novels/cronicas-da-nevoa/capitulos/volume-1-prologo",
+        "displayTitle": "Prólogo: Sinais na Névoa",
+        "volume": "Volume 01 — O Farol Cinzento"
+      },
+      {
+        "url": "https://novelmania.com.br/novels/cronicas-da-nevoa/capitulos/volume-1-capitulo-1",
+        "displayTitle": "Capítulo 1: Primeira Guarda",
+        "volume": "Volume 01 — O Farol Cinzento"
+      },
+      {
+        "url": "https://novelmania.com.br/novels/cronicas-da-nevoa/capitulos/ano-1-volume-2-capitulo-1",
+        "displayTitle": "Capítulo 1: Além da Muralha",
+        "volume": "Ano 1 - Volume 2"
+      }
+    ]
+  },
+  "scribblehub": {
+    "parserId": "scribblehub",
+    "startingUrl": "https://www.scribblehub.com/series/88811/ember-protocol/",
+    "title": "Ember Protocol",
+    "author": "A. Vance",
+    "language": "en",
+    "status": "Ongoing",
+    "genres": ["Action", "Fantasy", "Sci-fi"],
+    "coverUrl": "https://cdn.scribblehub.com/images/88/ember_88811_1700000000.jpg",
+    "synopsis": "Deep beneath the frozen reactor, an ancient signal wakes.\nOnly one courier knows the shutdown key.\nTime is running out.",
+    "chapters": [
+      {
+        "url": "https://www.scribblehub.com/read/88811-ember-protocol/chapter/3001/",
+        "displayTitle": "Chapter 1: Ignition",
+        "volume": "Volume 01"
+      },
+      {
+        "url": "https://www.scribblehub.com/read/88811-ember-protocol/chapter/3002/",
+        "displayTitle": "Chapter 2: Cold Core",
+        "volume": "Volume 01"
+      },
+      {
+        "url": "https://www.scribblehub.com/read/88811-ember-protocol/chapter/3003/",
+        "displayTitle": "Chapter 3: Ashfall",
+        "volume": "Volume 01"
+      }
+    ]
   }
 }

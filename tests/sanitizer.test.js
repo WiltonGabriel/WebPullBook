@@ -190,3 +190,28 @@ test('extractHiddenClassesFromStyles detects top-level hidden classes while igno
   assert.doesNotMatch(text, /Watermark B/);
   assert.match(text, /Visible in reader/);
 });
+
+test('HtmlSanitizer preserves referenced intra-chapter footnote anchors and drops unreferenced bookmarks', () => {
+  const root = parseHtmlBodyFragment(`
+    <h3><a name="_Toc452663782"></a>Seção 1</h3>
+    <p>Texto com nota<a id="nota1v"></a><a href="#nota1">¹</a> e âncora órfã<a id="unused"></a>.</p>
+    <hr>
+    <p><a id="nota1"></a><a href="#nota1v">1</a> – Explicação da nota.</p>
+  `);
+
+  const { xmlDoc, nodes } = sanitizeChapterContent(root, 'https://example.com/cap-1');
+  const xhtml = serializeChapterXhtml({
+    title: 'Notas',
+    xmlDoc,
+    nodes,
+    epub3: true
+  });
+
+  const parsed = new DOMParser().parseFromString(xhtml, 'application/xhtml+xml');
+  assert.equal(parsed.querySelector('parsererror'), null);
+
+  assert.match(xhtml, /<a id="nota1v"(?:\s*\/>|><\/a>)<a href="#nota1">¹<\/a>/);
+  assert.match(xhtml, /<a id="nota1"(?:\s*\/>|><\/a>)<a href="#nota1v">1<\/a>/);
+  assert.doesNotMatch(xhtml, /_Toc452663782/);
+  assert.doesNotMatch(xhtml, /id="unused"/);
+});

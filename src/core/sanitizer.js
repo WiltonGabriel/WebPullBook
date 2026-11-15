@@ -216,6 +216,21 @@ export class HtmlSanitizer {
       }
     }
 
+    const validIdRx = /^[A-Za-z_][A-Za-z0-9_.-]*$/;
+    const existingIds = new Set();
+    for (const el of workRoot.querySelectorAll('[id]')) {
+      const id = (el.getAttribute('id') || '').trim();
+      if (validIdRx.test(id)) existingIds.add(id);
+    }
+    const activeFragments = new Set();
+    for (const a of workRoot.querySelectorAll('a[href^="#"]')) {
+      const frag = (a.getAttribute('href') || '').trim().slice(1);
+      if (validIdRx.test(frag) && existingIds.has(frag)) {
+        activeFragments.add(frag);
+      }
+    }
+    const emittedIds = new Set();
+
     const cloneClean = (node) => {
       if (node.nodeType === Node.TEXT_NODE) {
         const cleanText = (node.nodeValue || '').replace(/[\u200b-\u200d\ufeff]/g, '');
@@ -245,17 +260,26 @@ export class HtmlSanitizer {
         if (this.removeNavLinks && NAV_LINK_PATTERNS.some((rx) => rx.test(linkText))) {
           return null;
         }
-        const hrefRaw = node.getAttribute('href') || '';
+        const rawId = (node.getAttribute('id') || '').trim();
+        const safeId = activeFragments.has(rawId) && !emittedIds.has(rawId) ? rawId : '';
+        const hrefRaw = (node.getAttribute('href') || '').trim();
         let safeHref = '';
-        try {
-          const u = new URL(hrefRaw, baseUrl);
-          if (u.protocol === 'http:' || u.protocol === 'https:') {
-            safeHref = u.toString();
+        if (hrefRaw.startsWith('#')) {
+          const frag = hrefRaw.slice(1);
+          if (activeFragments.has(frag)) {
+            safeHref = `#${frag}`;
           }
-        } catch {
-          safeHref = '';
+        } else if (hrefRaw) {
+          try {
+            const u = new URL(hrefRaw, baseUrl);
+            if (u.protocol === 'http:' || u.protocol === 'https:') {
+              safeHref = u.toString();
+            }
+          } catch {
+            safeHref = '';
+          }
         }
-        if (!safeHref) {
+        if (!safeHref && !safeId) {
           const frag = xmlDoc.createDocumentFragment();
           for (const child of node.childNodes) {
             const cloned = cloneClean(child);
@@ -264,7 +288,13 @@ export class HtmlSanitizer {
           return frag;
         }
         const cleanA = xmlDoc.createElementNS(XHTML_NS, 'a');
-        cleanA.setAttribute('href', safeHref);
+        if (safeId) {
+          cleanA.setAttribute('id', safeId);
+          emittedIds.add(safeId);
+        }
+        if (safeHref) {
+          cleanA.setAttribute('href', safeHref);
+        }
         for (const child of node.childNodes) {
           const cloned = cloneClean(child);
           if (cloned) cleanA.appendChild(cloned);
@@ -294,6 +324,11 @@ export class HtmlSanitizer {
       }
 
       const cleanEl = xmlDoc.createElementNS(XHTML_NS, targetTag);
+      const rawId = (node.getAttribute('id') || '').trim();
+      if (activeFragments.has(rawId) && !emittedIds.has(rawId)) {
+        cleanEl.setAttribute('id', rawId);
+        emittedIds.add(rawId);
+      }
       if (semanticClasses.length > 0) {
         cleanEl.setAttribute('class', [...new Set(semanticClasses)].join(' '));
       }
@@ -311,7 +346,10 @@ export class HtmlSanitizer {
       }
 
       if (targetTag !== 'br' && targetTag !== 'hr' && targetTag !== 'td' && targetTag !== 'th') {
-        const hasContent = cleanEl.textContent.trim().length > 0 || cleanEl.querySelector('img, br, hr');
+        const hasContent =
+          cleanEl.textContent.trim().length > 0 ||
+          cleanEl.hasAttribute('id') ||
+          cleanEl.querySelector('img, br, hr, [id]');
         if (!hasContent) {
           if (INLINE_TAGS.has(targetTag) && cleanEl.textContent.length > 0) {
             return xmlDoc.createTextNode(' ');

@@ -3,11 +3,13 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { installDomGlobals } from './helpers/dom-shim.js';
-import { BaseParser } from '../src/core/parser-engine.js';
+import { BaseParser, isAntiBotChallengeDocument } from '../src/core/parser-engine.js';
 import { ParserRegistry, loadSeriesWithParser, parserRegistry } from '../src/parsers/index.js';
 import { wpLightNovelParser } from '../src/parsers/wp-lightnovel.js';
 import { madaraThemeParser } from '../src/parsers/madara-theme.js';
 import { royalRoadParser } from '../src/parsers/royalroad.js';
+import { novelManiaParser } from '../src/parsers/novelmania.js';
+import { scribbleHubParser } from '../src/parsers/scribblehub.js';
 import { genericHtmlParser } from '../src/parsers/generic-html.js';
 
 const FIXTURES_DIR = path.resolve('tests/fixtures');
@@ -58,11 +60,13 @@ test('ParserRegistry ranks specialized adapters above generic fallback and honor
   const wpDoc = new DOMParser().parseFromString(readFixture('wp-lightnovel-index.html'), 'text/html');
   const madaraDoc = new DOMParser().parseFromString(readFixture('madara-index.html'), 'text/html');
   const rrDoc = new DOMParser().parseFromString(readFixture('royalroad-index.html'), 'text/html');
+  const nmDoc = new DOMParser().parseFromString(readFixture('novelmania-index.html'), 'text/html');
   const genericDoc = new DOMParser().parseFromString(readFixture('generic-index-p1.html'), 'text/html');
 
   assert.equal(parserRegistry.detect(wpDoc, 'https://novel.example.org/').id, 'wp-lightnovel');
   assert.equal(parserRegistry.detect(madaraDoc, 'https://madara.example.org/').id, 'madara-theme');
   assert.equal(parserRegistry.detect(rrDoc, 'https://www.royalroad.com/fiction/99900/clockwork-vanguard').id, 'royalroad');
+  assert.equal(parserRegistry.detect(nmDoc, 'https://novelmania.com.br/novels/cronicas-da-nevoa').id, 'novelmania');
   assert.equal(parserRegistry.detect(genericDoc, 'https://blog.example.org/').id, 'generic-html');
 
   // Explicit forcedId overrides DOM score
@@ -251,8 +255,8 @@ test('BaseParser supports custom CSS selectors, JSON-LD @graph, retries, rate-li
   globalThis.chrome = {
     tabs: {
       onUpdated: { addListener() {}, removeListener() {} },
-      create: async () => ({ id: 42, status: 'complete' }),
-      get: async () => ({ id: 42, status: 'complete' }),
+      create: async () => ({ id: 42, status: 'complete', url: 'https://spa.example.org/book' }),
+      get: async () => ({ id: 42, status: 'complete', url: 'https://spa.example.org/book' }),
       remove: async (id) => {
         removedTabId = id;
       }
@@ -319,4 +323,297 @@ test('Regression snapshot: royalroad index + chapter back-link resolution + hidd
   assert.equal(fallbackChapters.length, 1);
   assert.equal(fallbackChapters[0].displayTitle, 'Chapter 1: Fallback');
   assert.equal(fallbackChapters[0].dateText, '2026-02-01');
+});
+
+test('Regression snapshot: novelmania index + API pagination + chapter resolution + footnotes & sr-only cleanup', async () => {
+  const expected = SNAPSHOTS.novelmania;
+  mockFetchRoutes({
+    [expected.startingUrl]: readFixture('novelmania-index.html'),
+    [expected.chapters[0].url]: readFixture('novelmania-chapter.html')
+  });
+
+  // 1. DOM fallback from a chapter URL resolves back to the novel index page
+  const { parser, series } = await loadSeriesWithParser(expected.chapters[0].url);
+  assert.equal(parser.id, expected.parserId);
+  assert.equal(series.startingUrl, expected.startingUrl);
+  assert.equal(series.title, expected.title);
+  assert.equal(series.author, expected.author);
+  assert.equal(series.language, expected.language);
+  assert.equal(series.status, expected.status);
+  assert.deepEqual(series.genres, expected.genres);
+  assert.equal(series.coverUrl, expected.coverUrl);
+  assert.equal(series.synopsis, expected.synopsis);
+  assert.deepEqual(
+    series.chapters.map((c) => ({ url: c.url, displayTitle: c.displayTitle, volume: c.volume })),
+    expected.chapters
+  );
+
+  // 2. Chapter extraction strips .sr-only suffix, preserves inline image and intra-chapter footnote anchors
+  const parsedCh = await parser.downloadChapter(series.chapters[0]);
+  assert.equal(parsedCh.chapterTitle, 'Prólogo: Sinais na Névoa');
+  assert.equal(parsedCh.subtitle, '');
+  assert.equal(parsedCh.images.length, 1);
+  assert.equal(parsedCh.images[0].originalUrl, 'https://us-east-1.linodeobjects.com/novelmania/sample/ilustra-01.jpg');
+
+  const chXhtml = parsedCh.serialize('../styles/stylesheet.css', true);
+  assert.doesNotMatch(chXhtml, /Prólogo: Sinais na Névoa – Crônicas da Névoa/);
+  assert.match(chXhtml, /<a id="nota1v"(?:\s*\/>|><\/a>)<a href="#nota1">¹<\/a>/);
+  assert.match(chXhtml, /<a id="nota1"(?:\s*\/>|><\/a>)<a href="#nota1v">1<\/a>/);
+  assert.match(chXhtml, /<h5 class="wpb-center"><strong>Notas:<\/strong><\/h5>/);
+
+  // 3. Multi-page API chapter pagination and original cover enrichment
+  mockFetchRoutes({
+    [expected.startingUrl]: readFixture('novelmania-index.html'),
+    'https://novelmania.com.br/api/novels/cronicas-da-nevoa': JSON.stringify({
+      success: true,
+      data: {
+        title: 'Crônicas da Névoa',
+        author: 'L. Vasconcelos',
+        status: 'Ativo',
+        cover: {
+          original: 'https://assets.novelmania.com.br/uploads/novel/cover/99/original_nevoa.jpg',
+          large: 'https://assets.novelmania.com.br/uploads/novel/cover/99/hero_nevoa.jpg'
+        }
+      }
+    }),
+    'https://novelmania.com.br/api/novels/cronicas-da-nevoa/chapters?page=1&items=50&sort=asc': JSON.stringify({
+      success: true,
+      meta: { page: 1, limit: 50, pages: 2, count: 3 },
+      data: [
+        {
+          slug: 'volume-1-prologo',
+          title: 'Prólogo: Sinais na Névoa',
+          publishedAt: '2026-01-10T12:00:00Z',
+          unity: { name: 'Volume 1', title: 'O Farol Cinzento' }
+        },
+        {
+          slug: 'volume-1-capitulo-1',
+          title: 'Capítulo 1: Primeira Guarda',
+          publishedAt: '2026-01-12T12:00:00Z',
+          unity: { name: 'Volume 1', title: 'O Farol Cinzento' }
+        }
+      ]
+    }),
+    'https://novelmania.com.br/api/novels/cronicas-da-nevoa/chapters?page=2&items=50&sort=asc': JSON.stringify({
+      success: true,
+      meta: { page: 2, limit: 50, pages: 2, count: 3 },
+      data: [
+        {
+          slug: 'ano-1-volume-2-capitulo-1',
+          title: 'Capítulo 1: Além da Muralha',
+          publishedAt: '2026-01-20T12:00:00Z',
+          unity: { name: 'Ano 1 - Volume 2', title: null }
+        }
+      ]
+    })
+  });
+
+  const apiRes = await loadSeriesWithParser(expected.startingUrl);
+  assert.equal(apiRes.parser.id, novelManiaParser.id);
+  assert.equal(apiRes.series.coverUrl, 'https://assets.novelmania.com.br/uploads/novel/cover/99/original_nevoa.jpg');
+  assert.deepEqual(
+    apiRes.series.chapters.map((c) => ({ url: c.url, displayTitle: c.displayTitle, volume: c.volume, dateText: c.dateText })),
+    [
+      { ...expected.chapters[0], dateText: '2026-01-10' },
+      { ...expected.chapters[1], dateText: '2026-01-12' },
+      { ...expected.chapters[2], dateText: '2026-01-20' }
+    ]
+  );
+});
+
+test('GenericHtmlParser + BaseParser handle modern SSR index & chapter semantics without site-specific adapters', async () => {
+  const indexHtml = readFixture('novelmania-index.html');
+  const chapterHtml = readFixture('novelmania-chapter.html');
+  const mirrorIndexUrl = 'https://mirror-example.invalid/novels/cronicas-da-nevoa';
+  const mirrorChapterUrl = 'https://mirror-example.invalid/novels/cronicas-da-nevoa/capitulos/volume-1-prologo';
+
+  mockFetchRoutes({
+    [mirrorIndexUrl]: indexHtml,
+    [mirrorChapterUrl]: chapterHtml
+  });
+
+  const { parser, series } = await loadSeriesWithParser(mirrorIndexUrl, { parserId: 'generic-html' });
+  assert.equal(parser.id, 'generic-html');
+  assert.equal(series.title, 'Crônicas da Névoa');
+  assert.equal(series.author, 'L. Vasconcelos');
+  assert.equal(series.status, 'Ativo');
+  assert.deepEqual(series.genres, ['Ação', 'Fantasia', 'Sci-fi']);
+  assert.match(series.synopsis, /Na fronteira coberta por névoa/);
+  assert.equal(series.coverUrl, 'https://assets.novelmania.com.br/uploads/novel/cover/99/hero_nevoa.jpg');
+  assert.equal(series.chapters.length, 3);
+  assert.deepEqual(
+    series.chapters.map((c) => ({ title: c.displayTitle, dateText: c.dateText })),
+    [
+      { title: 'Prólogo: Sinais na Névoa', dateText: '2026-01-10' },
+      { title: 'Capítulo 1: Primeira Guarda', dateText: '2026-01-12' },
+      { title: 'Capítulo 1: Além da Muralha', dateText: '2026-01-20' }
+    ]
+  );
+
+  const chapterData = await genericHtmlParser.downloadChapter(series.chapters[0]);
+  assert.equal(chapterData.chapterTitle, 'Prólogo: Sinais na Névoa');
+  const chXml = chapterData.serialize('../styles/stylesheet.css', true);
+  assert.match(chXml, /Sinal detectado/);
+  assert.match(chXml, /O rádio estalou enquanto a neblina avançava/);
+});
+
+test('NovelManiaParser matches via DOM signals even if the domain changes', async () => {
+  const indexDoc = new DOMParser().parseFromString(readFixture('novelmania-index.html'), 'text/html');
+  const chapterDoc = new DOMParser().parseFromString(readFixture('novelmania-chapter.html'), 'text/html');
+
+  assert.ok(
+    novelManiaParser.matchScore(indexDoc, 'https://new-domain.example/novels/cronicas-da-nevoa') >=
+      genericHtmlParser.matchScore(indexDoc, 'https://new-domain.example/novels/cronicas-da-nevoa')
+  );
+  assert.ok(
+    novelManiaParser.matchScore(chapterDoc, 'https://new-domain.example/novels/cronicas-da-nevoa/capitulos/1') >=
+      genericHtmlParser.matchScore(chapterDoc, 'https://new-domain.example/novels/cronicas-da-nevoa/capitulos/1')
+  );
+});
+
+test('GenericHtmlParser infers ancestor volume headings, applies Innermost Node Wins, and suggests usable CSS selectors', async () => {
+  const indexHtml = readFixture('novelmania-index.html');
+  const chapterHtml = `
+    <html><body>
+      <main id="page-shell">
+        <div class="outer-wrapper">
+          <div class="meta-bar">Author note sidebar banner text with links <a href="/a">A</a><a href="/b">B</a></div>
+          <div class="story-prose">
+            <p>First long narrative paragraph with commas, pauses, and dialogue inside the inner prose block.</p>
+            <p>Second detailed paragraph expanding the world, atmosphere, and tension across the quiet night.</p>
+            <p>Third paragraph concluding the scene gracefully cleanly.</p>
+            <div class="author-note">Translator chatter to exclude</div>
+          </div>
+        </div>
+      </main>
+    </body></html>`;
+
+  const indexDoc = new DOMParser().parseFromString(indexHtml, 'text/html');
+  const chapterDoc = new DOMParser().parseFromString(chapterHtml, 'text/html');
+  const indexUrl = 'https://mirror-example.invalid/novels/cronicas-da-nevoa';
+
+  // Innermost Node Wins chooses .story-prose rather than .outer-wrapper
+  const root = genericHtmlParser.findChapterContentRoot(chapterDoc);
+  assert.match(root.className, /\bstory-prose\b/);
+
+  // Heuristic selector scanner generates working selectors for both list and content
+  const suggestion = genericHtmlParser.suggestSelectors({ indexDoc, chapterDoc, targetUrl: indexUrl });
+  assert.ok(suggestion.listSelector);
+  assert.equal(suggestion.listCount, 3);
+  assert.equal(suggestion.contentSelector, 'div.story-prose');
+  assert.match(suggestion.excludeSelector, /\.author-note/);
+
+  // Feed suggested selectors directly into loadSeriesWithParser + downloadChapter
+  mockFetchRoutes({
+    [indexUrl]: indexHtml,
+    'https://mirror-example.invalid/novels/cronicas-da-nevoa/capitulos/volume-1-prologo': chapterHtml
+  });
+
+  const autoNodes = genericHtmlParser.collectChapterNodes(indexDoc, indexUrl);
+  assert.deepEqual(
+    autoNodes.map((c) => c.volume),
+    ['Volume 01', 'Volume 01', 'Volume 02']
+  );
+
+  const { series } = await loadSeriesWithParser(indexUrl, {
+    parserId: 'generic-html',
+    customListSelector: suggestion.listSelector
+  });
+  assert.equal(series.chapters.length, 3);
+
+  const parsed = await genericHtmlParser.downloadChapter(series.chapters[0], {
+    customContentSelector: suggestion.contentSelector,
+    customExcludeSelector: suggestion.excludeSelector
+  });
+  const xml = parsed.serialize('../styles/stylesheet.css', true);
+  assert.match(xml, /First long narrative paragraph/);
+  assert.doesNotMatch(xml, /Translator chatter to exclude/);
+});
+
+test('Regression snapshot: scribblehub index + pagination ordering + chapter resolution + challenge detection', async () => {
+  const expected = SNAPSHOTS.scribblehub;
+  const page2Url = `${expected.startingUrl}?toc=2`;
+
+  mockFetchRoutes({
+    [expected.startingUrl]: readFixture('scribblehub-index-p1.html'),
+    [page2Url]: readFixture('scribblehub-index-p2.html'),
+    [expected.chapters[0].url]: readFixture('scribblehub-chapter.html')
+  });
+
+  // 1. Loading from a chapter URL resolves back to the series page and collects paginated TOC in ascending order
+  const { parser, series } = await loadSeriesWithParser(expected.chapters[0].url);
+  assert.equal(parser.id, scribbleHubParser.id);
+  assert.equal(series.startingUrl, expected.startingUrl);
+  assert.equal(series.title, expected.title);
+  assert.equal(series.author, expected.author);
+  assert.equal(series.language, expected.language);
+  assert.equal(series.status, expected.status);
+  assert.deepEqual(series.genres, expected.genres);
+  assert.equal(series.coverUrl, expected.coverUrl);
+  assert.equal(series.synopsis, expected.synopsis);
+  assert.deepEqual(
+    series.chapters.map((c) => ({ url: c.url, displayTitle: c.displayTitle, volume: c.volume })),
+    expected.chapters
+  );
+
+  // 2. Chapter extraction deduplicates leading title heading, strips .p-avatar-wrap, separates author notes, keeps inline image
+  const parsedCh = await parser.downloadChapter(series.chapters[0]);
+  assert.equal(parsedCh.chapterTitle, 'Chapter 1: Ignition');
+  assert.equal(parsedCh.subtitle, '');
+  assert.equal(parsedCh.images.length, 1);
+  assert.equal(parsedCh.images[0].originalUrl, 'https://cdn.scribblehub.com/img/sketch-01.png');
+
+  const chXhtml = parsedCh.serialize('../styles/stylesheet.css', true);
+  assert.match(chXhtml, /Static hissed over the shortwave radio/);
+  assert.match(chXhtml, /<hr\s*\/>[\s\S]*Thanks for reading the opening chapter!/);
+  assert.doesNotMatch(chXhtml, /avatarnew\.png/);
+  assert.doesNotMatch(chXhtml, /<h2><b>Chapter 1: Ignition<\/b><\/h2>/);
+
+  // 3. HTTP 403 triggers automatic tab fallback and detects localized anti-bot challenge interstitials
+  mockFetchRoutes({
+    [expected.startingUrl]: () => new Response('Forbidden', { status: 403 })
+  });
+  let tabCalls = 0;
+  globalThis.chrome = {
+    tabs: {
+      onUpdated: { addListener() {}, removeListener() {} },
+      query: async () => [],
+      create: async ({ url }) => {
+        tabCalls += 1;
+        return { id: 99, status: 'complete', url };
+      },
+      get: async () => ({ id: 99, status: 'complete', url: expected.startingUrl }),
+      remove: async () => {}
+    },
+    scripting: {
+      executeScript: async ({ func }) => {
+        const src = String(func);
+        if (src.includes('wi_getreleases_pagination')) {
+          return [
+            {
+              result: {
+                ok: true,
+                status: 200,
+                html: '<ol class="toc_ol"><li class="toc_w" order="1"><a class="toc_a" href="https://www.scribblehub.com/read/88811-ember-protocol/chapter/3001/">Chapter 1: Ignition</a></li></ol>'
+              }
+            }
+          ];
+        }
+        return [{ result: readFixture('scribblehub-index-p1.html') }];
+      }
+    }
+  };
+
+  const tabSeries = await loadSeriesWithParser(expected.startingUrl, { renderWaitMs: 0 });
+  assert.equal(tabSeries.series.requiresTabRender, true);
+  assert.ok(tabCalls >= 1);
+  assert.equal(tabSeries.series.chapters.length, 1);
+
+  const ptChallengeDoc = new DOMParser().parseFromString(
+    '<html><head><title>Um momento…</title></head><body><p>Este site utiliza um serviço de segurança para proteção contra bots maliciosos.</p></body></html>',
+    'text/html'
+  );
+  assert.equal(isAntiBotChallengeDocument(ptChallengeDoc), true);
+  const legitimateDoc = new DOMParser().parseFromString(readFixture('scribblehub-chapter.html'), 'text/html');
+  assert.equal(isAntiBotChallengeDocument(legitimateDoc), false);
 });

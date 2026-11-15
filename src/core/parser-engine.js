@@ -300,15 +300,85 @@ export function canUseTabScripting() {
 
 export function isAntiBotChallengeDocument(doc) {
   if (!doc) return false;
+  const hasContent = Boolean(doc.querySelector('#chp_raw, .epcontent, .reading-content, ol.toc_ol'));
+  if (hasContent) return false;
+
   const title = normalizeSpaces(doc.title || '');
   const hasChallengeEl = Boolean(
-    doc.querySelector('#challenge-running, #cf-challenge-running, form#challenge-form, iframe[src*="challenges.cloudflare.com"]')
+    doc.querySelector(
+      '#challenge-running, #cf-challenge-running, #challenge-stage, #challenge-error-text, form#challenge-form, iframe[src*="challenges.cloudflare.com"]'
+    )
   );
   const isChallengeTitle =
-    /^(?:just a moment\b|attention required!\s*\|\s*cloudflare|ddos-guard|checking your browser)/i.test(title);
-  if (!hasChallengeEl && !isChallengeTitle) return false;
+    /^(?:just a moment|um momento|un momento|un instant|einen moment|un attimo|checking your browser|verificação de segurança)\b|^attention required!\s*\|\s*cloudflare|^ddos-guard/i.test(
+      title
+    );
+  if (hasChallengeEl || isChallengeTitle) return true;
+
+  const bodyText = normalizeSpaces((doc.body?.textContent || '').slice(0, 2000));
+  return /este site utiliza um serviço de segurança para proteção contra bots|this website is using a security service to protect itself from online attacks|performing security verification|executando verificação de segurança|enable javascript and cookies to continue|ative o javascript e os cookies para continuar/i.test(
+    bodyText
+  );
+}
+
+export function isRateLimitDocument(doc) {
+  if (!doc) return false;
   const hasContent = Boolean(doc.querySelector('#chp_raw, .epcontent, .reading-content, ol.toc_ol'));
-  return !hasContent;
+  if (hasContent) return false;
+  const text = normalizeSpaces(`${doc.title || ''} ${(doc.body?.textContent || '').slice(0, 2000)}`);
+  return RATE_LIMIT_TEXT_RX.test(text) || /\berror\s*1015\b|you are being rate limited/i.test(text);
+}
+
+function isTabNavigationComplete(tab) {
+  return Boolean(tab?.status === 'complete' && tab?.url && tab.url !== 'about:blank');
+}
+
+export async function waitForTabComplete(tabId, initialTab = null, signal = null, timeoutMs = 12000) {
+  if (isTabNavigationComplete(initialTab)) return;
+
+  await new Promise((resolve, reject) => {
+    let settled = false;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
+      clearInterval(poller);
+      if (signal) signal.removeEventListener('abort', onAbort);
+      chrome.tabs.onUpdated.removeListener(listener);
+      resolve();
+    };
+
+    const timeout = setTimeout(finish, timeoutMs);
+
+    const onAbort = () => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
+      clearInterval(poller);
+      chrome.tabs.onUpdated.removeListener(listener);
+      reject(new DOMException('Aborted', 'AbortError'));
+    };
+    if (signal) signal.addEventListener('abort', onAbort, { once: true });
+
+    function listener(updatedId, changeInfo, tab) {
+      if (updatedId !== tabId) return;
+      const effectiveUrl = tab?.url || changeInfo?.url || '';
+      if (changeInfo.status === 'complete' && effectiveUrl && effectiveUrl !== 'about:blank') {
+        finish();
+      }
+    }
+
+    chrome.tabs.onUpdated.addListener(listener);
+
+    const poller = setInterval(async () => {
+      try {
+        const tabInfo = await chrome.tabs.get(tabId);
+        if (isTabNavigationComplete(tabInfo)) finish();
+      } catch {
+        finish();
+      }
+    }, 120);
+  });
 }
 
 /**
@@ -332,7 +402,7 @@ export async function fetchRenderedTabDocument(url, { waitMs = 950, tabId = null
       const liveHtml = results?.[0]?.result;
       if (liveHtml && liveHtml.length > 60) {
         const parsedLive = new DOMParser().parseFromString(liveHtml, 'text/html');
-        if (!isAntiBotChallengeDocument(parsedLive)) {
+        if (!isAntiBotChallengeDocument(parsedLive) && !isRateLimitDocument(parsedLive)) {
           return parsedLive;
         }
       }
@@ -346,49 +416,7 @@ export async function fetchRenderedTabDocument(url, { waitMs = 950, tabId = null
     createdTab = await chrome.tabs.create({ url, active: false });
     const targetTabId = createdTab.id;
 
-    if (createdTab.status !== 'complete') {
-      await new Promise((resolve, reject) => {
-        let settled = false;
-        const finish = () => {
-          if (settled) return;
-          settled = true;
-          clearTimeout(timeout);
-          clearInterval(poller);
-          if (signal) signal.removeEventListener('abort', onAbort);
-          chrome.tabs.onUpdated.removeListener(listener);
-          resolve();
-        };
-
-        const timeout = setTimeout(finish, 12000);
-
-        const onAbort = () => {
-          if (settled) return;
-          settled = true;
-          clearTimeout(timeout);
-          clearInterval(poller);
-          chrome.tabs.onUpdated.removeListener(listener);
-          reject(new DOMException('Aborted', 'AbortError'));
-        };
-        if (signal) signal.addEventListener('abort', onAbort, { once: true });
-
-        function listener(updatedId, changeInfo) {
-          if (updatedId === targetTabId && changeInfo.status === 'complete') {
-            finish();
-          }
-        }
-
-        chrome.tabs.onUpdated.addListener(listener);
-
-        const poller = setInterval(async () => {
-          try {
-            const tabInfo = await chrome.tabs.get(targetTabId);
-            if (tabInfo?.status === 'complete') finish();
-          } catch {
-            finish();
-          }
-        }, 120);
-      });
-    }
+    await waitForTabComplete(targetTabId, createdTab, signal, 12000);
 
     if (waitMs > 0) {
       await sleep(waitMs, signal);
@@ -411,6 +439,13 @@ export async function fetchRenderedTabDocument(url, { waitMs = 950, tabId = null
       err.isAntiBotChallenge = true;
       throw err;
     }
+    if (isRateLimitDocument(parsedDoc)) {
+      const err = new Error(`HTTP 429 ao carregar ${url}`);
+      err.status = 429;
+      err.isRateLimit = true;
+      throw err;
+    }
+    parsedDoc._wpbRenderedByTab = true;
     return parsedDoc;
   } finally {
     if (createdTab?.id !== undefined) {
@@ -502,6 +537,14 @@ export class BaseParser {
               const imgVal = typeof item.image === 'string' ? item.image : item.image?.url;
               if (imgVal) result.coverUrl = imgVal;
             }
+            if (!result.status && item.creativeWorkStatus) {
+              result.status = normalizeSpaces(item.creativeWorkStatus);
+            }
+            if ((!result.genres || result.genres.length === 0) && item.genre) {
+              const rawGenres = Array.isArray(item.genre) ? item.genre : [item.genre];
+              const genres = rawGenres.map((g) => normalizeSpaces(g)).filter(Boolean);
+              if (genres.length > 0) result.genres = genres;
+            }
           }
         }
       } catch {
@@ -511,8 +554,25 @@ export class BaseParser {
     return result;
   }
 
+  _extractDlMetadata(doc) {
+    const out = {};
+    for (const dt of doc.querySelectorAll('dl dt')) {
+      const label = normalizeSpaces(dt.textContent).toLowerCase();
+      const dd = dt.parentElement?.querySelector('dd') || dt.nextElementSibling;
+      const value = normalizeSpaces(dd?.textContent);
+      if (!value) continue;
+      if (!out.author && /^(?:autor|author|writer|escritor)$/i.test(label)) {
+        out.author = value;
+      } else if (!out.status && /^(?:status|situa[çc][ãa]o|state)$/i.test(label)) {
+        out.status = value;
+      }
+    }
+    return out;
+  }
+
   extractCommonMetadata(doc, targetUrl) {
     const jsonLd = this.extractJsonLdMetadata(doc);
+    const dlMeta = this._extractDlMetadata(doc);
     const ogTitle = doc.querySelector('meta[property="og:title"]')?.getAttribute('content');
     const h1Title = doc.querySelector('h1')?.textContent;
     const title = normalizeSpaces(h1Title || jsonLd.title || ogTitle || doc.title) || 'WebPullBook';
@@ -523,11 +583,29 @@ export class BaseParser {
     const authorMeta =
       doc.querySelector('meta[name="author"]')?.getAttribute('content') ||
       doc.querySelector('[rel="author"], .author a, .author')?.textContent ||
+      dlMeta.author ||
       '';
     const author = normalizeSpaces(authorMeta || jsonLd.author) || '<unknown>';
 
+    const status = dlMeta.status || jsonLd.status || '';
+
+    let genres = Array.isArray(jsonLd.genres) ? [...jsonLd.genres] : [];
+    if (genres.length === 0) {
+      const seenGenres = new Set();
+      for (const a of doc.querySelectorAll('a[rel="tag"], .tags a, .genres a')) {
+        if (a.closest('#comments, .comments, footer, [class*="related" i], [id*="parecidas" i]')) continue;
+        const g = normalizeSpaces(a.textContent);
+        if (g && !seenGenres.has(g)) {
+          seenGenres.add(g);
+          genres.push(g);
+        }
+      }
+    }
+
+    const ogCoverRaw = doc.querySelector('meta[property="og:image"]')?.getAttribute('content') || '';
+    const ogCover = /\/(?:og-default|default-og)\./i.test(ogCoverRaw) ? '' : ogCoverRaw;
     const rawCover =
-      doc.querySelector('meta[property="og:image"]')?.getAttribute('content') ||
+      ogCover ||
       jsonLd.coverUrl ||
       doc.querySelector('.cover img, .thumb img, .book-cover img, main img')?.getAttribute('src') ||
       '';
@@ -540,7 +618,9 @@ export class BaseParser {
       }
     }
 
-    const synContainer = doc.querySelector('.synopsis, .description, .summary, .entry-content');
+    const synContainer = doc.querySelector(
+      '.synopsis, .description, .summary, [itemprop="description"], [data-testid*="synopsis"], [data-testid*="description"], .entry-content'
+    );
     const ogDesc = doc.querySelector('meta[property="og:description"]')?.getAttribute('content');
     const synopsis = extractCleanSynopsis(synContainer) || jsonLd.synopsis || normalizeSpaces(ogDesc);
 
@@ -549,8 +629,8 @@ export class BaseParser {
       title,
       author,
       language,
-      status: '',
-      genres: [],
+      status,
+      genres,
       synopsis,
       coverUrl: toHighResCoverUrl(coverUrl) || coverUrl,
       coverThumbUrl: coverUrl
@@ -662,7 +742,12 @@ export class BaseParser {
     const initialUrl = normalizeUrl(inputUrl);
     const initialDoc = preloadedDoc || (await fetchDocumentWithOptions(initialUrl, options, signal));
     let { targetUrl, doc: indexDoc } = await this.resolveIndexDocument(initialUrl, initialDoc, signal, options);
-    let usedTabFallback = Boolean(options.renderWithTab || options._usedTabFallback);
+    let usedTabFallback = Boolean(
+      options.renderWithTab ||
+        options._usedTabFallback ||
+        initialDoc?._wpbRenderedByTab ||
+        indexDoc?._wpbRenderedByTab
+    );
 
     let allChapters = await this.collectAllChapters(indexDoc, targetUrl, options, signal);
 
@@ -714,7 +799,15 @@ export class BaseParser {
   }
 
   extractChapterHeading(doc, chapter) {
-    const h1 = normalizeSpaces(doc.querySelector('h1.entry-title, h1')?.textContent);
+    const h1El = doc.querySelector('h1.entry-title, h1');
+    let h1 = '';
+    if (h1El) {
+      const clone = h1El.cloneNode(true);
+      for (const hidden of clone.querySelectorAll('.sr-only, .visually-hidden, [aria-hidden="true"]')) {
+        hidden.remove();
+      }
+      h1 = normalizeSpaces(clone.textContent);
+    }
     const sub = normalizeSpaces(doc.querySelector('.cat-series')?.textContent);
     return {
       chapterTitle: h1 || chapter.displayTitle || chapter.url,
