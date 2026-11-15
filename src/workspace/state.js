@@ -56,81 +56,69 @@ export const DEFAULT_OPTIONS = {
   stylesheet: DEFAULT_EPUB_CSS
 };
 
+// Every preset sets the same group of options (EPUB standard, images, typography) so that picking a
+// profile always overwrites those fields in Advanced Options with the profile's exact values.
+const PRESET_BASE = {
+  outputFormat: 'epub',
+  restrictCoverJpeg: true,
+  grayscaleImages: false,
+  useSvgForImages: false,
+  compressedFormat: 'jpg',
+  imageQuality: 85,
+  fontFamily: 'reader-default',
+  textAlign: 'justify',
+  lineHeight: 1.55,
+  paragraphIndent: false
+};
+
 export const READER_PRESETS = {
   modern: {
-    outputFormat: 'epub',
+    ...PRESET_BASE,
     createEpub3: true,
     popupFootnotes: true,
-    restrictCoverJpeg: true,
     compressImages: false,
-    grayscaleImages: false,
     skipImages: false,
-    useSvgForImages: false,
-    compressedResolution: 1080,
-    fontFamily: 'reader-default',
-    textAlign: 'justify'
+    compressedResolution: 1080
   },
   kindle: {
-    outputFormat: 'epub',
+    ...PRESET_BASE,
     createEpub3: false,
     popupFootnotes: false,
-    restrictCoverJpeg: true,
     compressImages: true,
-    grayscaleImages: false,
     skipImages: false,
-    useSvgForImages: false,
-    compressedResolution: 1200,
-    fontFamily: 'reader-default',
-    textAlign: 'justify'
+    compressedResolution: 1200
   },
   'kindle-modern': {
-    outputFormat: 'epub',
+    ...PRESET_BASE,
     createEpub3: true,
     popupFootnotes: true,
-    restrictCoverJpeg: true,
     compressImages: true,
-    grayscaleImages: false,
     skipImages: false,
-    useSvgForImages: false,
-    compressedResolution: 1200,
-    fontFamily: 'reader-default',
-    textAlign: 'justify'
+    compressedResolution: 1200
   },
   kobo: {
-    outputFormat: 'epub',
+    ...PRESET_BASE,
     createEpub3: true,
     popupFootnotes: true,
-    restrictCoverJpeg: true,
     compressImages: true,
-    grayscaleImages: false,
     skipImages: false,
-    useSvgForImages: false,
-    compressedResolution: 1080,
-    fontFamily: 'reader-default',
-    textAlign: 'justify'
+    compressedResolution: 1080
   },
   textonly: {
-    outputFormat: 'epub',
+    ...PRESET_BASE,
     createEpub3: true,
     popupFootnotes: true,
-    restrictCoverJpeg: true,
     compressImages: false,
-    grayscaleImages: false,
     skipImages: true,
-    useSvgForImages: false
+    compressedResolution: 1080
   },
   legacy: {
-    outputFormat: 'epub',
+    ...PRESET_BASE,
     createEpub3: false,
     popupFootnotes: false,
-    restrictCoverJpeg: true,
     compressImages: true,
-    grayscaleImages: false,
     skipImages: false,
-    useSvgForImages: false,
-    compressedResolution: 1080,
-    fontFamily: 'reader-default',
-    textAlign: 'justify'
+    compressedResolution: 1080
   }
 };
 

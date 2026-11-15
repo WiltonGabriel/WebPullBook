@@ -6,7 +6,7 @@ Todas as mudanças notáveis do **WebPullBook** serão documentadas neste arquiv
 
 ### Novidades / New Features
 - **Perfis de Leitor reformulados:** novos perfis **Kindle (Antigo)** (EPUB 2, ideal para *Send to Kindle*) e **Kindle (Moderno)** (EPUB 3 para Calibre/KFX), além de Padrão Moderno, Kobo, Somente Texto e Padrão Antigo. Todos preservam as cores (removida a conversão forçada para escala de cinza e o selo E-Ink). Guia completo em `docs/READER_PRESETS.md` / `docs/READER_PRESETS.pt.md`.
-- **Seletor de perfil também em Opções Avançadas:** perfis são predefinições fixas; alterar qualquer opção avançada muda o perfil para **Personalizado** automaticamente.
+- **Seletor de perfil também em Opções Avançadas:** perfis são predefinições fixas e completas: escolher um perfil atualiza na hora todas as opções avançadas correspondentes (padrão EPUB, imagens e tipografia) e alterar qualquer opção avançada muda o perfil para **Personalizado** automaticamente. Ordem do seletor: Padrão Moderno, Kobo, Kindle (Moderno), Kindle (Antigo), Somente Texto, Personalizado, Padrão Antigo.
 - **Seletor Visual (`🎯 Apontar`)** para capturar seletores CSS clicando na página real.
 - **Detecção automática inteligente:** Modo SPA / JavaScript e seletores CSS são detectados e preenchidos automaticamente em sites desconhecidos.
 - **Edição rápida e mesclagem de capítulos** na prévia (selo `Editado`), **Notas de rodapé pop-up EPUB 3**, e conversão automática de capa/imagens AVIF/WebP para JPEG.

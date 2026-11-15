@@ -6,6 +6,8 @@ O **WebPullBook** oferece **Perfis de Leitor** rápidos (disponíveis tanto na a
 
 Os perfis são **predefinições fixas** e não podem ser editados. Sempre que você altera **qualquer** opção em **Opções Avançadas** (mesmo uma que o perfil não controla, como o atraso entre requisições), o seletor muda automaticamente para **Personalizado** e permanece assim até você escolher um perfil de novo. Ao escolher um perfil, todas as opções dele são preenchidas de uma vez.
 
+Cada perfil define o mesmo conjunto de Opções Avançadas de uma só vez: padrão EPUB, notas pop-up, capa JPEG, otimização e resolução de imagens, formato/qualidade das imagens, ignorar imagens, fonte, alinhamento, espaçamento entre linhas e recuo de parágrafo. Ao escolher um perfil (na aba **Obra** ou em **Opções Avançadas**), todos esses campos são atualizados na tela imediatamente. O seletor lista os perfis nesta ordem: Padrão Moderno, Kobo e Leitores Digitais, Kindle (Moderno), Kindle (Antigo), Somente Texto, Personalizado, Padrão Antigo.
+
 ---
 
 ## Tabela Comparativa dos Perfis
@@ -13,12 +15,12 @@ Os perfis são **predefinições fixas** e não podem ser editados. Sempre que v
 | Perfil | Padrão EPUB | Notas Pop-up | Capa JPEG | Otimização de Imagens | Resolução Máx. | Alinhamento | Indicado para |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
 | **Padrão Moderno** (`modern`) | EPUB 3 | Sim | Sim | Original (sem compressão) | Original | Justificado | Celulares, tablets, Apple Books, Thorium, Calibre Viewer |
-| **Kindle (Antigo)** (`kindle`) | EPUB 2 | Não | Sim | JPEG comprimido | 1200px | Justificado | Envio por *Send to Kindle* (e-mail/web/app) sem rejeições |
-| **Kindle (Moderno)** (`kindle-modern`) | EPUB 3 | Sim | Sim | JPEG comprimido | 1200px | Justificado | Conversão via Calibre (KFX/AZW3 por USB), Kindle Colorsoft |
 | **Kobo e Leitores Digitais** (`kobo`) | EPUB 3 | Sim | Sim | JPEG comprimido | 1080px | Justificado | Kobo (inclusive Clara/Libra Colour), Tolino, PocketBook |
-| **Somente Texto** (`textonly`) | EPUB 3 | Sim | Sim | Ignora imagens | — | Mantido | Leitura focada e livros gigantes ultraleves |
-| **⚠️ Padrão Antigo** (`legacy`) | EPUB 2 | Não | Sim | JPEG comprimido | 1080px | Justificado | Aparelhos antigos (Sony Reader, Nook antigo, CoolReader) |
+| **Kindle (Moderno)** (`kindle-modern`) | EPUB 3 | Sim | Sim | JPEG comprimido | 1200px | Justificado | Conversão via Calibre (KFX/AZW3 por USB), Kindle Colorsoft |
+| **Kindle (Antigo)** (`kindle`) | EPUB 2 | Não | Sim | JPEG comprimido | 1200px | Justificado | Envio por *Send to Kindle* (e-mail/web/app) sem rejeições |
+| **Somente Texto** (`textonly`) | EPUB 3 | Sim | Sim | Ignora imagens | — | Justificado | Leitura focada e livros gigantes ultraleves |
 | **Personalizado** (`custom`) | Manual | Manual | Manual | Manual | Manual | Manual | Ativado automaticamente ao editar qualquer opção avançada |
+| **⚠️ Padrão Antigo** (`legacy`) | EPUB 2 | Não | Sim | JPEG comprimido | 1080px | Justificado | Aparelhos antigos (Sony Reader, Nook antigo, CoolReader) |
 
 ---
 

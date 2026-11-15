@@ -210,6 +210,33 @@ async function runE2E() {
     await page.waitForSelector('#preview-modal[open]', { state: 'detached' });
 
     // 2. Test Reader Preset selector (kindle vs kindle-modern, legacy, kobo, modern, and custom auto-detection)
+    const expectedPresetOrder = ['modern', 'kobo', 'kindle-modern', 'kindle', 'textonly', 'custom', 'legacy'];
+    for (const selId of ['#reader-preset', '#adv-reader-preset']) {
+      assert.deepEqual(
+        await page.$$eval(`${selId} option`, (opts) => opts.map((o) => o.value)),
+        expectedPresetOrder,
+        `${selId} option order`
+      );
+    }
+    // Picking a preset must overwrite every related Advanced Options field (fully linked UI)
+    await page.evaluate(() => {
+      const el = document.getElementById('opt-line-height');
+      el.value = '2';
+      el.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    assert.equal(await page.inputValue('#reader-preset'), 'custom');
+    await page.selectOption('#reader-preset', 'textonly');
+    assert.equal(await page.isChecked('#opt-skip-images'), true, 'Text Only should skip images');
+    assert.equal(await page.inputValue('#opt-line-height'), '1.55', 'Preset should reset line height');
+    assert.equal(await page.inputValue('#opt-img-res'), '1080');
+    await page.click('[data-tab="advanced"]');
+    await page.selectOption('#adv-reader-preset', 'kindle');
+    await page.click('[data-tab="main"]');
+    assert.equal(await page.isChecked('#opt-skip-images'), false);
+    assert.equal(await page.isChecked('#opt-popup-footnotes'), false, 'Kindle (Antigo) disables pop-up footnotes');
+    assert.equal(await page.isChecked('#opt-epub3'), false);
+    assert.equal(await page.inputValue('#opt-img-res'), '1200');
+    assert.equal(await page.inputValue('#opt-text-align'), 'justify');
     await page.selectOption('#reader-preset', 'kindle');
     assert.equal(await page.isChecked('#opt-epub3'), false, 'Kindle preset should switch to EPUB 2');
     assert.equal(await page.isChecked('#opt-compress-images'), true, 'Kindle preset should optimize images');
