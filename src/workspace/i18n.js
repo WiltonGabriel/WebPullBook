@@ -7,7 +7,7 @@ export const I18N_DICTIONARY = {
     btnLoadingSeries: 'Carregando...',
     btnMergeTabs: 'Juntar Abas',
     btnMergeTabsTitle: 'Capturar abas abertas da janela atual como capítulos (estilo EpubPress)',
-    tabMain: 'Obra & Capítulos',
+    tabMain: 'Obra',
     tabLibrary: 'Biblioteca',
     tabAdvanced: 'Opções Avançadas',
     tabLogs: 'Logs',
@@ -135,6 +135,12 @@ export const I18N_DICTIONARY = {
     themeSystem: 'Sistema (Automático)',
     themeLight: 'Claro',
     themeDark: 'Escuro',
+    themeSepia: 'Sépia',
+    themeMidnight: 'Meia-noite',
+    themeLightTop: '☀️ Claro',
+    themeDarkTop: '🌙 Escuro',
+    themeSepiaTop: '📜 Sépia',
+    themeMidnightTop: '🌌 Meia-noite',
     labelCustomFilename: 'Modelo de Nome do Arquivo',
     tokensHint: 'Tokens: %Filename%, %Title%, %Author%, %Volume%',
     optSubfolder: 'Salvar dentro de subpasta WebPullBook/<Título>/ em Downloads',
@@ -220,8 +226,16 @@ export const I18N_DICTIONARY = {
     msgNoNewChapters: 'Nenhum capítulo novo desde o último registro ({total} capítulos no total).',
     msgRateLimitPaused:
       'Limite de taxa detectado no servidor (HTTP {status}). Fila pausada automaticamente para proteger seu acesso — os capítulos já baixados estão salvos no cache local. Aguarde alguns minutos, ative o Modo Seguro e clique em Retomar.',
+    msgAntiBotPaused:
+      'Verificação humana (anti-bot/Cloudflare) exigida pelo site em {url}. Abra essa página em uma aba normal do navegador, conclua a verificação ("Eu não sou um robô") e clique em Retomar.',
     msgSessionRestored: 'Sessão de "{title}" restaurada do cache ({cached} capítulos já prontos em disco!).',
-    msgCacheCleared: 'Cache local limpo com sucesso.'
+    msgCacheCleared: 'Cache local limpo com sucesso.',
+    labelAutoDetectSelectors: 'Assistente de Seletores (Heurística)',
+    btnAutoDetectSelectors: 'Auto-detectar seletores',
+    btnAutoDetectingSelectors: 'Analisando DOM...',
+    msgAutoDetectNoUrl: 'Informe a URL da obra acima antes de executar a detecção automática.',
+    msgAutoDetectResult: 'Seletores sugeridos: lista ({listCount} links) e conteúdo (~{contentChars} caracteres). Clique em Carregar Série para testar.',
+    msgAutoDetectFailed: 'Falha ao analisar seletores: {error}'
   },
   en: {
     brandSub: 'Volume-aware web book extractor & EPUB packager for offline reading',
@@ -231,7 +245,7 @@ export const I18N_DICTIONARY = {
     btnLoadingSeries: 'Loading...',
     btnMergeTabs: 'Merge Tabs',
     btnMergeTabsTitle: 'Grab open browser tabs in the current window as chapters (EpubPress style)',
-    tabMain: 'Series & Chapters',
+    tabMain: 'Series',
     tabLibrary: 'Library',
     tabAdvanced: 'Advanced Options',
     tabLogs: 'Logs',
@@ -359,6 +373,12 @@ export const I18N_DICTIONARY = {
     themeSystem: 'System (Auto)',
     themeLight: 'Light',
     themeDark: 'Dark',
+    themeSepia: 'Sepia',
+    themeMidnight: 'Midnight',
+    themeLightTop: '☀️ Light',
+    themeDarkTop: '🌙 Dark',
+    themeSepiaTop: '📜 Sepia',
+    themeMidnightTop: '🌌 Midnight',
     labelCustomFilename: 'Filename Template',
     tokensHint: 'Tokens: %Filename%, %Title%, %Author%, %Volume%',
     optSubfolder: 'Save inside WebPullBook/<Title>/ subfolder in Downloads',
@@ -444,8 +464,16 @@ export const I18N_DICTIONARY = {
     msgNoNewChapters: 'No new chapters since last check ({total} total chapters).',
     msgRateLimitPaused:
       'Rate limit detected on server (HTTP {status}). Queue automatically paused to prevent lockout — downloaded chapters are saved in local cache. Wait a few minutes, enable Safe Mode, and click Resume.',
+    msgAntiBotPaused:
+      'Human verification (anti-bot/Cloudflare) requested by site at {url}. Open that page in a normal browser tab, complete the check, and click Resume.',
     msgSessionRestored: 'Restored "{title}" from local cache ({cached} chapters already ready on disk!).',
-    msgCacheCleared: 'Local cache cleared.'
+    msgCacheCleared: 'Local cache cleared.',
+    labelAutoDetectSelectors: 'Selector Assistant (Heuristic)',
+    btnAutoDetectSelectors: 'Auto-detect selectors',
+    btnAutoDetectingSelectors: 'Scanning DOM...',
+    msgAutoDetectNoUrl: 'Enter a series or chapter URL above before running auto-detection.',
+    msgAutoDetectResult: 'Suggested selectors: list ({listCount} links) and content (~{contentChars} chars). Click Load Series to test.',
+    msgAutoDetectFailed: 'Failed to auto-detect selectors: {error}'
   }
 };
 

@@ -40,18 +40,18 @@
       </form>
 
       <div class="topbar-right">
-        <nav class="tabs" aria-label="Seções">
-          <button type="button" class="tab-btn active" data-tab="main">
-            <span data-i18n="tabMain">Obra &amp; Capítulos</span>
+        <nav class="tabs" role="tablist" aria-label="Seções / Sections">
+          <button type="button" id="tab-btn-main" class="tab-btn active" role="tab" aria-selected="true" tabindex="0" data-tab="main">
+            <span data-i18n="tabMain">Obra</span>
           </button>
-          <button type="button" class="tab-btn" data-tab="library">
+          <button type="button" id="tab-btn-library" class="tab-btn" role="tab" aria-selected="false" tabindex="-1" data-tab="library">
             <span data-i18n="tabLibrary">Biblioteca</span>
             <span id="library-badge" class="badge hidden">0</span>
           </button>
-          <button type="button" class="tab-btn" data-tab="advanced">
+          <button type="button" id="tab-btn-advanced" class="tab-btn" role="tab" aria-selected="false" tabindex="-1" data-tab="advanced">
             <span data-i18n="tabAdvanced">Opções Avançadas</span>
           </button>
-          <button type="button" class="tab-btn" data-tab="logs">
+          <button type="button" id="tab-btn-logs" class="tab-btn" role="tab" aria-selected="false" tabindex="-1" data-tab="logs">
             <span data-i18n="tabLogs">Logs</span>
             <span id="log-badge" class="badge hidden">0</span>
             <span id="log-warn-badge" class="badge warn hidden" data-i18n-title="logWarnsTitle" title="Avisos leves">0</span>
@@ -59,10 +59,18 @@
           </button>
         </nav>
 
-        <select id="ui-lang-top" class="lang-select" aria-label="Idioma / Language">
-          <option value="pt">🇧🇷 PT</option>
-          <option value="en">🇺🇸 EN</option>
-        </select>
+        <div class="topbar-selectors">
+          <select id="ui-lang-top" class="lang-select" aria-label="Idioma / Language">
+            <option value="pt">🇧🇷 PT</option>
+            <option value="en">🇺🇸 EN</option>
+          </select>
+          <select id="ui-theme-top" class="theme-select" aria-label="Tema / Theme" data-i18n-title="labelTheme" title="Tema da Interface">
+            <option value="light" data-i18n="themeLightTop">☀️ Claro</option>
+            <option value="dark" data-i18n="themeDarkTop">🌙 Escuro</option>
+            <option value="sepia" data-i18n="themeSepiaTop">📜 Sépia</option>
+            <option value="midnight" data-i18n="themeMidnightTop">🌌 Meia-noite</option>
+          </select>
+        </div>
       </div>
     </div>
   </header>
@@ -72,80 +80,85 @@
     <section id="export-report" class="export-report hidden" aria-live="polite"></section>
 
     <!-- TAB 1: MAIN -->
-    <section id="tab-main" class="tab-panel">
-      <div class="top-grid">
+    <section id="tab-main" class="tab-panel" role="tabpanel" aria-labelledby="tab-btn-main">
+      <div class="main-layout">
         <!-- Cover + Pack Card -->
         <aside class="card pack-card">
-          <div class="cover-box">
-            <img id="cover-preview" alt="Prévia da capa" hidden>
-            <div id="cover-placeholder" class="cover-placeholder" data-i18n="noCover">Sem capa</div>
-          </div>
-          <div class="cover-actions">
-            <button type="button" id="btn-clear-cover" class="btn ghost sm" data-i18n="btnClearCover">Limpar Capa</button>
-            <button type="button" id="btn-hires-cover" class="btn ghost sm" data-i18n="btnHiresCover">Alta Res.</button>
-          </div>
-
-          <div class="field mt-sm">
-            <label for="output-format" data-i18n="labelOutputFormat">Formato de Saída</label>
-            <select id="output-format">
-              <option value="epub">EPUB (eBook)</option>
-              <option value="html">HTML Único (Offline)</option>
-              <option value="md">Markdown (.md)</option>
-              <option value="txt">Texto Puro (.txt)</option>
-            </select>
-          </div>
-
-          <fieldset class="mode-fieldset">
-            <legend data-i18n="legendPackMode">Modo de Saída</legend>
-            <label class="radio-card">
-              <input type="radio" name="pack-mode" value="by-volume" checked>
-              <span>
-                <strong data-i18n="modeByVolumeTitle">1 Arquivo por Volume</strong>
-                <small data-i18n="modeByVolumeDesc">Gera um arquivo separado para cada volume selecionado</small>
-              </span>
-            </label>
-            <label class="radio-card">
-              <input type="radio" name="pack-mode" value="single">
-              <span>
-                <strong data-i18n="modeSingleTitle">Arquivo Único</strong>
-                <small data-i18n="modeSingleDesc">Todos os capítulos selecionados em 1 livro (com sumário por volume)</small>
-              </span>
-            </label>
-          </fieldset>
-
-          <label class="safe-mode-card">
-            <input type="checkbox" id="opt-safe-mode-quick">
-            <span>
-              <strong data-i18n="safeModeQuickTitle">Modo Seguro (Anti-Bloqueio)</strong>
-              <small data-i18n="safeModeQuickDesc">Limita o ritmo (~22 págs/min) + pausa curta entre lotes para sites com firewall</small>
-            </span>
-          </label>
-
-          <div class="pack-actions">
-            <button type="button" id="btn-pack-epub" class="btn primary lg" disabled data-i18n="btnPackEpub">Empacotar EPUB</button>
-            <button type="button" id="btn-retry-failed" class="btn secondary hidden">Tentar Falhos (0)</button>
-            <div id="run-controls" class="run-controls hidden">
-              <button type="button" id="btn-pause" class="btn secondary" data-i18n="btnPause">Pausar</button>
-              <button type="button" id="btn-cancel" class="btn danger" data-i18n="btnCancel">Cancelar</button>
+          <div class="pack-cover-col">
+            <div class="cover-box">
+              <img id="cover-preview" alt="Prévia da capa" hidden>
+              <div id="cover-placeholder" class="cover-placeholder" data-i18n="noCover">Sem capa</div>
+            </div>
+            <div class="cover-actions">
+              <button type="button" id="btn-clear-cover" class="btn ghost sm" data-i18n="btnClearCover">Limpar Capa</button>
+              <button type="button" id="btn-hires-cover" class="btn ghost sm" data-i18n="btnHiresCover">Alta Res.</button>
             </div>
           </div>
 
-          <div id="progress-box" class="progress-box hidden">
-            <div class="progress-head">
-              <span id="progress-label" data-i18n="progressPreparing">Preparando...</span>
-              <span id="progress-pct">0%</span>
+          <div class="pack-controls-col">
+            <div class="field mt-sm">
+              <label for="output-format" data-i18n="labelOutputFormat">Formato de Saída</label>
+              <select id="output-format">
+                <option value="epub">EPUB (eBook)</option>
+                <option value="html">HTML Único (Offline)</option>
+                <option value="md">Markdown (.md)</option>
+                <option value="txt">Texto Puro (.txt)</option>
+              </select>
             </div>
-            <progress id="progress-bar" max="100" value="0"></progress>
-            <p id="progress-detail" class="muted sm"></p>
-          </div>
 
-          <p class="hint sm" data-i18n="readerHint">
-            Os livros são empacotados no padrão EPUB 2/3 (com capa, sumário e metadados de volume), HTML único offline, Markdown ou TXT.
-          </p>
+            <fieldset class="mode-fieldset">
+              <legend data-i18n="legendPackMode">Modo de Saída</legend>
+              <label class="radio-card">
+                <input type="radio" name="pack-mode" value="by-volume" checked>
+                <span>
+                  <strong data-i18n="modeByVolumeTitle">1 Arquivo por Volume</strong>
+                  <small data-i18n="modeByVolumeDesc">Gera um arquivo separado para cada volume selecionado</small>
+                </span>
+              </label>
+              <label class="radio-card">
+                <input type="radio" name="pack-mode" value="single">
+                <span>
+                  <strong data-i18n="modeSingleTitle">Arquivo Único</strong>
+                  <small data-i18n="modeSingleDesc">Todos os capítulos selecionados em 1 livro (com sumário por volume)</small>
+                </span>
+              </label>
+            </fieldset>
+
+            <label class="safe-mode-card">
+              <input type="checkbox" id="opt-safe-mode-quick">
+              <span>
+                <strong data-i18n="safeModeQuickTitle">Modo Seguro (Anti-Bloqueio)</strong>
+                <small data-i18n="safeModeQuickDesc">Limita o ritmo (~22 págs/min) + pausa curta entre lotes para sites com firewall</small>
+              </span>
+            </label>
+
+            <div class="pack-actions">
+              <button type="button" id="btn-pack-epub" class="btn primary lg" disabled data-i18n="btnPackEpub">Empacotar EPUB</button>
+              <button type="button" id="btn-retry-failed" class="btn secondary hidden">Tentar Falhos (0)</button>
+              <div id="run-controls" class="run-controls hidden">
+                <button type="button" id="btn-pause" class="btn secondary" data-i18n="btnPause">Pausar</button>
+                <button type="button" id="btn-cancel" class="btn danger" data-i18n="btnCancel">Cancelar</button>
+              </div>
+            </div>
+
+            <div id="progress-box" class="progress-box hidden">
+              <div class="progress-head">
+                <span id="progress-label" data-i18n="progressPreparing">Preparando...</span>
+                <span id="progress-pct">0%</span>
+              </div>
+              <progress id="progress-bar" max="100" value="0"></progress>
+              <p id="progress-detail" class="muted sm"></p>
+            </div>
+
+            <p class="hint sm" data-i18n="readerHint">
+              Os livros são empacotados no padrão EPUB 2/3 (com capa, sumário e metadados de volume), HTML único offline, Markdown ou TXT.
+            </p>
+          </div>
         </aside>
 
-        <!-- Metadata Card -->
-        <section class="card meta-card">
+        <div class="main-content-col">
+          <!-- Metadata Card -->
+          <section class="card meta-card">
           <div class="card-header">
             <h2 data-i18n="metaHeading">Metadados da Obra</h2>
             <div class="row-gap">
@@ -212,11 +225,10 @@
               <span class="muted sm" data-i18n="volumesEmpty">Carregue uma obra para detectar os volumes automaticamente.</span>
             </div>
           </div>
-        </section>
-      </div>
+          </section>
 
-      <!-- Chapters Table Card -->
-      <section class="card chapters-card">
+          <!-- Chapters Table Card -->
+          <section class="card chapters-card">
         <div class="chapters-top">
           <div class="chapters-title-row">
             <h2 data-i18n="chaptersHeading">Capítulos</h2>
@@ -271,11 +283,13 @@
             </tbody>
           </table>
         </div>
-      </section>
+          </section>
+        </div>
+      </div>
     </section>
 
     <!-- TAB 2: LIBRARY & CACHE -->
-    <section id="tab-library" class="tab-panel hidden">
+    <section id="tab-library" class="tab-panel hidden" role="tabpanel" aria-labelledby="tab-btn-library" hidden>
       <section class="card">
         <div class="card-header">
           <div>
@@ -314,7 +328,7 @@
     </section>
 
     <!-- TAB 3: ADVANCED OPTIONS -->
-    <section id="tab-advanced" class="tab-panel hidden">
+    <section id="tab-advanced" class="tab-panel hidden" role="tabpanel" aria-labelledby="tab-btn-advanced" hidden>
       <div class="adv-grid">
         <section class="card">
           <h2 data-i18n="advAppearanceHeading">Aparência &amp; Arquivos</h2>
@@ -333,6 +347,8 @@
                 <option value="system" data-i18n="themeSystem">Sistema (Automático)</option>
                 <option value="light" data-i18n="themeLight">Claro</option>
                 <option value="dark" data-i18n="themeDark">Escuro</option>
+                <option value="sepia" data-i18n="themeSepia">Sépia</option>
+                <option value="midnight" data-i18n="themeMidnight">Meia-noite</option>
               </select>
             </div>
 
@@ -418,6 +434,10 @@
             <div class="field">
               <label for="opt-exclude-selector" data-i18n="labelExcludeSelector">Seletor CSS de elementos a excluir (opcional)</label>
               <input id="opt-exclude-selector" type="text" placeholder="Ex.: .ads, .author-note">
+            </div>
+            <div class="field">
+              <label data-i18n="labelAutoDetectSelectors">Assistente de Seletores (Heurística)</label>
+              <button type="button" id="btn-auto-detect-selectors" class="btn ghost sm" data-i18n="btnAutoDetectSelectors">Auto-detectar seletores</button>
             </div>
           </div>
 
@@ -507,7 +527,7 @@
     </section>
 
     <!-- TAB 4: LOGS -->
-    <section id="tab-logs" class="tab-panel hidden">
+    <section id="tab-logs" class="tab-panel hidden" role="tabpanel" aria-labelledby="tab-btn-logs" hidden>
       <section class="card">
         <div class="card-header">
           <h2 data-i18n="logsHeading">Registro de Execução</h2>

@@ -3,6 +3,7 @@ import {
   buildEpubStylesheet,
   downloadAndParseChapter,
   extractVolumeNumber,
+  fetchDocumentWithOptions,
   normalizeSpaces,
   normalizeUrl,
   sanitizeFilename,
@@ -72,6 +73,7 @@ const state = {
     status: ''
   },
   activeParser: genericHtmlParser,
+  seriesRequiresTab: false,
   chapters: [],
   chapterCache: new Map(),
   library: [],
@@ -359,32 +361,55 @@ function renderExportReport({ okCount, chapterErrors, imageWarnings }) {
   box.replaceChildren(head, list);
 }
 
+const VALID_THEMES = new Set(['light', 'dark', 'sepia', 'midnight']);
+
+function resolveEffectiveTheme(theme) {
+  if (VALID_THEMES.has(theme)) return theme;
+  return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+
 function switchTab(targetTab) {
   for (const b of document.querySelectorAll('.tab-btn')) {
-    b.classList.toggle('active', b.dataset.tab === targetTab);
+    const isSelected = b.dataset.tab === targetTab;
+    b.classList.toggle('active', isSelected);
+    b.setAttribute('aria-selected', String(isSelected));
+    b.tabIndex = isSelected ? 0 : -1;
+    if (isSelected) {
+      b.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    }
   }
   for (const panel of document.querySelectorAll('.tab-panel')) {
-    panel.classList.toggle('hidden', panel.id !== `tab-${targetTab}`);
+    const isVisible = panel.id === `tab-${targetTab}`;
+    panel.classList.toggle('hidden', !isVisible);
+    panel.hidden = !isVisible;
   }
 }
 
 function applyThemeChoice(theme) {
+  const root = document.documentElement;
   const meta = document.querySelector('meta[name="color-scheme"]');
-  if (!meta) return;
-  if (theme === 'dark' || theme === 'light') {
-    meta.content = theme;
+  if (VALID_THEMES.has(theme)) {
+    root.dataset.theme = theme;
+    if (meta) {
+      meta.content = theme === 'dark' || theme === 'midnight' ? 'dark' : 'light';
+    }
     try {
       localStorage.setItem('wpb-color-scheme', theme);
     } catch {
       // ignore
     }
   } else {
-    meta.content = 'light dark';
+    delete root.dataset.theme;
+    if (meta) meta.content = 'light dark';
     try {
       localStorage.removeItem('wpb-color-scheme');
     } catch {
       // ignore
     }
+  }
+  const topThemeEl = $('ui-theme-top');
+  if (topThemeEl) {
+    topThemeEl.value = resolveEffectiveTheme(theme);
   }
 }
 
@@ -522,6 +547,7 @@ function syncOptionsToUi() {
   $('opt-ui-lang').value = o.uiLang || 'pt';
   $('output-format').value = o.outputFormat || 'epub';
   $('opt-theme').value = o.theme;
+  $('ui-theme-top').value = resolveEffectiveTheme(o.theme);
   $('opt-custom-filename').value = o.customFilename;
   $('opt-subfolder').checked = o.subfolder;
   $('opt-no-save-as').checked = o.noSaveAs;
@@ -1052,6 +1078,7 @@ async function renderCacheSessions() {
 async function restoreCachedSession(sess, onlyCached = false) {
   switchTab('main');
   state.activeParser = getParserById(sess.parserId) || genericHtmlParser;
+  state.seriesRequiresTab = Boolean(sess.metadata?.requiresTabRender);
   state.metadata = {
     ...sess.metadata,
     filename: sess.metadata?.filename || sanitizeFilename(sess.metadata?.title || 'WebPullBook', true)
@@ -1302,6 +1329,7 @@ async function handleMergeOpenTabs() {
     }
 
     state.activeParser = genericHtmlParser;
+    state.seriesRequiresTab = false;
     const defaultTitle =
       state.options.uiLang === 'en'
         ? `Open Tabs Anthology (${validTabs.length})`
@@ -1388,6 +1416,7 @@ async function handleLoadSeries(url) {
   try {
     const { parser, series } = await loadSeriesWithParser(url, state.options);
     state.activeParser = parser;
+    state.seriesRequiresTab = Boolean(series.requiresTabRender);
     state.metadata = {
       ...series,
       filename: sanitizeFilename(series.title, true)
@@ -1425,6 +1454,79 @@ async function handleLoadSeries(url) {
   } finally {
     btn.disabled = false;
     btn.textContent = t('btnLoadSeries');
+  }
+}
+
+async function handleAutoDetectSelectors() {
+  const url = $('starting-url').value.trim();
+  if (!url) {
+    showBanner(t('msgAutoDetectNoUrl'), 'error');
+    return;
+  }
+
+  readOptionsFromUi();
+  const btn = $('btn-auto-detect-selectors');
+  btn.disabled = true;
+  btn.textContent = t('btnAutoDetectingSelectors');
+
+  try {
+    let indexDoc = await fetchDocumentWithOptions(url, { renderWithTab: state.options.renderWithTab });
+    let scan = genericHtmlParser.suggestSelectors({ indexDoc, targetUrl: url });
+    if (scan.listCount === 0 && !state.options.renderWithTab) {
+      try {
+        const renderedDoc = await fetchDocumentWithOptions(url, { renderWithTab: true });
+        const renderedScan = genericHtmlParser.suggestSelectors({ indexDoc: renderedDoc, targetUrl: url });
+        if (renderedScan.listCount > 0) {
+          indexDoc = renderedDoc;
+          scan = renderedScan;
+        }
+      } catch {
+        // Keep static result if SPA fallback is unavailable
+      }
+    }
+
+    const sampleUrl = state.chapters?.[0]?.url || scan.sampleChapterUrl || '';
+    let chapterDoc = null;
+    if (sampleUrl && sampleUrl !== url) {
+      try {
+        chapterDoc = await fetchDocumentWithOptions(sampleUrl, { renderWithTab: state.options.renderWithTab });
+      } catch {
+        chapterDoc = null;
+      }
+    } else if (!scan.listSelector) {
+      chapterDoc = indexDoc;
+    }
+
+    const fullScan = genericHtmlParser.suggestSelectors({
+      indexDoc,
+      chapterDoc,
+      targetUrl: url
+    });
+
+    if (fullScan.listSelector) $('opt-list-selector').value = fullScan.listSelector;
+    if (fullScan.contentSelector) $('opt-content-selector').value = fullScan.contentSelector;
+    if (fullScan.excludeSelector && !$('opt-exclude-selector').value.trim()) {
+      $('opt-exclude-selector').value = fullScan.excludeSelector;
+    }
+
+    readOptionsFromUi();
+    await saveOptions();
+    appendLog(
+      `Heurística: list="${fullScan.listSelector || '-'}" (${fullScan.listCount}), content="${fullScan.contentSelector || '-'}" (${fullScan.contentChars} chars), exclude="${fullScan.excludeSelector || '-'}"`
+    );
+    showBanner(
+      t('msgAutoDetectResult', {
+        listCount: fullScan.listCount,
+        contentChars: fullScan.contentChars
+      }),
+      fullScan.listCount > 0 || fullScan.contentChars > 0 ? 'success' : 'info'
+    );
+  } catch (err) {
+    appendLog(`Erro na heurística: ${err.message}`, 'error');
+    showBanner(t('msgAutoDetectFailed', { error: err.message }), 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = t('btnAutoDetectSelectors');
   }
 }
 
@@ -1509,9 +1611,13 @@ async function waitWhilePaused(signal) {
 
 async function enforceSafeThrottle(networkTimestamps, networkFetchCount, signal) {
   readOptionsFromUi();
+  const effectiveBaseDelay = Math.max(
+    state.options.delayMs || 0,
+    state.activeParser?.minDelayMs || 0
+  );
   if (!state.options.safeMode) {
-    if (state.options.delayMs > 0) {
-      await sleep(state.options.delayMs, signal);
+    if (effectiveBaseDelay > 0) {
+      await sleep(effectiveBaseDelay, signal);
     }
     return;
   }
@@ -1523,8 +1629,8 @@ async function enforceSafeThrottle(networkTimestamps, networkFetchCount, signal)
     await sleep(10000, signal);
   }
 
-  // Humanized jitter (1.8s - 3.2s or configured delayMs if larger)
-  const minDelay = Math.max(state.options.delayMs || 0, 1800);
+  // Humanized jitter (1.8s - 3.2s or configured/parser min delay if larger)
+  const minDelay = Math.max(effectiveBaseDelay, 1800);
   const jittered = minDelay + Math.round(Math.random() * 1400);
   await sleep(jittered, signal);
 
@@ -1699,10 +1805,13 @@ async function handlePackEpub() {
         ch.status = 'downloading';
         renderChaptersTable();
 
-        let shouldPauseForRateLimit = false;
+        let pauseTrigger = null;
         try {
           networkTimestamps.push(Date.now());
-          const parsed = await downloadAndParseChapter(ch, state.activeParser, state.options, signal);
+          const chapterFetchOptions = state.seriesRequiresTab
+            ? { ...state.options, renderWithTab: true }
+            : state.options;
+          const parsed = await downloadAndParseChapter(ch, state.activeParser, chapterFetchOptions, signal);
           networkFetchCount++;
 
           const cacheRec = {
@@ -1729,12 +1838,16 @@ async function handlePackEpub() {
           totalOkChapters++;
         } catch (err) {
           if (err.name === 'AbortError') throw err;
-          if (err.isRateLimit && state.options.autoPauseOnRateLimit !== false) {
+          if ((err.isRateLimit || err.isAntiBotChallenge) && state.options.autoPauseOnRateLimit !== false) {
             ch.status = 'error';
             ch.errorMsg = err.message;
-            shouldPauseForRateLimit = true;
+            pauseTrigger = err.isAntiBotChallenge
+              ? { kind: 'antibot', url: ch.url }
+              : { kind: 'ratelimit', status: err.status || 429 };
             ch.logId = appendLog(
-              `BLOQUEIO DE TAXA (${err.status || 503}) detectado em "${ch.displayTitle}" — pausando fila automaticamente!`,
+              err.isAntiBotChallenge
+                ? `VERIFICAÇÃO ANTI-BOT detectada em "${ch.displayTitle}" (${ch.url}) — pausando fila automaticamente!`
+                : `BLOQUEIO DE TAXA (${err.status || 503}) detectado em "${ch.displayTitle}" — pausando fila automaticamente!`,
               'error'
             );
           } else if (err.status === 404 && state.options.skip404) {
@@ -1776,19 +1889,24 @@ async function handlePackEpub() {
         }
 
         renderChaptersTable();
-        if (networkFetchCount % 5 === 0 || shouldPauseForRateLimit) {
+        if (networkFetchCount % 5 === 0 || pauseTrigger) {
           await persistSessionSnapshot();
         }
 
-        if (shouldPauseForRateLimit) {
+        if (pauseTrigger) {
           networkTimestamps.length = 0;
           state.paused = true;
           $('btn-pause').textContent = t('btnResume');
-          showBanner(t('msgRateLimitPaused', { status: 503 }), 'error');
+          showBanner(
+            pauseTrigger.kind === 'antibot'
+              ? t('msgAntiBotPaused', { url: pauseTrigger.url })
+              : t('msgRateLimitPaused', { status: pauseTrigger.status }),
+            'error'
+          );
           await renderCacheSessions();
           await waitWhilePaused(signal);
           hideBanner();
-          c--; // Retry the exact chapter that hit rate-limit upon resume
+          c--; // Retry the exact chapter that triggered pause upon resume
           continue;
         }
 
@@ -1903,6 +2021,27 @@ function wireEvents() {
     });
   }
 
+  const tablist = document.querySelector('.tabs[role="tablist"]');
+  if (tablist) {
+    tablist.addEventListener('keydown', (e) => {
+      const tabs = [...tablist.querySelectorAll('[role="tab"]')];
+      const idx = tabs.indexOf(document.activeElement);
+      if (idx === -1) return;
+      let nextIdx = -1;
+      if (e.key === 'ArrowRight') nextIdx = (idx + 1) % tabs.length;
+      else if (e.key === 'ArrowLeft') nextIdx = (idx - 1 + tabs.length) % tabs.length;
+      else if (e.key === 'Home') nextIdx = 0;
+      else if (e.key === 'End') nextIdx = tabs.length - 1;
+      if (nextIdx !== -1) {
+        e.preventDefault();
+        const nextTab = tabs[nextIdx];
+        switchTab(nextTab.dataset.tab);
+        if (nextTab.dataset.tab === 'library') renderCacheSessions();
+        nextTab.focus();
+      }
+    });
+  }
+
   $('load-series-form').addEventListener('submit', (e) => {
     e.preventDefault();
     const url = $('starting-url').value.trim();
@@ -1952,6 +2091,14 @@ function wireEvents() {
     const newLang = $('ui-lang-top').value;
     $('opt-ui-lang').value = newLang;
     applyLanguageChoice(newLang);
+    await saveOptions();
+  });
+
+  $('ui-theme-top').addEventListener('change', async () => {
+    const newTheme = $('ui-theme-top').value;
+    state.options.theme = newTheme;
+    $('opt-theme').value = newTheme;
+    applyThemeChoice(newTheme);
     await saveOptions();
   });
 
@@ -2212,6 +2359,10 @@ function wireEvents() {
     await saveOptions();
   });
 
+  $('btn-auto-detect-selectors').addEventListener('click', () => {
+    handleAutoDetectSelectors();
+  });
+
   $('btn-export-opts').addEventListener('click', () => {
     readOptionsFromUi();
     const blob = new Blob([JSON.stringify(state.options, null, 2)], { type: 'application/json' });
@@ -2257,10 +2408,18 @@ function wireEvents() {
 
   window.addEventListener('storage', (e) => {
     if (e.key === 'wpb-color-scheme') {
-      const meta = document.querySelector('meta[name="color-scheme"]');
-      if (meta) meta.content = e.newValue || 'light dark';
+      applyThemeChoice(e.newValue || 'system');
     }
   });
+
+  const darkSchemeMq = window.matchMedia?.('(prefers-color-scheme: dark)');
+  if (darkSchemeMq) {
+    darkSchemeMq.addEventListener('change', () => {
+      if (state.options.theme === 'system') {
+        applyThemeChoice('system');
+      }
+    });
+  }
 }
 
 async function init() {

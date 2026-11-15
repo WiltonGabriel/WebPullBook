@@ -1,8 +1,15 @@
 try {
   const stored = localStorage.getItem('wpb-color-scheme');
-  if (stored === 'light' || stored === 'dark') {
-    const meta = document.querySelector('meta[name="color-scheme"]');
-    if (meta) meta.content = stored;
+  const root = document.documentElement;
+  const meta = document.querySelector('meta[name="color-scheme"]');
+  if (stored === 'light' || stored === 'dark' || stored === 'sepia' || stored === 'midnight') {
+    root.dataset.theme = stored;
+    if (meta) {
+      meta.content = stored === 'dark' || stored === 'midnight' ? 'dark' : 'light';
+    }
+  } else {
+    delete root.dataset.theme;
+    if (meta) meta.content = 'light dark';
   }
 } catch {
   // Ignore storage access errors
