@@ -6,13 +6,14 @@
   <meta name="color-scheme" content="light dark">
   <script src="theme-init.js"></script>
   <title>WebPullBook</title>
+  <link rel="icon" type="image/svg+xml" href="../../icons/icon.svg">
   <link rel="stylesheet" href="workspace.css">
 </head>
 <body>
   <header class="topbar">
     <div class="topbar-inner">
       <div class="brand">
-        <img src="../../icons/icon-48.png" alt="" class="brand-icon" width="32" height="32">
+        <img src="../../icons/icon.svg" alt="" class="brand-icon" width="32" height="32">
         <div>
           <h1>WebPullBook</h1>
           <p class="brand-sub" data-i18n="brandSub">Extrator por volumes e empacotador EPUB para leitura offline</p>
@@ -65,6 +66,7 @@
             <option value="en">🇺🇸 EN</option>
           </select>
           <select id="ui-theme-top" class="theme-select" aria-label="Tema / Theme" data-i18n-title="labelTheme" title="Tema da Interface">
+            <option value="system" data-i18n="themeSystemTop">🖥️ Auto</option>
             <option value="light" data-i18n="themeLightTop">☀️ Claro</option>
             <option value="dark" data-i18n="themeDarkTop">🌙 Escuro</option>
             <option value="sepia" data-i18n="themeSepiaTop">📜 Sépia</option>
@@ -90,12 +92,27 @@
               <div id="cover-placeholder" class="cover-placeholder" data-i18n="noCover">Sem capa</div>
             </div>
             <div class="cover-actions">
-              <button type="button" id="btn-clear-cover" class="btn ghost sm" data-i18n="btnClearCover">Limpar Capa</button>
+              <button type="button" id="btn-upload-cover" class="btn ghost sm" data-i18n="btnUploadCover">Enviar Capa</button>
+              <button type="button" id="btn-generate-cover" class="btn ghost sm" data-i18n="btnGenerateCover">Gerar Capa</button>
               <button type="button" id="btn-hires-cover" class="btn ghost sm" data-i18n="btnHiresCover">Alta Res.</button>
+              <button type="button" id="btn-clear-cover" class="btn ghost sm" data-i18n="btnClearCover">Limpar Capa</button>
+              <input type="file" id="input-upload-cover" accept="image/jpeg,image/png,image/webp,image/gif" hidden>
             </div>
           </div>
 
           <div class="pack-controls-col">
+            <div class="field mt-sm">
+              <label for="reader-preset" data-i18n="labelReaderPreset">Perfil de Leitor</label>
+              <select id="reader-preset">
+                <option value="modern" data-i18n="presetModern">Padrão Moderno</option>
+                <option value="kindle" data-i18n="presetKindle">Kindle</option>
+                <option value="kobo" data-i18n="presetKobo">Kobo e Leitores Digitais</option>
+                <option value="textonly" data-i18n="presetTextOnly">Somente Texto</option>
+                <option value="legacy" data-i18n="presetLegacy" data-i18n-title="presetLegacyTitle" title="Recomendado apenas para aparelhos antigos ou leitores que não abrem livros modernos">⚠️ Padrão Antigo</option>
+                <option value="custom" data-i18n="presetCustom">Personalizado</option>
+              </select>
+            </div>
+
             <div class="field mt-sm">
               <label for="output-format" data-i18n="labelOutputFormat">Formato de Saída</label>
               <select id="output-format">
@@ -127,8 +144,8 @@
             <label class="safe-mode-card">
               <input type="checkbox" id="opt-safe-mode-quick">
               <span>
-                <strong data-i18n="safeModeQuickTitle">Modo Seguro (Anti-Bloqueio)</strong>
-                <small data-i18n="safeModeQuickDesc">Limita o ritmo (~22 págs/min) + pausa curta entre lotes para sites com firewall</small>
+                <strong data-i18n="safeModeQuickTitle">Modo Seguro</strong>
+                <small data-i18n="safeModeQuickDesc">Limita o ritmo (~22 págs/min) com pausa curta entre lotes. Ative e desative quando quiser.</small>
               </span>
             </label>
 
@@ -218,6 +235,7 @@
               </div>
               <div class="volumes-actions">
                 <button type="button" id="btn-filter-clear-vol" class="btn ghost sm hidden" data-i18n="btnShowAllVolumes">Mostrar todos volumes</button>
+                <button type="button" id="btn-redetect-volumes" class="btn secondary sm" data-i18n="btnRedetectVolumes">Tentar Encontrar Volumes</button>
                 <button type="button" id="btn-open-volume-modal" class="btn secondary sm" data-i18n="btnManualVolumes">Definir Volumes Manualmente</button>
               </div>
             </div>
@@ -254,6 +272,7 @@
             <button type="button" id="btn-select-all" class="btn ghost sm" data-i18n="btnSelectAll">Selecionar Todos</button>
             <button type="button" id="btn-unselect-all" class="btn ghost sm" data-i18n="btnUnselectAll">Desmarcar Todos</button>
             <button type="button" id="btn-reverse-order" class="btn ghost sm" data-i18n="btnReverseOrder">Inverter Ordem</button>
+            <button type="button" id="btn-preview-chapter" class="btn ghost sm" data-i18n="btnPreviewChapter">Pré-visualizar</button>
             <button type="button" id="btn-edit-urls" class="btn ghost sm" data-i18n="btnEditUrls">Editar URLs</button>
             <button type="button" id="btn-copy-urls" class="btn ghost sm" data-i18n="btnCopyUrls">Copiar URLs</button>
             <button type="button" id="btn-select-failed" class="btn ghost sm hidden" data-i18n="btnSelectFailed">Selecionar Falhos</button>
@@ -321,7 +340,10 @@
               Salve séries em andamento para checar e marcar automaticamente apenas os capítulos novos desde o último download.
             </p>
           </div>
-          <button type="button" id="btn-save-library-tab" class="btn primary sm" data-i18n="btnSaveCurrentToLib">+ Salvar Obra Atual</button>
+          <div class="row-gap">
+            <button type="button" id="btn-check-all-library" class="btn secondary sm" data-i18n="btnCheckAllLibrary">Verificar Todas</button>
+            <button type="button" id="btn-save-library-tab" class="btn primary sm" data-i18n="btnSaveCurrentToLib">+ Salvar Obra Atual</button>
+          </div>
         </div>
         <div id="library-grid" class="library-grid"></div>
       </section>
@@ -331,39 +353,61 @@
     <section id="tab-advanced" class="tab-panel hidden" role="tabpanel" aria-labelledby="tab-btn-advanced" hidden>
       <div class="adv-grid">
         <section class="card">
-          <h2 data-i18n="advAppearanceHeading">Aparência &amp; Arquivos</h2>
+          <div class="card-header">
+            <h2 data-i18n="advFilesHeading">Arquivos &amp; Padrão EPUB</h2>
+            <button type="button" id="btn-reset-files" class="btn ghost sm" data-i18n="btnResetCss">Restaurar Padrão</button>
+          </div>
           <div class="form-grid mt-sm">
+            <div class="field span-2">
+              <label data-i18n="labelSaveDestination">Pasta de Destino</label>
+              <div class="save-destination-bar">
+                <span id="save-folder-status" class="save-folder-pill">Downloads (padrão do navegador)</span>
+                <div class="row-gap">
+                  <button type="button" id="btn-pick-save-folder" class="btn secondary sm" data-i18n="btnPickSaveFolder">Escolher Pasta no PC...</button>
+                  <button type="button" id="btn-use-downloads-folder" class="btn ghost sm hidden" data-i18n="btnUseDownloadsFolder">Usar Downloads</button>
+                </div>
+              </div>
+            </div>
             <div class="field">
-              <label for="opt-ui-lang" data-i18n="labelUiLang">Idioma da Interface</label>
-              <select id="opt-ui-lang">
-                <option value="pt">Português (pt-BR)</option>
-                <option value="en">English (en)</option>
+              <label for="opt-root-folder" data-i18n="labelRootFolder">Nome da Pasta Principal</label>
+              <input id="opt-root-folder" type="text" value="WebPullBook" data-i18n-placeholder="placeholderRootFolder" placeholder="Ex.: WebPullBook ou Biblioteca/Novels (vazio = sem pasta raiz)">
+            </div>
+            <div class="field">
+              <label for="opt-folder-layout" data-i18n="labelFolderLayout">Organização das Pastas</label>
+              <select id="opt-folder-layout">
+                <option value="root-title" data-i18n="folderLayoutRootTitle">Pasta Principal / Título da Obra (Padrão)</option>
+                <option value="root-author-title" data-i18n="folderLayoutRootAuthorTitle">Pasta Principal / Autor / Título da Obra</option>
+                <option value="root-format-title" data-i18n="folderLayoutRootFormatTitle">Pasta Principal / Formato / Título da Obra</option>
+                <option value="root-only" data-i18n="folderLayoutRootOnly">Tudo direto na Pasta Principal</option>
+                <option value="title-only" data-i18n="folderLayoutTitleOnly">Somente subpasta com Título da Obra</option>
+                <option value="author-title" data-i18n="folderLayoutAuthorTitle">Autor / Título da Obra (estilo Calibre)</option>
+                <option value="flat" data-i18n="folderLayoutFlat">Sem subpastas (arquivo direto no destino)</option>
+                <option value="custom" data-i18n="folderLayoutCustom">Modelo personalizado (tokens)</option>
               </select>
             </div>
-
-            <div class="field">
-              <label for="opt-theme" data-i18n="labelTheme">Tema da Interface</label>
-              <select id="opt-theme">
-                <option value="system" data-i18n="themeSystem">Sistema (Automático)</option>
-                <option value="light" data-i18n="themeLight">Claro</option>
-                <option value="dark" data-i18n="themeDark">Escuro</option>
-                <option value="sepia" data-i18n="themeSepia">Sépia</option>
-                <option value="midnight" data-i18n="themeMidnight">Meia-noite</option>
-              </select>
+            <div id="custom-folder-template-wrap" class="field span-2 hidden">
+              <label for="opt-folder-template" data-i18n="labelCustomFolderTemplate">Modelo de Subpastas Personalizado</label>
+              <input id="opt-folder-template" type="text" value="%Root%/%Author%/%Title%">
+              <small class="muted" data-i18n="folderTokensHint">Tokens de pasta: %Root%, %Title%, %Filename%, %Author%, %Volume%, %Format%, %Language% (use / para subpastas)</small>
             </div>
-
             <div class="field span-2">
               <label for="opt-custom-filename" data-i18n="labelCustomFilename">Modelo de Nome do Arquivo</label>
               <input id="opt-custom-filename" type="text" value="%Filename%">
               <small class="muted" data-i18n="tokensHint">Tokens: %Filename%, %Title%, %Author%, %Volume%</small>
             </div>
+            <div class="field span-2">
+              <div id="path-preview-box" class="path-preview-box">
+                <span class="muted" data-i18n="labelPathPreview">Prévia do caminho salvo:</span>
+                <code id="path-preview-text" class="path-preview-code">Downloads/WebPullBook/Minha Obra/Minha Obra.epub</code>
+              </div>
+            </div>
+            <div class="field span-2">
+              <label for="opt-max-chapters" data-i18n="labelMaxChapters">Máx. capítulos por EPUB (modo único)</label>
+              <input id="opt-max-chapters" type="number" min="1" max="10000" value="10000">
+            </div>
           </div>
 
           <div class="checks-col">
-            <label class="checkbox-row">
-              <input type="checkbox" id="opt-subfolder" checked>
-              <span data-i18n="optSubfolder">Salvar dentro de subpasta WebPullBook/&lt;Título&gt;/ em Downloads</span>
-            </label>
             <label class="checkbox-row">
               <input type="checkbox" id="opt-no-save-as" checked>
               <span data-i18n="optNoSaveAs">Não abrir janela "Salvar como" (baixar direto)</span>
@@ -374,7 +418,7 @@
             </label>
             <label class="checkbox-row">
               <input type="checkbox" id="opt-epub3" checked>
-              <span data-i18n="optEpub3">Criar EPUB 3 (inclui também toc.ncx para compatibilidade com leitores EPUB 2)</span>
+              <span data-i18n="optEpub3">Padrão EPUB 3 (recomendado para leitores modernos; desmarque para EPUB 2 clássico)</span>
             </label>
             <label class="checkbox-row">
               <input type="checkbox" id="opt-add-info" checked>
@@ -388,17 +432,67 @@
         </section>
 
         <section class="card">
-          <h2 data-i18n="advNetworkHeading">Imagens, Rede, SPA &amp; Resiliência</h2>
+          <div class="card-header">
+            <h2 data-i18n="advExtractionHeading">Extração, Parser &amp; Regras</h2>
+            <button type="button" id="btn-reset-extraction" class="btn ghost sm" data-i18n="btnResetCss">Restaurar Padrão</button>
+          </div>
           <div class="form-grid mt-sm">
-            <div class="field">
+            <div class="field span-2">
               <label for="opt-parser" data-i18n="labelParser">Seleção de Parser</label>
               <select id="opt-parser">
                 <option value="auto" data-i18n="parserAutoOption">Automático (Pontuação DOM)</option>
               </select>
             </div>
             <div class="field">
+              <label for="opt-list-selector" data-i18n="labelListSelector">Seletor CSS da lista de capítulos (opcional)</label>
+              <input id="opt-list-selector" type="text" placeholder="Ex.: .chapter-list a">
+            </div>
+            <div class="field">
+              <label for="opt-content-selector" data-i18n="labelContentSelector">Seletor CSS do conteúdo do capítulo (opcional)</label>
+              <input id="opt-content-selector" type="text" placeholder="Ex.: article .content">
+            </div>
+            <div class="field span-2">
+              <label for="opt-exclude-selector" data-i18n="labelExcludeSelector">Seletor CSS de elementos a excluir (opcional)</label>
+              <input id="opt-exclude-selector" type="text" placeholder="Ex.: .ads, .author-note">
+            </div>
+            <div class="field span-2">
+              <label for="opt-strip-regex" data-i18n="labelStripRegex">Filtro de texto / Regex a remover (1 por linha, opcional)</label>
+              <textarea id="opt-strip-regex" class="code-area" rows="2" spellcheck="false" data-i18n-placeholder="placeholderStripRegex" placeholder="Ex.: Traduzido por ...\n/\[Nota do Tradutor:.*?\]/gi"></textarea>
+            </div>
+            <div class="field span-2">
+              <label data-i18n="labelAutoDetectSelectors">Assistente de Seletores (Heurística)</label>
+              <div class="row-gap">
+                <button type="button" id="btn-auto-detect-selectors" class="btn ghost sm" data-i18n="btnAutoDetectSelectors">Auto-detectar seletores</button>
+                <button type="button" id="btn-save-domain-rule" class="btn secondary sm" data-i18n="btnSaveDomainRule">Salvar p/ Domínio</button>
+              </div>
+            </div>
+            <div class="field span-2">
+              <label data-i18n="labelDomainRules">Regras Salvas por Domínio</label>
+              <div id="domain-rules-list" class="domain-rules-list"></div>
+            </div>
+          </div>
+
+          <div class="checks-col">
+            <label class="checkbox-row">
+              <input type="checkbox" id="opt-crawl-next" checked>
+              <span data-i18n="optCrawlNext">Seguir link "Próximo Capítulo" automaticamente quando não houver sumário</span>
+            </label>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="card-header">
+            <h2 data-i18n="advNetworkOnlyHeading">Rede, SPA &amp; Resiliência</h2>
+            <button type="button" id="btn-reset-network" class="btn ghost sm" data-i18n="btnResetCss">Restaurar Padrão</button>
+          </div>
+          <div class="form-grid mt-sm">
+            <div class="field">
               <label for="opt-delay" data-i18n="labelDelay">Delay entre capítulos (ms)</label>
               <input id="opt-delay" type="number" min="0" max="10000" step="50" value="350">
+            </div>
+            <div class="field">
+              <label for="opt-retries" data-i18n="labelMaxRetries">Retentativas automáticas (HTTP 5xx/rede)</label>
+              <input id="opt-retries" type="number" min="0" max="5" step="1" value="2">
             </div>
             <div class="field">
               <label for="opt-safe-rpm" data-i18n="labelSafeRpm">Máx. req/min (Modo Seguro)</label>
@@ -409,9 +503,53 @@
               <input id="opt-safe-batch" type="number" min="0" max="500" step="5" value="25">
             </div>
             <div class="field">
-              <label for="opt-max-chapters" data-i18n="labelMaxChapters">Máx. capítulos por EPUB (modo único)</label>
-              <input id="opt-max-chapters" type="number" min="1" max="10000" value="10000">
+              <label for="opt-render-wait-ms" data-i18n="labelRenderWaitMs">Espera após carregar página no Modo SPA (ms)</label>
+              <input id="opt-render-wait-ms" type="number" min="0" max="5000" step="100" value="950">
             </div>
+            <div class="field">
+              <label for="opt-concurrency" data-i18n="labelConcurrency">Downloads simultâneos (ignorado no Modo Seguro)</label>
+              <input id="opt-concurrency" type="number" min="1" max="6" step="1" value="1">
+            </div>
+          </div>
+
+          <div class="checks-col">
+            <label class="checkbox-row">
+              <input type="checkbox" id="opt-safe-mode">
+              <span data-i18n="optSafeMode">Modo Seguro: limitar req/min, jitter aleatório e pausa entre lotes (ative e desative quando quiser)</span>
+            </label>
+            <label class="checkbox-row">
+              <input type="checkbox" id="opt-auto-pause-ratelimit" checked>
+              <span data-i18n="optAutoPauseRateLimit">Pausar fila automaticamente ao detectar bloqueio HTTP 429 / 503 (proteção anti-ban)</span>
+            </label>
+            <label class="checkbox-row">
+              <input type="checkbox" id="opt-continue-on-error" checked>
+              <span data-i18n="optContinueOnError">Continuar baixando mesmo se algum capítulo falhar (Resiliência Parcial)</span>
+            </label>
+            <label class="checkbox-row">
+              <input type="checkbox" id="opt-skip-404">
+              <span data-i18n="optSkip404">Pular silenciosamente capítulos com erro HTTP 404</span>
+            </label>
+            <label class="checkbox-row">
+              <input type="checkbox" id="opt-render-with-tab">
+              <span data-i18n="optRenderWithTab">Modo SPA / JavaScript: renderizar páginas via aba em segundo plano</span>
+            </label>
+            <label class="checkbox-row">
+              <input type="checkbox" id="opt-auto-fallback-tab" checked>
+              <span data-i18n="optAutoFallbackTab">Fallback automático via aba se o site retornar 403/503 ou página vazia</span>
+            </label>
+            <label class="checkbox-row">
+              <input type="checkbox" id="opt-prefer-open-tab-dom" checked>
+              <span data-i18n="optPreferOpenTabDom">Ao juntar abas, ler primeiro o conteúdo já carregado na aba aberta</span>
+            </label>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="card-header">
+            <h2 data-i18n="advImagesHeading">Imagens &amp; Capa</h2>
+            <button type="button" id="btn-reset-images" class="btn ghost sm" data-i18n="btnResetCss">Restaurar Padrão</button>
+          </div>
+          <div class="form-grid mt-sm">
             <div class="field">
               <label for="opt-img-res" data-i18n="labelImgRes">Resolução máxima das imagens (px)</label>
               <input id="opt-img-res" type="number" min="200" max="4000" step="20" value="1080">
@@ -423,41 +561,13 @@
                 <option value="png">PNG</option>
               </select>
             </div>
-            <div class="field">
-              <label for="opt-list-selector" data-i18n="labelListSelector">Seletor CSS da lista de capítulos (opcional)</label>
-              <input id="opt-list-selector" type="text" placeholder="Ex.: .chapter-list a">
-            </div>
-            <div class="field">
-              <label for="opt-content-selector" data-i18n="labelContentSelector">Seletor CSS do conteúdo do capítulo (opcional)</label>
-              <input id="opt-content-selector" type="text" placeholder="Ex.: article .content">
-            </div>
-            <div class="field">
-              <label for="opt-exclude-selector" data-i18n="labelExcludeSelector">Seletor CSS de elementos a excluir (opcional)</label>
-              <input id="opt-exclude-selector" type="text" placeholder="Ex.: .ads, .author-note">
-            </div>
-            <div class="field">
-              <label data-i18n="labelAutoDetectSelectors">Assistente de Seletores (Heurística)</label>
-              <button type="button" id="btn-auto-detect-selectors" class="btn ghost sm" data-i18n="btnAutoDetectSelectors">Auto-detectar seletores</button>
+            <div class="field span-2">
+              <label for="opt-image-quality" data-i18n="labelImageQuality">Qualidade JPEG na compressão (%)</label>
+              <input id="opt-image-quality" type="number" min="40" max="98" step="5" value="85">
             </div>
           </div>
 
           <div class="checks-col">
-            <label class="checkbox-row">
-              <input type="checkbox" id="opt-safe-mode">
-              <span data-i18n="optSafeMode">Modo Seguro (Anti-Bloqueio): limitar req/min, jitter aleatório e pausa entre lotes</span>
-            </label>
-            <label class="checkbox-row">
-              <input type="checkbox" id="opt-auto-pause-ratelimit" checked>
-              <span data-i18n="optAutoPauseRateLimit">Pausar fila automaticamente ao detectar bloqueio HTTP 429 / 503 (proteção anti-ban)</span>
-            </label>
-            <label class="checkbox-row">
-              <input type="checkbox" id="opt-continue-on-error" checked>
-              <span data-i18n="optContinueOnError">Continuar baixando mesmo se algum capítulo falhar (Resiliência Parcial)</span>
-            </label>
-            <label class="checkbox-row">
-              <input type="checkbox" id="opt-render-with-tab">
-              <span data-i18n="optRenderWithTab">Modo SPA / JavaScript: renderizar páginas via aba em segundo plano</span>
-            </label>
             <label class="checkbox-row">
               <input type="checkbox" id="opt-cover-jpeg" checked>
               <span data-i18n="optCoverJpeg">Converter capa para JPEG otimizado (recomendado para maior compatibilidade)</span>
@@ -467,16 +577,16 @@
               <span data-i18n="optCompressImages">Redimensionar e comprimir imagens internas dos capítulos</span>
             </label>
             <label class="checkbox-row">
+              <input type="checkbox" id="opt-grayscale-images">
+              <span data-i18n="optGrayscaleImages">Converter imagens e capa para escala de cinza (otimizado para E-Ink)</span>
+            </label>
+            <label class="checkbox-row">
               <input type="checkbox" id="opt-skip-images">
               <span data-i18n="optSkipImages">Ignorar imagens dentro dos capítulos (somente texto + capa)</span>
             </label>
             <label class="checkbox-row">
               <input type="checkbox" id="opt-use-svg">
               <span data-i18n="optUseSvg">Usar wrapper &lt;svg&gt; na página da capa</span>
-            </label>
-            <label class="checkbox-row">
-              <input type="checkbox" id="opt-skip-404">
-              <span data-i18n="optSkip404">Pular silenciosamente capítulos com erro HTTP 404</span>
             </label>
           </div>
         </section>
@@ -513,8 +623,26 @@
               </label>
             </div>
           </div>
-          <textarea id="opt-stylesheet" class="code-area" rows="12" spellcheck="false"></textarea>
 
+          <div id="typo-live-preview" class="typo-live-preview">
+            <p data-i18n="typoPreviewSample1">A luz da manhã atravessava a janela da biblioteca enquanto as páginas antigas aguardavam a próxima leitura.</p>
+            <p data-i18n="typoPreviewSample2">Este texto demonstra ao vivo como a fonte, o alinhamento, o espaçamento entre linhas e o recuo ficarão no seu leitor.</p>
+          </div>
+
+          <details class="more-meta mt-sm">
+            <summary data-i18n="summaryCustomCss">Editar CSS completo do EPUB</summary>
+            <textarea id="opt-stylesheet" class="code-area mt-sm" rows="12" spellcheck="false"></textarea>
+          </details>
+        </section>
+
+        <section class="card span-2">
+          <div class="card-header">
+            <div>
+              <h2 data-i18n="advBackupHeading">Backup &amp; Restauração Global</h2>
+              <p class="muted sm mt-xs" data-i18n="advBackupDesc">Exporte/importe suas preferências e regras de domínio ou restaure todas as opções avançadas de uma vez.</p>
+            </div>
+            <button type="button" id="btn-reset-all-opts" class="btn danger sm" data-i18n="btnResetAllOpts">Restaurar Tudo</button>
+          </div>
           <div class="dev-tools">
             <button type="button" id="btn-export-opts" class="btn secondary sm" data-i18n="btnExportOpts">Exportar Opções (JSON)</button>
             <label class="btn secondary sm file-label">
@@ -612,6 +740,94 @@
       <form method="dialog" class="row-gap">
         <button type="submit" value="cancel" class="btn ghost" data-i18n="btnCancelModal">Cancelar</button>
         <button type="submit" value="save" id="btn-save-edited-urls" class="btn primary" autofocus data-i18n="btnSaveEditedUrls">Aplicar Alterações</button>
+      </form>
+    </div>
+  </dialog>
+
+  <!-- MODAL: SELECIONAR E ORGANIZAR ABAS -->
+  <dialog id="merge-tabs-modal" class="wide-dialog" closedby="any" aria-labelledby="merge-tabs-title">
+    <div class="dialog-header">
+      <div>
+        <h2 id="merge-tabs-title" data-i18n="modalMergeTitle">Abas Abertas Detectadas</h2>
+        <p id="merge-tabs-summary" class="muted sm mt-xs"></p>
+      </div>
+      <form method="dialog">
+        <button type="submit" value="cancel" class="btn ghost sm" aria-label="Fechar">✕</button>
+      </form>
+    </div>
+    <div class="dialog-body">
+      <div class="merge-config-grid">
+        <div class="field">
+          <label for="merge-organize-mode" data-i18n="labelMergeOrganizeMode">Como organizar as abas selecionadas</label>
+          <select id="merge-organize-mode">
+            <option value="same-book" data-i18n="mergeModeSameBook">Mesmo livro (capítulos em Volume 01)</option>
+            <option value="same-book-volumes" data-i18n="mergeModeSameBookVolumes">Mesmo livro dividido em Volumes (Arquivo Único)</option>
+            <option value="separate-books" data-i18n="mergeModeSeparateBooks">Livros diferentes (1 EPUB separado por aba)</option>
+          </select>
+        </div>
+        <div class="field" id="merge-collection-wrap">
+          <label for="merge-collection-title" data-i18n="labelMergeBookTitle">Título da Coletânea / Livro</label>
+          <input id="merge-collection-title" type="text">
+        </div>
+      </div>
+
+      <div class="merge-toolbar">
+        <label class="checkbox-row sm-check">
+          <input type="checkbox" id="merge-select-all" checked>
+          <span data-i18n="mergeSelectAll">Selecionar todas as abas</span>
+        </label>
+        <label class="checkbox-row sm-check">
+          <input type="checkbox" id="merge-all-windows">
+          <span data-i18n="mergeAllWindows">Incluir abas de outras janelas</span>
+        </label>
+      </div>
+
+      <div id="merge-tabs-list" class="merge-tabs-list"></div>
+    </div>
+    <div class="dialog-footer">
+      <form method="dialog" class="row-gap">
+        <button type="submit" value="cancel" class="btn secondary" data-i18n="btnCancelModal">Cancelar</button>
+        <button type="button" id="btn-confirm-merge-tabs" class="btn primary" autofocus data-i18n="btnConfirmMergeTabs">Confirmar e Carregar</button>
+      </form>
+    </div>
+  </dialog>
+
+  <!-- MODAL: PRÉ-VISUALIZAÇÃO DO CAPÍTULO -->
+  <dialog id="preview-modal" closedby="any" aria-labelledby="preview-modal-title">
+    <div class="dialog-header">
+      <div>
+        <h2 id="preview-modal-title" data-i18n="modalPreviewTitle">Pré-visualização do Capítulo</h2>
+        <p id="preview-modal-meta" class="muted sm mt-xs"></p>
+      </div>
+      <form method="dialog">
+        <button type="submit" value="cancel" class="btn ghost sm" aria-label="Fechar">✕</button>
+      </form>
+    </div>
+    <div class="dialog-body">
+      <div id="preview-modal-content" class="preview-reading-pane"></div>
+    </div>
+    <div class="dialog-footer">
+      <form method="dialog">
+        <button type="submit" value="close" class="btn primary" autofocus data-i18n="btnDone">Concluir</button>
+      </form>
+    </div>
+  </dialog>
+
+  <!-- MODAL: CONFIRMAR RESTAURAÇÃO GLOBAL -->
+  <dialog id="confirm-reset-modal" closedby="any" aria-labelledby="confirm-reset-title">
+    <div class="dialog-header">
+      <h2 id="confirm-reset-title" data-i18n="modalResetTitle">Restaurar todas as opções?</h2>
+      <form method="dialog">
+        <button type="submit" value="cancel" class="btn ghost sm" aria-label="Fechar">✕</button>
+      </form>
+    </div>
+    <div class="dialog-body">
+      <p id="confirm-reset-desc" data-i18n="modalResetDesc">Isso restaurará TODAS as seções de Opções Avançadas para o padrão de fábrica. Suas Regras por Domínio, Biblioteca e Cache não serão apagados.</p>
+    </div>
+    <div class="dialog-footer">
+      <form method="dialog" class="row-gap">
+        <button type="submit" value="cancel" class="btn secondary" data-i18n="btnCancelModal">Cancelar</button>
+        <button type="button" id="btn-confirm-reset-all" class="btn danger" autofocus data-i18n="btnConfirmResetAll">Sim, restaurar tudo</button>
       </form>
     </div>
   </dialog>

@@ -392,9 +392,15 @@ body {
 
 .cover-actions {
   display: flex;
+  flex-wrap: wrap;
   justify-content: center;
-  gap: 0.5rem;
+  gap: 0.4rem;
   margin-top: 0.55rem;
+}
+
+.cover-actions .btn {
+  flex: 1 1 calc(50% - 0.4rem);
+  justify-content: center;
 }
 
 .mode-fieldset {
@@ -1232,6 +1238,99 @@ dialog::backdrop {
   line-height: 1.35;
 }
 
+.chap-status-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.chap-preview-btn {
+  padding: 0.14rem 0.4rem !important;
+  font-size: 0.78rem !important;
+  line-height: 1.2;
+}
+
+.domain-rules-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.25rem;
+}
+
+.domain-rule-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.28rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  font-size: 0.8rem;
+}
+
+.domain-rule-chip .btn {
+  padding: 0.1rem 0.35rem;
+  font-size: 0.74rem;
+}
+
+.preview-reading-pane {
+  max-height: 60vh;
+  overflow-y: auto;
+  padding: 1rem 1.2rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+  font-family: Georgia, 'Times New Roman', serif;
+  line-height: 1.68;
+  font-size: 1rem;
+}
+
+.preview-reading-pane p {
+  margin: 0 0 0.85rem;
+}
+
+.preview-reading-pane img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 6px;
+}
+
+#preview-modal {
+  width: min(840px, 94vw);
+}
+
+.lib-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.lib-status-pill {
+  flex-shrink: 0;
+}
+
+.typo-live-preview {
+  padding: 0.9rem 1.15rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+  margin-bottom: 0.75rem;
+  font-size: 0.98rem;
+}
+
+.typo-live-preview p {
+  margin: 0 0 0.7em;
+}
+
+.typo-live-preview p:last-child {
+  margin-bottom: 0;
+}
+
+.typo-live-preview.indent p {
+  text-indent: 1.5em;
+}
+
 /* Responsive layout */
 @media (max-width: 1120px) {
   .url-bar {
@@ -1317,5 +1416,253 @@ dialog::backdrop {
   .tip-shift {
     margin-left: 0;
     width: 100%;
+  }
+}
+
+/* Merge Open Tabs Modal */
+dialog.wide-dialog {
+  width: min(820px, calc(100vw - 2rem));
+}
+
+.merge-config-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.merge-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
+  padding: 0.45rem 0.7rem;
+  border-radius: 8px;
+  background: var(--bg-muted, rgba(148, 163, 184, 0.09));
+}
+
+.merge-tabs-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  max-height: 46vh;
+  overflow-y: auto;
+}
+
+.merge-tab-row {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1.5fr) minmax(135px, 0.85fr) auto;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+.merge-tab-row.unchecked {
+  opacity: 0.55;
+}
+
+.merge-tab-idx {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--muted);
+  min-width: 1.7rem;
+  text-align: center;
+}
+
+.merge-tab-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.merge-tab-main input {
+  width: 100%;
+  font-size: 0.85rem;
+  padding: 0.3rem 0.5rem;
+}
+
+.merge-tab-host {
+  font-size: 0.74rem;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.merge-tab-vol {
+  width: 100%;
+  font-size: 0.82rem;
+  padding: 0.3rem 0.45rem;
+}
+
+.merge-tab-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.save-destination-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+}
+
+.save-folder-pill {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text);
+  word-break: break-word;
+}
+
+.save-folder-pill.is-warning {
+  color: var(--warn);
+}
+
+.path-preview-box {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.5rem 0.7rem;
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+  font-size: 0.82rem;
+}
+
+.path-preview-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.81rem;
+  color: var(--accent);
+  word-break: break-all;
+}
+
+@keyframes wpbTabEnter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes wpbDialogIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes wpbBannerDrop {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.tab-panel:not(.hidden) {
+  animation: wpbTabEnter 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.status-banner:not(.hidden) {
+  animation: wpbBannerDrop 0.18s ease-out;
+}
+
+dialog[open] {
+  animation: wpbDialogIn 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.btn {
+  transition: transform 0.12s ease, background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+}
+
+.btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgb(0 0 0 / 0.12);
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(0) scale(0.98);
+  box-shadow: none;
+}
+
+.tab {
+  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, transform 0.12s ease;
+}
+
+.tab:active {
+  transform: scale(0.97);
+}
+
+.card,
+.lib-card,
+.merge-tab-row,
+.domain-rule-chip,
+.mode-pill {
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.16s ease, opacity 0.16s ease;
+}
+
+.lib-card:hover {
+  transform: translateY(-2px);
+}
+
+tbody tr {
+  transition: background-color 0.12s ease;
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+  transition: transform 0.12s ease;
+}
+
+input[type="checkbox"]:active,
+input[type="radio"]:active {
+  transform: scale(0.9);
+}
+
+progress::-webkit-progress-value {
+  transition: width 0.22s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media (max-width: 720px) {
+  .merge-config-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .merge-tab-row {
+    grid-template-columns: auto 1fr auto;
+  }
+
+  .merge-tab-idx,
+  .merge-tab-vol {
+    grid-column: span 2;
   }
 }
