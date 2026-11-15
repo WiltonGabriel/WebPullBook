@@ -1561,6 +1561,55 @@ dialog.wide-dialog {
   animation: wpbBannerDrop 0.18s ease-out;
 }
 
+.cover-box {
+  position: relative;
+}
+
+.log-line.log-debug {
+  opacity: 0.85;
+}
+
+.log-filter-btn.active {
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.input-with-picker {
+  display: flex;
+  gap: 0.4rem;
+  align-items: stretch;
+}
+
+.input-with-picker > input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.input-with-picker > button {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.preview-reading-pane[contenteditable="true"] {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 8px;
+  padding: 0.75rem;
+  background: var(--surface);
+}
+
+.mb-sm {
+  margin-bottom: 0.65rem;
+}
+
+.badge.edited {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--accent);
+  margin-left: 0.35rem;
+  font-size: 0.7rem;
+}
+
 @keyframes wpbTabEnter {
   from {
     opacity: 0;

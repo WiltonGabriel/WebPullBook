@@ -132,18 +132,19 @@ try {
     if (missingInPt.length) fail(`i18n.js missing in pt: ${missingInPt.join(', ')}`);
 
     const wsHtml = fs.readFileSync(path.join('src', 'workspace', 'workspace.html'), 'utf8');
-    const wsJs = fs.readFileSync(path.join('src', 'workspace', 'workspace.js'), 'utf8');
+    const wsJsFiles = walk(path.join('src', 'workspace')).filter((f) => f.endsWith('.js'));
+    const wsJsAll = wsJsFiles.map((f) => fs.readFileSync(f, 'utf8')).join('\n');
 
     for (const m of wsHtml.matchAll(/data-i18n(?:-[a-z]+)?="([^"]+)"/g)) {
       if (!ptKeys.has(m[1])) fail(`workspace.html references missing i18n key: ${m[1]}`);
     }
-    for (const m of wsJs.matchAll(/\bt\(\s*['"]([A-Za-z0-9_]+)['"]/g)) {
-      if (!ptKeys.has(m[1])) fail(`workspace.js references missing i18n key: ${m[1]}`);
+    for (const m of wsJsAll.matchAll(/\bt\(\s*['"]([A-Za-z0-9_]+)['"]/g)) {
+      if (!ptKeys.has(m[1])) fail(`workspace JS references missing i18n key: ${m[1]}`);
     }
 
     const htmlIds = new Set([...wsHtml.matchAll(/\bid="([^"]+)"/g)].map((m) => m[1]));
-    for (const m of wsJs.matchAll(/\$\(\s*['"]([^'"]+)['"]\s*\)/g)) {
-      if (!htmlIds.has(m[1])) fail(`workspace.js references missing HTML id: #${m[1]}`);
+    for (const m of wsJsAll.matchAll(/\$\(\s*['"]([^'"]+)['"]\s*\)/g)) {
+      if (!htmlIds.has(m[1])) fail(`workspace JS references missing HTML id: #${m[1]}`);
     }
     console.log(`[OK] i18n (${ptKeys.size} keys) and workspace DOM IDs verified`);
   }

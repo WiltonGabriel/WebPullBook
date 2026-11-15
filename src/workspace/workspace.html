@@ -98,6 +98,9 @@
               <button type="button" id="btn-clear-cover" class="btn ghost sm" data-i18n="btnClearCover">Limpar Capa</button>
               <input type="file" id="input-upload-cover" accept="image/jpeg,image/png,image/webp,image/gif" hidden>
             </div>
+            <p id="cover-format-note" class="inline-warn-note hidden" role="note" data-i18n="coverWebpWarning">
+              ⚠️ Capa em formato WebP/AVIF pode falhar em alguns leitores EPUB. Ative "Converter capa para JPEG" em Opções Avançadas.
+            </p>
           </div>
 
           <div class="pack-controls-col">
@@ -155,9 +158,9 @@
             <div class="pack-actions">
               <button type="button" id="btn-pack-epub" class="btn primary lg" disabled data-i18n="btnPackEpub">Empacotar EPUB</button>
               <button type="button" id="btn-retry-failed" class="btn secondary hidden">Tentar Falhos (0)</button>
-              <div id="run-controls" class="run-controls hidden">
-                <button type="button" id="btn-pause" class="btn secondary" data-i18n="btnPause">Pausar</button>
-                <button type="button" id="btn-cancel" class="btn danger" data-i18n="btnCancel">Cancelar</button>
+              <div id="run-controls" class="run-controls">
+                <button type="button" id="btn-pause" class="btn secondary" disabled data-i18n="btnPause">⏸ Pausar</button>
+                <button type="button" id="btn-cancel" class="btn danger" disabled data-i18n="btnCancel">Cancelar</button>
               </div>
             </div>
 
@@ -276,6 +279,7 @@
             <button type="button" id="btn-unselect-all" class="btn ghost sm" data-i18n="btnUnselectAll">Desmarcar Todos</button>
             <button type="button" id="btn-reverse-order" class="btn ghost sm" data-i18n="btnReverseOrder">Inverter Ordem</button>
             <button type="button" id="btn-preview-chapter" class="btn ghost sm" data-i18n="btnPreviewChapter">Pré-visualizar</button>
+            <button type="button" id="btn-merge-chapters" class="btn ghost sm" data-i18n="btnMergeChapters">Mesclar Marcados</button>
             <button type="button" id="btn-edit-urls" class="btn ghost sm" data-i18n="btnEditUrls">Editar URLs</button>
             <button type="button" id="btn-copy-urls" class="btn ghost sm" data-i18n="btnCopyUrls">Copiar URLs</button>
             <button type="button" id="btn-select-failed" class="btn ghost sm hidden" data-i18n="btnSelectFailed">Selecionar Falhos</button>
@@ -345,6 +349,7 @@
           </div>
           <div class="row-gap">
             <button type="button" id="btn-check-all-library" class="btn secondary sm" data-i18n="btnCheckAllLibrary">Verificar Todas</button>
+            <button type="button" id="btn-download-library-updates" class="btn secondary sm" data-i18n="btnDownloadAllUpdates">⬇ Baixar Novidades</button>
             <button type="button" id="btn-save-library-tab" class="btn primary sm" data-i18n="btnSaveCurrentToLib">+ Salvar Obra Atual</button>
           </div>
         </div>
@@ -424,6 +429,10 @@
               <span data-i18n="optEpub3">Padrão EPUB 3 (recomendado para leitores modernos; desmarque para EPUB 2 clássico)</span>
             </label>
             <label class="checkbox-row">
+              <input type="checkbox" id="opt-popup-footnotes" checked>
+              <span data-i18n="optPopupFootnotes">Converter notas de rodapé em pop-up nativo EPUB 3 (Kindle/Kobo/Apple Books)</span>
+            </label>
+            <label class="checkbox-row">
               <input type="checkbox" id="opt-add-info" checked>
               <span data-i18n="optAddInfo">Adicionar página de Informações (Metadados &amp; Sinopse)</span>
             </label>
@@ -448,15 +457,24 @@
             </div>
             <div class="field">
               <label for="opt-list-selector" data-i18n="labelListSelector">Seletor CSS da lista de capítulos (opcional)</label>
-              <input id="opt-list-selector" type="text" placeholder="Ex.: .chapter-list a">
+              <div class="input-with-picker">
+                <input id="opt-list-selector" type="text" placeholder="Ex.: .chapter-list a">
+                <button type="button" id="btn-pick-list-selector" class="btn ghost sm" data-i18n="btnPickSelectorShort" data-i18n-title="btnPickSelectorTitle" title="Apontar e clicar diretamente na página aberta para capturar o seletor CSS">🎯 Apontar</button>
+              </div>
             </div>
             <div class="field">
               <label for="opt-content-selector" data-i18n="labelContentSelector">Seletor CSS do conteúdo do capítulo (opcional)</label>
-              <input id="opt-content-selector" type="text" placeholder="Ex.: article .content">
+              <div class="input-with-picker">
+                <input id="opt-content-selector" type="text" placeholder="Ex.: article .content">
+                <button type="button" id="btn-pick-content-selector" class="btn ghost sm" data-i18n="btnPickSelectorShort" data-i18n-title="btnPickSelectorTitle" title="Apontar e clicar diretamente na página aberta para capturar o seletor CSS">🎯 Apontar</button>
+              </div>
             </div>
             <div class="field span-2">
               <label for="opt-exclude-selector" data-i18n="labelExcludeSelector">Seletor CSS de elementos a excluir (opcional)</label>
-              <input id="opt-exclude-selector" type="text" placeholder="Ex.: .ads, .author-note">
+              <div class="input-with-picker">
+                <input id="opt-exclude-selector" type="text" placeholder="Ex.: .ads, .author-note">
+                <button type="button" id="btn-pick-exclude-selector" class="btn ghost sm" data-i18n="btnPickSelectorShort" data-i18n-title="btnPickSelectorTitle" title="Apontar e clicar diretamente na página aberta para capturar o seletor CSS">🎯 Apontar</button>
+              </div>
             </div>
             <div class="field span-2">
               <label for="opt-strip-regex" data-i18n="labelStripRegex">Filtro de texto / Regex a remover (1 por linha, opcional)</label>
@@ -580,10 +598,6 @@
               <span data-i18n="optCompressImages">Redimensionar e comprimir imagens internas dos capítulos</span>
             </label>
             <label class="checkbox-row">
-              <input type="checkbox" id="opt-grayscale-images">
-              <span data-i18n="optGrayscaleImages">Converter imagens e capa para escala de cinza (otimizado para E-Ink)</span>
-            </label>
-            <label class="checkbox-row">
               <input type="checkbox" id="opt-skip-images">
               <span data-i18n="optSkipImages">Ignorar imagens dentro dos capítulos (somente texto + capa)</span>
             </label>
@@ -663,6 +677,10 @@
         <div class="card-header">
           <h2 data-i18n="logsHeading">Registro de Execução</h2>
           <div class="row-gap">
+            <button type="button" id="log-filter-all" class="btn ghost sm log-filter-btn active" data-log-filter="all" data-i18n="logFilterAll">Todos</button>
+            <button type="button" id="log-filter-warn" class="btn ghost sm log-filter-btn" data-log-filter="warn" data-i18n="logFilterWarn">Avisos</button>
+            <button type="button" id="log-filter-error" class="btn ghost sm log-filter-btn" data-log-filter="error" data-i18n="logFilterError">Erros</button>
+            <button type="button" id="btn-copy-logs" class="btn secondary sm" data-i18n="btnCopyLogs">Copiar Log</button>
             <button type="button" id="btn-download-logs" class="btn secondary sm" data-i18n="btnDownloadLogs">Baixar Log</button>
             <button type="button" id="btn-clear-logs" class="btn ghost sm" data-i18n="btnClearLogs">Limpar</button>
           </div>
@@ -802,16 +820,47 @@
         <h2 id="preview-modal-title" data-i18n="modalPreviewTitle">Pré-visualização do Capítulo</h2>
         <p id="preview-modal-meta" class="muted sm mt-xs"></p>
       </div>
+      <div class="row-gap">
+        <button type="button" id="btn-preview-toggle-edit" class="btn secondary sm hidden" data-i18n="btnPreviewToggleEdit">✏️ Editar Capítulo</button>
+        <form method="dialog">
+          <button type="submit" value="cancel" class="btn ghost sm" aria-label="Fechar">✕</button>
+        </form>
+      </div>
+    </div>
+    <div class="dialog-body">
+      <div id="preview-edit-title-wrap" class="field hidden mb-sm">
+        <label for="preview-edit-title-input" data-i18n="labelPreviewEditTitle">Título do Capítulo</label>
+        <input id="preview-edit-title-input" type="text">
+      </div>
+      <div id="preview-modal-content" class="preview-reading-pane"></div>
+    </div>
+    <div class="dialog-footer">
+      <button type="button" id="btn-preview-save-edit" class="btn primary hidden" data-i18n="btnPreviewSaveEdit">💾 Salvar Edição</button>
+      <form method="dialog">
+        <button type="submit" value="close" class="btn secondary" autofocus data-i18n="btnDone">Concluir</button>
+      </form>
+    </div>
+  </dialog>
+
+  <!-- MODAL: MESCLAR CAPÍTULOS SELECIONADOS -->
+  <dialog id="merge-chapters-modal" closedby="any" aria-labelledby="merge-chapters-title">
+    <div class="dialog-header">
+      <h2 id="merge-chapters-title" data-i18n="modalMergeChaptersTitle">Mesclar Capítulos Selecionados</h2>
       <form method="dialog">
         <button type="submit" value="cancel" class="btn ghost sm" aria-label="Fechar">✕</button>
       </form>
     </div>
     <div class="dialog-body">
-      <div id="preview-modal-content" class="preview-reading-pane"></div>
+      <p id="merge-chapters-desc" class="muted sm mb-sm"></p>
+      <div class="field">
+        <label for="merge-chapters-title-input" data-i18n="labelMergedChapterTitle">Título do Capítulo Combinado</label>
+        <input id="merge-chapters-title-input" type="text">
+      </div>
     </div>
     <div class="dialog-footer">
-      <form method="dialog">
-        <button type="submit" value="close" class="btn primary" autofocus data-i18n="btnDone">Concluir</button>
+      <form method="dialog" class="row-gap">
+        <button type="submit" value="cancel" class="btn secondary" data-i18n="btnCancelModal">Cancelar</button>
+        <button type="button" id="btn-confirm-merge-chapters" class="btn primary" autofocus data-i18n="btnConfirmMergeChapters">Mesclar Capítulos</button>
       </form>
     </div>
   </dialog>
