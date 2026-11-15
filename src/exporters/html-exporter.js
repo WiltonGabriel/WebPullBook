@@ -17,6 +17,10 @@ export class HtmlExporter extends BaseExporter {
   async exportBook({ metadata, bookTitle, parsedChapters, options, signal }) {
     let coverDataUri = '';
     for (const cUrl of [metadata.coverUrl, metadata.coverThumbUrl].filter(Boolean)) {
+      if (/^data:image\//i.test(cUrl)) {
+        coverDataUri = cUrl;
+        break;
+      }
       try {
         const resp = await fetch(cUrl, { credentials: 'include', signal });
         if (resp.ok) {

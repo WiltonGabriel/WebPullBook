@@ -149,12 +149,155 @@ export function normalizeUrl(url) {
   }
 }
 
+function parseChapterOrderNum(ch) {
+  const candidates = [ch?.numText, ch?.displayTitle, ch?.titleText];
+  for (const text of candidates) {
+    if (!text) continue;
+    const m =
+      String(text).match(/(?:cap(?:[íi]tulo)?|chapter|ch\.?|ep\.?|#|parte)\s*(\d+(?:\.\d+)?)/i) ||
+      String(text).match(/^\s*(\d+(?:\.\d+)?)\b/);
+    if (m) return parseFloat(m[1]);
+  }
+  const urlMatch = String(ch?.url || '').match(/(\d+(?:\.\d+)?)\/?$/);
+  return urlMatch ? parseFloat(urlMatch[1]) : null;
+}
+
+export function ensureAscendingChapterOrder(chapters, defaultReversed = false) {
+  if (!Array.isArray(chapters) || chapters.length < 2) return chapters;
+  const nums = chapters.map(parseChapterOrderNum).filter((n) => n !== null && Number.isFinite(n));
+  if (nums.length >= 2 && nums[0] !== nums[nums.length - 1]) {
+    if (nums[0] > nums[nums.length - 1]) {
+      chapters.reverse();
+    }
+    return chapters;
+  }
+  if (defaultReversed) chapters.reverse();
+  return chapters;
+}
+
 export function sanitizeFilename(name, removeIllegal = true) {
   let out = normalizeSpaces(name);
   if (removeIllegal) {
     out = out.replace(/[<>:"/\\|?*\x00-\x1f]/g, '_').replace(/\s+/g, ' ').trim();
   }
   return out || 'webpullbook-ebook';
+}
+
+export const FOLDER_LAYOUT_TEMPLATES = {
+  'root-title': '%Root%/%Title%',
+  'root-author-title': '%Root%/%Author%/%Title%',
+  'root-format-title': '%Root%/%Format%/%Title%',
+  'root-only': '%Root%',
+  'title-only': '%Title%',
+  'author-title': '%Author%/%Title%',
+  flat: ''
+};
+
+/**
+ * Sanitizes a single relative path segment (file stem or directory name) for Chrome Downloads and File System Access API.
+ */
+export function sanitizePathSegment(name, removeIllegal = true) {
+  let out = normalizeSpaces(name);
+  if (removeIllegal) {
+    out = out.replace(/[<>:"/\\|?*\x00-\x1f]/g, '_').replace(/\s+/g, ' ').trim();
+  }
+  out = out.replace(/^[\s.]+|[\s.]+$/g, '');
+  if (!out || out === '.' || out === '..') return '';
+  if (removeIllegal && /^(?:CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])$/i.test(out)) {
+    out = `_${out}`;
+  }
+  return out;
+}
+
+/**
+ * Builds the relative output file path (folders + sanitized filename + extension) from metadata and user folder options.
+ */
+export function buildOutputPath({
+  baseFilename = '',
+  title = '',
+  author = '',
+  volumeLabel = '',
+  suffix = '',
+  extension = 'epub',
+  language = '',
+  options = {}
+} = {}) {
+  const removeIllegal = options.removeIllegal !== false;
+  const filenameTemplate = options.customFilename || '%Filename%';
+  let rawFile = filenameTemplate
+    .replace(/%Filename%/gi, baseFilename || title || 'webpullbook-ebook')
+    .replace(/%Title%/gi, title || baseFilename || 'WebPullBook')
+    .replace(/%Author%/gi, author || '')
+    .replace(/%Volume%/gi, volumeLabel || '');
+
+  if (volumeLabel && !/%Volume%/i.test(filenameTemplate)) {
+    rawFile = `${rawFile} - ${volumeLabel}`;
+  }
+  if (suffix) {
+    rawFile = `${rawFile} ${suffix}`;
+  }
+
+  const cleanFile = sanitizePathSegment(rawFile, removeIllegal) || 'webpullbook-ebook';
+  const cleanExt = String(extension || 'epub').replace(/^\.+/, '').toLowerCase() || 'epub';
+  const filePart = `${cleanFile}.${cleanExt}`;
+
+  const layout =
+    options.folderLayout != null
+      ? options.folderLayout
+      : options.subfolder === false
+        ? 'flat'
+        : 'root-title';
+
+  if (layout === 'flat') {
+    return filePart;
+  }
+
+  const folderTemplate =
+    layout === 'custom'
+      ? String(options.customFolderTemplate || '')
+      : FOLDER_LAYOUT_TEMPLATES[layout] ?? FOLDER_LAYOUT_TEMPLATES['root-title'];
+
+  if (!folderTemplate.trim()) {
+    return filePart;
+  }
+
+  const rawRoot = options.rootFolderName !== undefined ? String(options.rootFolderName) : 'WebPullBook';
+  const rootSegments = rawRoot
+    .split(/[/\\]+/)
+    .map((seg) => sanitizePathSegment(seg, true))
+    .filter(Boolean);
+
+  const safeTitle = sanitizePathSegment(title || baseFilename || '', true);
+  const safeFilename = sanitizePathSegment(baseFilename || title || '', true);
+  const safeAuthor = sanitizePathSegment(author || '', true);
+  const safeVolume = sanitizePathSegment(volumeLabel || '', true);
+  const safeFormat = sanitizePathSegment(cleanExt.toUpperCase(), true);
+  const safeLang = sanitizePathSegment(language || '', true);
+
+  const folderSegments = [];
+  for (const part of folderTemplate.split(/[/\\]+/)) {
+    const trimmed = part.trim();
+    if (!trimmed) continue;
+    if (/^%Root%$/i.test(trimmed)) {
+      folderSegments.push(...rootSegments);
+      continue;
+    }
+    const expanded = trimmed
+      .replace(/%Root%/gi, rootSegments.join('_'))
+      .replace(/%Title%/gi, safeTitle)
+      .replace(/%Filename%/gi, safeFilename)
+      .replace(/%Author%/gi, safeAuthor)
+      .replace(/%Volume%/gi, safeVolume)
+      .replace(/%Format%/gi, safeFormat)
+      .replace(/%Language%/gi, safeLang);
+
+    const cleanSeg = sanitizePathSegment(expanded, true);
+    if (cleanSeg) {
+      folderSegments.push(cleanSeg);
+    }
+  }
+
+  return folderSegments.length > 0 ? `${folderSegments.join('/')}/${filePart}` : filePart;
 }
 
 export function toHighResCoverUrl(url) {
@@ -466,8 +609,11 @@ export async function fetchDocumentWithOptions(url, options = {}, signal) {
       signal
     });
   }
+  const maxRetries = Number.isFinite(Number(options.maxRetries))
+    ? Math.max(0, Math.min(5, Number(options.maxRetries)))
+    : 2;
   try {
-    return await fetchWithRetry(url, { retries: 2, signal });
+    return await fetchWithRetry(url, { retries: maxRetries, signal });
   } catch (err) {
     if (
       options.autoFallbackTab !== false &&
@@ -843,8 +989,11 @@ export class BaseParser {
         signal
       });
     } else {
+      const maxRetries = Number.isFinite(Number(options.maxRetries))
+        ? Math.max(0, Math.min(5, Number(options.maxRetries)))
+        : 2;
       try {
-        doc = await fetchWithRetry(chapter.url, { retries: 2, signal });
+        doc = await fetchWithRetry(chapter.url, { retries: maxRetries, signal });
       } catch (err) {
         if (
           options.autoFallbackTab !== false &&
@@ -899,6 +1048,7 @@ export class BaseParser {
       hiddenClasses
     });
     const sanitized = sanitizer.sanitize(extracted.contentRoot, chapter.url);
+    applyCustomTextStripPatterns(sanitized.nodes, options.customStripPatterns);
 
     return {
       chapter,
@@ -916,6 +1066,62 @@ export class BaseParser {
         });
       }
     };
+  }
+}
+
+function compileStripRegexList(rawPatterns) {
+  const lines = String(rawPatterns || '')
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+  const compiled = [];
+  for (const line of lines) {
+    const rxMatch = line.match(/^\/(.+)\/([gimsuy]*)$/);
+    try {
+      if (rxMatch) {
+        const flags = rxMatch[2].includes('g') ? rxMatch[2] : `${rxMatch[2]}g`;
+        compiled.push(new RegExp(rxMatch[1], flags));
+      } else {
+        const escaped = line.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        compiled.push(new RegExp(escaped, 'gi'));
+      }
+    } catch {
+      // Skip malformed user regex cleanly
+    }
+  }
+  return compiled;
+}
+
+function applyCustomTextStripPatterns(nodes, rawPatterns) {
+  if (!rawPatterns || !Array.isArray(nodes) || nodes.length === 0) return;
+  const regexes = compileStripRegexList(rawPatterns);
+  if (regexes.length === 0) return;
+
+  const stripTextNodes = (root) => {
+    if (!root) return;
+    if (root.nodeType === Node.TEXT_NODE) {
+      let txt = root.nodeValue || '';
+      for (const rx of regexes) {
+        rx.lastIndex = 0;
+        txt = txt.replace(rx, '');
+      }
+      root.nodeValue = txt;
+      return;
+    }
+    if (root.childNodes) {
+      for (const child of Array.from(root.childNodes)) {
+        stripTextNodes(child);
+      }
+    }
+  };
+
+  for (let i = nodes.length - 1; i >= 0; i--) {
+    const node = nodes[i];
+    stripTextNodes(node);
+    const hasMedia = Boolean(node.querySelector?.('img, svg, hr, br'));
+    if (!hasMedia && !normalizeSpaces(node.textContent || '')) {
+      nodes.splice(i, 1);
+    }
   }
 }
 

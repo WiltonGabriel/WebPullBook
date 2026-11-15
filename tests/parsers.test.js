@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { installDomGlobals } from './helpers/dom-shim.js';
-import { BaseParser, isAntiBotChallengeDocument } from '../src/core/parser-engine.js';
+import { BaseParser, buildOutputPath, isAntiBotChallengeDocument, sanitizePathSegment } from '../src/core/parser-engine.js';
 import { ParserRegistry, loadSeriesWithParser, parserRegistry } from '../src/parsers/index.js';
 import { wpLightNovelParser } from '../src/parsers/wp-lightnovel.js';
 import { madaraThemeParser } from '../src/parsers/madara-theme.js';
@@ -616,4 +616,181 @@ test('Regression snapshot: scribblehub index + pagination ordering + chapter res
   assert.equal(isAntiBotChallengeDocument(ptChallengeDoc), true);
   const legitimateDoc = new DOMParser().parseFromString(readFixture('scribblehub-chapter.html'), 'text/html');
   assert.equal(isAntiBotChallengeDocument(legitimateDoc), false);
+});
+
+test('Universal Smart Extractor crawls sequential Next Chapter links and beats weak accidental ties', async () => {
+  // Weak accidental .spe span without .eplister or .epcontent must not hijack generic extractor
+  const genericPageDoc = new DOMParser().parseFromString(
+    '<html><body><div class="spe"><span>Status: Ongoing</span></div><main><h1>Serial</h1><ul><li><a href="https://blog.example.org/p1">Cap 1</a></li><li><a href="https://blog.example.org/p2">Cap 2</a></li></ul></main></body></html>',
+    'text/html'
+  );
+  const picked = parserRegistry.detect(genericPageDoc, 'https://blog.example.org/serial');
+  assert.equal(picked.id, 'generic-html');
+  assert.equal(picked.name, 'Universal Smart Extractor');
+
+  const ch1 = `<html><head><title>Chapter 1</title></head><body><main><h1>Chapter 1: Dawn</h1><article><p>${'A quiet morning breeze drifted over the valley as the caravan prepared to depart before noon. '.repeat(4)}</p></article><div class="chapter-nav"><a href="/ch/2">Próximo Capítulo</a></div></main></body></html>`;
+  const ch2 = `<html><head><title>Chapter 2</title></head><body><main><h1>Chapter 2: Road</h1><article><p>${'The stone highway climbed steadily toward the northern ridge while lanterns swayed in the dusk. '.repeat(4)}</p></article><div class="chapter-nav"><a href="/ch/3" rel="next">Next Chapter</a></div></main></body></html>`;
+  const ch3 = `<html><head><title>Chapter 3</title></head><body><main><h1>Chapter 3: Gate</h1><article><p>${'Beyond the iron gate lay the sunken library, silent for centuries beneath the roots. '.repeat(4)}</p></article><div class="chapter-nav"><a href="/ch/2">Anterior</a></div></main></body></html>`;
+
+  mockFetchRoutes({
+    'https://serial.example.org/ch/1': ch1,
+    'https://serial.example.org/ch/2': ch2,
+    'https://serial.example.org/ch/3': ch3
+  });
+
+  const { parser, series } = await loadSeriesWithParser('https://serial.example.org/ch/1');
+  assert.equal(parser.id, 'generic-html');
+  assert.equal(series.chapters.length, 3);
+  assert.deepEqual(
+    series.chapters.map((c) => [c.url, c.displayTitle]),
+    [
+      ['https://serial.example.org/ch/1', 'Chapter 1: Dawn'],
+      ['https://serial.example.org/ch/2', 'Chapter 2: Road'],
+      ['https://serial.example.org/ch/3', 'Chapter 3: Gate']
+    ]
+  );
+
+  // customStripPatterns removes literal banners and /regex/ watermarks without harming prose
+  const noisyChapterHtml =
+    '<html><body><article><h1>Chapter 1</h1><p>Traduzido por Equipe Exemplo</p><p>Texto real do capítulo. [Nota do Tradutor: teste]</p></article></body></html>';
+  mockFetchRoutes({ 'https://serial.example.org/noisy-1': noisyChapterHtml });
+  const parsedNoisy = await genericHtmlParser.downloadChapter(
+    { url: 'https://serial.example.org/noisy-1', displayTitle: 'Chapter 1' },
+    { customStripPatterns: 'Traduzido por Equipe Exemplo\n/\\[Nota do Tradutor:.*?\\]/gi' }
+  );
+  const textOut = parsedNoisy.nodes.map((n) => n.textContent).join(' ').trim();
+  assert.equal(textOut, 'Chapter 1 Texto real do capítulo.');
+});
+
+test('WP ascending chapter lists stay ascending and standalone articles become 1-chapter books', async () => {
+  const ascWpHtml = `<html><body><div class="infox"><h1 class="entry-title">Ascending WP</h1></div>
+    <div class="ts-chl-collapsible">Volume 01</div>
+    <div class="ts-chl-collapsible-content"><div class="eplister"><ul>
+      <li><a href="https://wp.example.org/c1"><div class="epl-num">Cap. 1</div><div class="epl-title">One</div></a></li>
+      <li><a href="https://wp.example.org/c2"><div class="epl-num">Cap. 2</div><div class="epl-title">Two</div></a></li>
+    </ul></div></div>
+    <div class="ts-chl-collapsible">Volume 02</div>
+    <div class="ts-chl-collapsible-content"><div class="eplister"><ul>
+      <li><a href="https://wp.example.org/c3"><div class="epl-num">Cap. 3</div><div class="epl-title">Three</div></a></li>
+    </ul></div></div></body></html>`;
+  mockFetchRoutes({ 'https://wp.example.org/series': ascWpHtml });
+  const { series: wpSeries } = await loadSeriesWithParser('https://wp.example.org/series');
+  assert.deepEqual(
+    wpSeries.chapters.map((c) => c.titleText),
+    ['One', 'Two', 'Three']
+  );
+
+  const singleArticleHtml = `<html><head><title>Ensaio Único</title></head><body><main><h1>Ensaio Único</h1><article>
+    <p>${'Um texto autônomo longo o bastante para ser convertido diretamente em um livro de capítulo único. '.repeat(3)}</p>
+  </article></main></body></html>`;
+  mockFetchRoutes({ 'https://essay.example.org/post': singleArticleHtml });
+  const { series: essaySeries } = await loadSeriesWithParser('https://essay.example.org/post');
+  assert.equal(essaySeries.chapters.length, 1);
+  assert.equal(essaySeries.chapters[0].displayTitle, 'Ensaio Único');
+});
+
+test('buildOutputPath and sanitizePathSegment handle custom root folders, presets, tokens, and unsafe segments', () => {
+  assert.equal(sanitizePathSegment('..'), '');
+  assert.equal(sanitizePathSegment('  Nome.. '), 'Nome');
+  assert.equal(sanitizePathSegment('CON'), '_CON');
+
+  assert.equal(
+    buildOutputPath({
+      baseFilename: 'Crônica',
+      title: 'Crônica',
+      author: 'Ana',
+      extension: 'epub',
+      options: {}
+    }),
+    'WebPullBook/Crônica/Crônica.epub'
+  );
+
+  assert.equal(
+    buildOutputPath({
+      baseFilename: 'Crônica',
+      title: 'Fate/Stay Night',
+      author: 'Nasu',
+      extension: 'epub',
+      options: {
+        rootFolderName: 'Biblioteca/LightNovels',
+        folderLayout: 'root-author-title'
+      }
+    }),
+    'Biblioteca/LightNovels/Nasu/Fate_Stay Night/Crônica.epub'
+  );
+
+  assert.equal(
+    buildOutputPath({
+      baseFilename: 'Livro',
+      title: 'Livro',
+      author: 'Autor',
+      extension: 'html',
+      options: { rootFolderName: 'MeusLivros', folderLayout: 'root-format-title' }
+    }),
+    'MeusLivros/HTML/Livro/Livro.html'
+  );
+
+  assert.equal(
+    buildOutputPath({
+      baseFilename: 'Livro',
+      title: 'Livro',
+      extension: 'epub',
+      options: { rootFolderName: 'Leitura', folderLayout: 'root-only' }
+    }),
+    'Leitura/Livro.epub'
+  );
+
+  assert.equal(
+    buildOutputPath({
+      baseFilename: 'Livro',
+      title: 'Livro',
+      author: 'Autor',
+      extension: 'epub',
+      options: { folderLayout: 'title-only', rootFolderName: 'Ignored' }
+    }),
+    'Livro/Livro.epub'
+  );
+
+  assert.equal(
+    buildOutputPath({
+      baseFilename: 'Livro',
+      title: 'Livro',
+      extension: 'epub',
+      options: { subfolder: false }
+    }),
+    'Livro.epub'
+  );
+
+  assert.equal(
+    buildOutputPath({
+      baseFilename: 'Saga',
+      title: 'Saga',
+      author: 'João',
+      volumeLabel: 'Volume 02',
+      language: 'pt',
+      extension: 'epub',
+      options: {
+        rootFolderName: '../../Hacks',
+        folderLayout: 'custom',
+        customFolderTemplate: '%Language%/%Author%/%Title%/%Volume%'
+      }
+    }),
+    'pt/João/Saga/Volume 02/Saga - Volume 02.epub'
+  );
+
+  assert.equal(
+    buildOutputPath({
+      baseFilename: 'Saga',
+      title: 'Saga',
+      author: 'João',
+      volumeLabel: '',
+      language: 'pt',
+      extension: 'epub',
+      options: {
+        folderLayout: 'custom',
+        customFolderTemplate: '../%Author%/%Volume%/%Title%'
+      }
+    }),
+    'João/Saga/Saga.epub'
+  );
 });

@@ -7,7 +7,26 @@ function randomUuid() {
   return `wpb-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
+function decodeDataUrlToBlob(dataUrl) {
+  const match = String(dataUrl).match(/^data:([^;,]+)?(?:;charset=[^;,]+)?(;base64)?,(.*)$/is);
+  if (!match) throw new Error('Invalid data URL for image');
+  const mime = (match[1] || 'image/png').trim().toLowerCase();
+  const isBase64 = Boolean(match[2]);
+  const payload = match[3] || '';
+  if (isBase64) {
+    const bin = atob(payload);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return { blob: new Blob([bytes], { type: mime }), mime };
+  }
+  const bytes = new TextEncoder().encode(decodeURIComponent(payload));
+  return { blob: new Blob([bytes], { type: mime }), mime };
+}
+
 async function fetchImageBytes(url, signal) {
+  if (/^data:/i.test(String(url || ''))) {
+    return decodeDataUrlToBlob(url);
+  }
   let resp = null;
   let firstErr = null;
   try {
@@ -46,7 +65,10 @@ async function fetchImageBytes(url, signal) {
   return { blob, mime: mime || 'image/jpeg' };
 }
 
-async function convertImageViaCanvas(blob, { maxDim = 1080, forceJpeg = false, quality = 0.88 }) {
+async function convertImageViaCanvas(
+  blob,
+  { maxDim = 1080, forceJpeg = false, quality = 0.88, grayscale = false }
+) {
   const bitmap = await createImageBitmap(blob);
   try {
     let { width, height } = bitmap;
@@ -63,6 +85,9 @@ async function convertImageViaCanvas(blob, { maxDim = 1080, forceJpeg = false, q
     if (forceJpeg) {
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(0, 0, width, height);
+    }
+    if (grayscale) {
+      ctx.filter = 'grayscale(100%)';
     }
     ctx.drawImage(bitmap, 0, 0, width, height);
 
@@ -416,6 +441,11 @@ export async function buildEpubBlob({
     }
   ];
 
+  const parsedQuality = Number(options.imageQuality);
+  const customImageQuality = Number.isFinite(parsedQuality)
+    ? Math.min(0.98, Math.max(0.4, parsedQuality / 100))
+    : null;
+
   // Cover image
   let coverItem = null;
   let hasCoverPage = false;
@@ -425,11 +455,12 @@ export async function buildEpubBlob({
       const { blob, mime } = await fetchImageBytes(cUrl, signal);
       let bytes;
       let finalMime = mime;
-      if (options.restrictCoverJpeg || options.compressImages) {
+      if (options.restrictCoverJpeg || options.compressImages || options.grayscaleImages) {
         const conv = await convertImageViaCanvas(blob, {
           maxDim: options.compressImages ? (options.compressedResolution || 1200) : 1600,
           forceJpeg: Boolean(options.restrictCoverJpeg),
-          quality: 0.9
+          quality: customImageQuality ?? 0.9,
+          grayscale: Boolean(options.grayscaleImages)
         });
         bytes = conv.bytes;
         finalMime = conv.mime;
@@ -514,12 +545,13 @@ export async function buildEpubBlob({
           let bytes;
           let finalMime = mime;
           const needsEpub2Convert = !epub3 && /^image\/(?:webp|avif)$/i.test(mime);
-          if (options.compressImages || needsEpub2Convert) {
+          if (options.compressImages || needsEpub2Convert || options.grayscaleImages) {
             const forceJpeg = needsEpub2Convert || (options.compressedFormat || 'jpg') === 'jpg';
             const conv = await convertImageViaCanvas(blob, {
               maxDim: options.compressImages ? (options.compressedResolution || 1080) : 0,
               forceJpeg,
-              quality: options.compressImages ? 0.85 : 0.92
+              quality: options.compressImages ? (customImageQuality ?? 0.85) : 0.92,
+              grayscale: Boolean(options.grayscaleImages)
             });
             bytes = conv.bytes;
             finalMime = conv.mime;

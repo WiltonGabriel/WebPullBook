@@ -1,5 +1,6 @@
 import {
   BaseParser,
+  ensureAscendingChapterOrder,
   extractCleanSynopsis,
   extractVolumeLabel,
   fetchWithRetry,
@@ -97,8 +98,7 @@ export class MadaraThemeParser extends BaseParser {
       if (item) raw.push(item);
     }
 
-    raw.reverse();
-    return raw;
+    return ensureAscendingChapterOrder(raw, true);
   }
 
   _parseChapterLi(li, targetUrl, fallbackVol, seen) {

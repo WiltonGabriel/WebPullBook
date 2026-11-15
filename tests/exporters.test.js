@@ -284,3 +284,43 @@ test('EpubExporter retries image fetch with anonymous credentials on HTTP 403 an
   assert.equal(warnings[0].chapterIndex, 1);
   assert.equal(warnings[0].chapterUrl, 'https://example.com/ch/1');
 });
+
+test('EpubExporter and HtmlExporter accept inline data: URI local/generated covers without network fetch', async () => {
+  const dataCover =
+    'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
+  let fetchCalled = false;
+  globalThis.fetch = async () => {
+    fetchCalled = true;
+    throw new Error('Network should not be called for data: cover');
+  };
+
+  const ctx = makeBookContext({
+    metadata: {
+      startingUrl: 'https://example.com/book',
+      title: 'Local Cover Book',
+      author: 'Autora',
+      language: 'pt',
+      coverUrl: dataCover,
+      genres: [],
+      synopsis: ''
+    },
+    options: {
+      createEpub3: true,
+      addInfoPage: false,
+      restrictCoverJpeg: false,
+      compressImages: false,
+      useSvgForImages: false
+    },
+    parsedChapters: [buildParsedChapter(1, 'Volume 01', '<p>Texto sem imagens externas.</p>')]
+  });
+
+  const epubBlob = await exporterRegistry.get('epub').exportBook(ctx);
+  const zip = await readZipArchive(epubBlob);
+  assert.equal(fetchCalled, false);
+  assert.ok(zip.files.has('OEBPS/images/cover.png'));
+
+  const htmlBlob = await exporterRegistry.get('html').exportBook(ctx);
+  const htmlText = await htmlBlob.text();
+  assert.equal(fetchCalled, false);
+  assert.ok(htmlText.includes(dataCover));
+});

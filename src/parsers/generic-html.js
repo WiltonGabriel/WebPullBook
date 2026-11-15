@@ -1,6 +1,7 @@
 import {
   BaseParser,
   extractVolumeLabel,
+  fetchDocumentWithOptions,
   normalizeSpaces,
   normalizeUrl
 } from '../core/parser-engine.js';
@@ -11,6 +12,8 @@ const CHAPTER_HINT_RX = /(?:cap[íi]tulo|chapter|cap\.?|ch\.?|ep\.?|epis[óo]dio
 const URL_HINT_RX = /(?:cap|chapter|ch|ep|vol|parte|read|lesson|section)[-_/\d]/i;
 const TAXONOMY_PATH_RX = /(?:^|\/)(?:genero|generos|genre|genres|tag|tags|category|categories|categoria|categorias|author|authors|autor|autores|perfil|profile|user|users|login|register|signup|search|busca|sobre|about|contato|contact|privacy|terms)(?:\/|$)/i;
 const CTA_TEXT_RX = /^(?:come[çc]ar\s+a\s+ler|continuar\s+lendo|start\s+reading|read\s+first|continue\s+reading)$/i;
+const NEXT_CHAPTER_RX =
+  /^(?:next(?:\s+(?:chapter|part|page|ep(?:isode)?))?|pr[óo]xim[oa](?:\s+(?:cap[íi]tulo|parte|p[áa]gina|epis[óo]dio))?|cap[íi]tulo\s+seguinte|seguinte|avan[çc]ar|siguiente(?:\s+cap[íi]tulo)?|»+|›+|→)$/i;
 const UTILITY_CLASS_RX = /^(?:flex|inline-flex|grid|block|inline-block|hidden|relative|absolute|fixed|sticky|prose|container|mx-auto|(?:m|p|px|py|pt|pb|pl|pr|mt|mb|ml|mr|gap|space-[xy]|w|h|min-w|min-h|max-w|max-h|text|bg|border|rounded|shadow|overflow|items|justify|self|col|row|z)-.+|_[a-zA-Z0-9_-]{4,}|[a-zA-Z0-9-]+_[a-zA-Z0-9]{5,})$/;
 const VOLUME_HEADING_RX = /\b(?:vol(?:ume)?\.?\s*\d+|book\s*\d+|livro\s*\d+|tome\s*\d+|ano\s*\d+|part(?:e)?\s*(?:\d+|[ivx]+))/i;
 
@@ -102,7 +105,7 @@ export class GenericHtmlParser extends BaseParser {
   constructor() {
     super({
       id: 'generic-html',
-      name: 'Generic Web Page Extractor'
+      name: 'Universal Smart Extractor'
     });
   }
 
@@ -110,7 +113,7 @@ export class GenericHtmlParser extends BaseParser {
     if (doc.querySelector('.chapter-list, .chapters, #chapter-list, .toc')) {
       return 35;
     }
-    return 10;
+    return 20;
   }
 
   _isNoiseRegion(el) {
@@ -294,6 +297,121 @@ export class GenericHtmlParser extends BaseParser {
       volume: this._inferVolumeFromAncestors(l.el, selected.container, l.text, l.url),
       included: true
     }));
+  }
+
+  _findNextChapterUrl(doc, currentUrl, baseOrigin) {
+    const normCurrent = normalizeUrl(currentUrl);
+    const validateHref = (href) => {
+      if (!href || href.startsWith('#') || href.startsWith('javascript:')) return null;
+      try {
+        const u = new URL(href, currentUrl);
+        if (u.origin !== baseOrigin || TAXONOMY_PATH_RX.test(u.pathname || '')) return null;
+        u.hash = '';
+        const abs = normalizeUrl(u.toString());
+        return abs && abs !== normCurrent ? abs : null;
+      } catch {
+        return null;
+      }
+    };
+
+    const explicit = doc.querySelector(
+      'a[rel="next"], .chapter-nav a.next, .nav-links a.next, .post-navigation .nav-next a, a[data-next-chapter]'
+    );
+    const explicitUrl = validateHref(explicit?.getAttribute('href'));
+    if (explicitUrl) return explicitUrl;
+
+    for (const a of doc.querySelectorAll('a[href]')) {
+      if (a.closest('#comments, .comments, footer, .sidebar, #sidebar')) continue;
+      const label = normalizeSpaces(a.textContent);
+      const aria = normalizeSpaces(a.getAttribute('aria-label') || a.getAttribute('title') || '');
+      if (NEXT_CHAPTER_RX.test(label) || (aria && NEXT_CHAPTER_RX.test(aria))) {
+        const abs = validateHref(a.getAttribute('href'));
+        if (abs) return abs;
+      }
+    }
+    return null;
+  }
+
+  async _crawlChaptersFromNextLinks(startDoc, startUrl, options = {}, signal) {
+    const maxCrawl = Math.max(1, Math.min(300, Number(options.maxCrawlChapters) || 100));
+    const baseOrigin = new URL(startUrl).origin;
+    const chapters = [];
+    const visited = new Set();
+
+    let curDoc = startDoc;
+    let curUrl = normalizeUrl(startUrl);
+
+    for (let step = 0; step < maxCrawl; step++) {
+      if (!curUrl || visited.has(curUrl)) break;
+      visited.add(curUrl);
+
+      const { chapterTitle } = this.extractChapterHeading(curDoc, {
+        url: curUrl,
+        displayTitle: `Capítulo ${chapters.length + 1}`
+      });
+      chapters.push({
+        url: curUrl,
+        numText: '',
+        titleText: chapterTitle,
+        dateText: '',
+        displayTitle: chapterTitle,
+        volume: extractVolumeLabel('', chapterTitle, curUrl),
+        included: true
+      });
+
+      const nextUrl = this._findNextChapterUrl(curDoc, curUrl, baseOrigin);
+      if (!nextUrl || visited.has(nextUrl)) break;
+      try {
+        curDoc = await fetchDocumentWithOptions(nextUrl, options, signal);
+        curUrl = nextUrl;
+      } catch (err) {
+        if (err.name === 'AbortError') throw err;
+        break;
+      }
+    }
+
+    return chapters;
+  }
+
+  async collectAllChapters(indexDoc, targetUrl, options = {}, signal) {
+    const customListSelector = (options.customListSelector || '').trim();
+    if (!customListSelector) {
+      const initialNodes = this.collectChapterNodes(indexDoc, targetUrl, options, {
+        pageIndex: 0,
+        knownPrefixes: new Set()
+      });
+      if (initialNodes.length <= 1) {
+        const proseRoot = this.findChapterContentRoot(indexDoc);
+        const proseChars = proseRoot ? normalizeSpaces(proseRoot.textContent).length : 0;
+        if (proseChars >= 120) {
+          if (options.crawlNextLinks !== false) {
+            const baseOrigin = new URL(targetUrl).origin;
+            const nextChapterUrl = this._findNextChapterUrl(indexDoc, targetUrl, baseOrigin);
+            if (nextChapterUrl) {
+              return this._crawlChaptersFromNextLinks(indexDoc, targetUrl, options, signal);
+            }
+          }
+          if (initialNodes.length === 0) {
+            const singleTitle =
+              this.extractChapterHeading(indexDoc, { url: targetUrl, displayTitle: 'Capítulo 1' }).chapterTitle ||
+              'Capítulo 1';
+            return [
+              {
+                url: targetUrl,
+                numText: '1',
+                titleText: singleTitle,
+                dateText: '',
+                displayTitle: singleTitle,
+                volume: extractVolumeLabel('', singleTitle, targetUrl),
+                included: true
+              }
+            ];
+          }
+        }
+      }
+    }
+
+    return super.collectAllChapters(indexDoc, targetUrl, options, signal);
   }
 
   /**

@@ -1,5 +1,6 @@
 import {
   BaseParser,
+  ensureAscendingChapterOrder,
   extractCleanSynopsis,
   extractVolumeLabel,
   fetchWithRetry,
@@ -148,8 +149,7 @@ export class WpNovelThemeParser extends BaseParser {
       addLi(li, '');
     }
 
-    rawChapters.reverse();
-    return rawChapters;
+    return ensureAscendingChapterOrder(rawChapters, true);
   }
 
   findChapterContentRoot(doc) {
