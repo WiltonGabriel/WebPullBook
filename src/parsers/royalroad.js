@@ -1,0 +1,318 @@
+import {
+  BaseParser,
+  extractCleanSynopsis,
+  extractVolumeLabel,
+  fetchWithRetry,
+  normalizeSpaces,
+  normalizeUrl,
+  toHighResCoverUrl
+} from '../core/parser-engine.js';
+
+const STATUS_RX = /^(ONGOING|COMPLETED|HIATUS|INACTIVE|STUB|DROPPED)$/i;
+const FICTION_PATH_RX = /^\/fiction\/\d+(?:\/[^/?#]+)?\/?$/i;
+
+function extractJsonArraySlice(text, startBracketIdx) {
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+
+  for (let i = startBracketIdx; i < text.length; i++) {
+    const ch = text[i];
+    if (inString) {
+      if (escaped) {
+        escaped = false;
+      } else if (ch === '\\') {
+        escaped = true;
+      } else if (ch === '"') {
+        inString = false;
+      }
+      continue;
+    }
+    if (ch === '"') {
+      inString = true;
+    } else if (ch === '[') {
+      depth++;
+    } else if (ch === ']') {
+      depth--;
+      if (depth === 0) {
+        return text.slice(startBracketIdx, i + 1);
+      }
+    }
+  }
+  return null;
+}
+
+function formatRoyalRoadVolume(vol) {
+  const title = normalizeSpaces(vol?.title || '');
+  const order = Number(vol?.order);
+  if (title) {
+    if (/\d+/.test(title)) return title;
+    if (Number.isFinite(order) && order > 0) {
+      return `Volume ${String(order).padStart(2, '0')} — ${title}`;
+    }
+    return title;
+  }
+  if (Number.isFinite(order) && order > 0) {
+    return `Volume ${String(order).padStart(2, '0')}`;
+  }
+  return 'Volume 01';
+}
+
+/**
+ * Adapter for Royal Road (royalroad.com) fiction index and chapter pages.
+ */
+export class RoyalRoadParser extends BaseParser {
+  constructor() {
+    super({
+      id: 'royalroad',
+      name: 'Royal Road'
+    });
+  }
+
+  matchScore(doc, url = '') {
+    let score = 0;
+    try {
+      const host = new URL(url).hostname;
+      if (/(?:^|\.)royalroad\.com$/i.test(host)) score += 45;
+    } catch {
+      // ignore invalid/empty URL
+    }
+
+    if (doc.querySelector('meta[property="og:site_name"][content="Royal Road"]')) score += 30;
+    if (doc.querySelector('table#chapters tr.chapter-row, table#chapters')) score += 45;
+    if (doc.querySelector('.chapter-inner.chapter-content')) score += 45;
+    if (doc.querySelector('.cover-art-container') && doc.querySelector('.fiction-tag')) score += 20;
+
+    return Math.min(100, score);
+  }
+
+  _extractWindowJsonArray(doc, varName) {
+    const pattern = new RegExp(`window\\.${varName}\\s*=\\s*\\[`);
+    for (const script of doc.querySelectorAll('script')) {
+      const text = script.textContent || '';
+      const match = pattern.exec(text);
+      if (!match) continue;
+      const bracketIdx = text.indexOf('[', match.index);
+      if (bracketIdx === -1) continue;
+      const slice = extractJsonArraySlice(text, bracketIdx);
+      if (!slice) continue;
+      try {
+        const parsed = JSON.parse(slice);
+        if (Array.isArray(parsed)) return parsed;
+      } catch {
+        // Ignore malformed inline JSON
+      }
+    }
+    return [];
+  }
+
+  async resolveIndexDocument(inputUrl, doc, signal) {
+    const targetUrl = normalizeUrl(inputUrl);
+    if (doc.querySelector('table#chapters') || this._extractWindowJsonArray(doc, 'chapters').length > 0) {
+      return { targetUrl, doc };
+    }
+
+    for (const a of doc.querySelectorAll('a[href*="/fiction/"]')) {
+      const rawHref = a.getAttribute('href') || '';
+      if (!rawHref) continue;
+      let resolvedUrl;
+      try {
+        const u = new URL(rawHref, targetUrl);
+        if (!FICTION_PATH_RX.test(u.pathname)) continue;
+        u.hash = '';
+        u.search = '';
+        resolvedUrl = u.toString();
+      } catch {
+        continue;
+      }
+      if (resolvedUrl === targetUrl) continue;
+
+      const candidateDoc = await fetchWithRetry(resolvedUrl, { retries: 2, signal });
+      if (
+        candidateDoc.querySelector('table#chapters') ||
+        this._extractWindowJsonArray(candidateDoc, 'chapters').length > 0
+      ) {
+        return { targetUrl: resolvedUrl, doc: candidateDoc };
+      }
+    }
+
+    return { targetUrl, doc };
+  }
+
+  extractSiteMetadata(doc, targetUrl) {
+    const out = {};
+
+    const titleEl = doc.querySelector('.fic-header h1, h1.font-white, h1');
+    const title = normalizeSpaces(titleEl?.textContent);
+    if (title) out.title = title;
+
+    const authorRaw =
+      doc.querySelector('.fic-header h4 a[href*="/profile/"]')?.textContent ||
+      doc.querySelector('.fic-header h4 a')?.textContent ||
+      doc.querySelector('meta[property="books:author"]')?.getAttribute('content') ||
+      doc.querySelector('meta[name="twitter:creator"]')?.getAttribute('content') ||
+      '';
+    const author = normalizeSpaces(authorRaw);
+    if (author) out.author = author;
+
+    for (const labelEl of doc.querySelectorAll('.fiction-info span.label, .margin-bottom-10 > span.label')) {
+      const txt = normalizeSpaces(labelEl.textContent);
+      if (STATUS_RX.test(txt)) {
+        out.status = txt;
+        break;
+      }
+    }
+
+    const genres = [];
+    const seenGenres = new Set();
+    for (const tagEl of doc.querySelectorAll('.tags .fiction-tag, a.fiction-tag')) {
+      const tag = normalizeSpaces(tagEl.textContent);
+      if (tag && !seenGenres.has(tag)) {
+        seenGenres.add(tag);
+        genres.push(tag);
+      }
+    }
+    if (genres.length > 0) out.genres = genres;
+
+    const hiddenDesc = doc.querySelector('.description .hidden-content');
+    if (hiddenDesc) {
+      const syn = extractCleanSynopsis(hiddenDesc);
+      if (syn) out.synopsis = syn;
+    } else {
+      const descEl = doc.querySelector('.description');
+      if (descEl) {
+        const clone = descEl.cloneNode(true);
+        for (const uiEl of clone.querySelectorAll('input, label')) {
+          uiEl.remove();
+        }
+        const syn = extractCleanSynopsis(clone);
+        if (syn) out.synopsis = syn;
+      }
+    }
+
+    const resolveAbs = (raw) => {
+      if (!raw) return '';
+      try {
+        return new URL(raw, targetUrl).toString();
+      } catch {
+        return '';
+      }
+    };
+    const ogCover = resolveAbs(doc.querySelector('meta[property="og:image"]')?.getAttribute('content'));
+    const domCover = resolveAbs(doc.querySelector('.cover-art-container img')?.getAttribute('src'));
+    const primaryCover = ogCover || domCover;
+    const thumbCover = domCover || ogCover;
+    if (primaryCover) {
+      out.coverUrl = toHighResCoverUrl(primaryCover) || primaryCover;
+      out.coverThumbUrl = thumbCover;
+    }
+
+    return out;
+  }
+
+  collectChapterNodes(doc, targetUrl) {
+    const windowVolumes = this._extractWindowJsonArray(doc, 'volumes');
+    const volumeMap = new Map();
+    for (const vol of windowVolumes) {
+      if (vol?.id != null) {
+        volumeMap.set(String(vol.id), formatRoyalRoadVolume(vol));
+      }
+    }
+
+    const windowChapters = this._extractWindowJsonArray(doc, 'chapters');
+    const domRows = Array.from(doc.querySelectorAll('table#chapters tbody tr.chapter-row, table#chapters tbody tr'));
+    const chapters = [];
+    const seenUrls = new Set();
+
+    if (windowChapters.length > 0 && windowChapters.length >= domRows.length) {
+      const ordered = windowChapters
+        .map((ch, idx) => ({ ch, idx }))
+        .sort((a, b) => (Number(a.ch?.order ?? a.idx) - Number(b.ch?.order ?? b.idx)) || (a.idx - b.idx));
+
+      for (const { ch } of ordered) {
+        const rawHref = ch?.url || '';
+        if (!rawHref) continue;
+        let absUrl;
+        try {
+          absUrl = normalizeUrl(new URL(rawHref, targetUrl).toString());
+        } catch {
+          continue;
+        }
+        if (seenUrls.has(absUrl)) continue;
+        seenUrls.add(absUrl);
+
+        const titleText = normalizeSpaces(ch.title) || absUrl;
+        const volKey = ch.volumeId != null ? String(ch.volumeId) : '';
+        const volume = volKey && volumeMap.has(volKey)
+          ? volumeMap.get(volKey)
+          : extractVolumeLabel('', titleText, absUrl);
+
+        chapters.push({
+          url: absUrl,
+          numText: '',
+          titleText,
+          dateText: ch.date ? String(ch.date).slice(0, 10) : '',
+          displayTitle: titleText,
+          volume,
+          included: ch.isUnlocked !== false
+        });
+      }
+      return chapters;
+    }
+
+    for (const tr of domRows) {
+      const a = tr.querySelector('a[href*="/chapter/"], a[href]');
+      if (!a) continue;
+      const rawHref = a.getAttribute('href') || '';
+      if (!rawHref || rawHref.startsWith('#')) continue;
+
+      let absUrl;
+      try {
+        absUrl = normalizeUrl(new URL(rawHref, targetUrl).toString());
+      } catch {
+        continue;
+      }
+      if (seenUrls.has(absUrl)) continue;
+      seenUrls.add(absUrl);
+
+      const titleText = normalizeSpaces(a.textContent) || absUrl;
+      const volAttr = tr.getAttribute('data-volume-id');
+      const volKey = volAttr && volAttr !== 'null' ? volAttr : '';
+      const volume = volKey && volumeMap.has(volKey)
+        ? volumeMap.get(volKey)
+        : extractVolumeLabel('', titleText, absUrl);
+      const timeEl = tr.querySelector('time');
+      const dateText = (timeEl?.getAttribute('datetime') || '').slice(0, 10) || normalizeSpaces(timeEl?.textContent);
+
+      chapters.push({
+        url: absUrl,
+        numText: '',
+        titleText,
+        dateText,
+        displayTitle: titleText,
+        volume,
+        included: true
+      });
+    }
+
+    return chapters;
+  }
+
+  findNextPageUrl() {
+    return null;
+  }
+
+  findChapterContentRoot(doc) {
+    return doc.querySelector('.chapter-inner.chapter-content, .chapter-inner, .chapter-content');
+  }
+
+  extractChapterHeading(doc, chapter) {
+    const h1 = normalizeSpaces(doc.querySelector('.fic-header h1, h1')?.textContent);
+    return {
+      chapterTitle: h1 || chapter.displayTitle || chapter.url,
+      subtitle: ''
+    };
+  }
+}
+
+export const royalRoadParser = new RoyalRoadParser();

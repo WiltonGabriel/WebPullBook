@@ -6,6 +6,7 @@ import {
 } from '../core/parser-engine.js';
 import { wpLightNovelParser } from './wp-lightnovel.js';
 import { madaraThemeParser } from './madara-theme.js';
+import { royalRoadParser } from './royalroad.js';
 import { genericHtmlParser } from './generic-html.js';
 
 /**
@@ -50,6 +51,7 @@ export class ParserRegistry {
 export const parserRegistry = new ParserRegistry([
   wpLightNovelParser,
   madaraThemeParser,
+  royalRoadParser,
   genericHtmlParser
 ]);
 

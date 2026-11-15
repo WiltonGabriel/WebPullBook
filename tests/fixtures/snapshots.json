@@ -85,5 +85,33 @@
         "volume": "Volume 02"
       }
     ]
+  },
+  "royalroad": {
+    "parserId": "royalroad",
+    "startingUrl": "https://www.royalroad.com/fiction/99900/clockwork-vanguard",
+    "title": "Clockwork Vanguard",
+    "author": "J. Mercer",
+    "language": "en",
+    "status": "ONGOING",
+    "genres": ["LitRPG", "Fantasy"],
+    "coverUrl": "https://www.royalroadcdn.com/public/covers-full/clockwork-vanguard.jpg?time=1700000000",
+    "synopsis": "When the brass citadel fell, only one engineer remained awake.\n\nEvery gear carries a memory worth fighting for.",
+    "chapters": [
+      {
+        "url": "https://www.royalroad.com/fiction/99900/clockwork-vanguard/chapter/1001/chapter-1-first-spark",
+        "displayTitle": "Chapter 1: First Spark",
+        "volume": "Volume 01 — Brass Foundations"
+      },
+      {
+        "url": "https://www.royalroad.com/fiction/99900/clockwork-vanguard/chapter/1002/chapter-2-iron-boiler",
+        "displayTitle": "Chapter 2: Iron Boiler",
+        "volume": "Volume 01 — Brass Foundations"
+      },
+      {
+        "url": "https://www.royalroad.com/fiction/99900/clockwork-vanguard/chapter/1003/chapter-3-the-skyward-gate",
+        "displayTitle": "Chapter 3: The Skyward Gate",
+        "volume": "Vol. 2 Ascent"
+      }
+    ]
   }
 }

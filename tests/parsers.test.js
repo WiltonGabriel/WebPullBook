@@ -7,6 +7,7 @@ import { BaseParser } from '../src/core/parser-engine.js';
 import { ParserRegistry, loadSeriesWithParser, parserRegistry } from '../src/parsers/index.js';
 import { wpLightNovelParser } from '../src/parsers/wp-lightnovel.js';
 import { madaraThemeParser } from '../src/parsers/madara-theme.js';
+import { royalRoadParser } from '../src/parsers/royalroad.js';
 import { genericHtmlParser } from '../src/parsers/generic-html.js';
 
 const FIXTURES_DIR = path.resolve('tests/fixtures');
@@ -56,10 +57,12 @@ afterEach(() => {
 test('ParserRegistry ranks specialized adapters above generic fallback and honors forcedId', () => {
   const wpDoc = new DOMParser().parseFromString(readFixture('wp-lightnovel-index.html'), 'text/html');
   const madaraDoc = new DOMParser().parseFromString(readFixture('madara-index.html'), 'text/html');
+  const rrDoc = new DOMParser().parseFromString(readFixture('royalroad-index.html'), 'text/html');
   const genericDoc = new DOMParser().parseFromString(readFixture('generic-index-p1.html'), 'text/html');
 
   assert.equal(parserRegistry.detect(wpDoc, 'https://novel.example.org/').id, 'wp-lightnovel');
   assert.equal(parserRegistry.detect(madaraDoc, 'https://madara.example.org/').id, 'madara-theme');
+  assert.equal(parserRegistry.detect(rrDoc, 'https://www.royalroad.com/fiction/99900/clockwork-vanguard').id, 'royalroad');
   assert.equal(parserRegistry.detect(genericDoc, 'https://blog.example.org/').id, 'generic-html');
 
   // Explicit forcedId overrides DOM score
@@ -266,4 +269,54 @@ test('BaseParser supports custom CSS selectors, JSON-LD @graph, retries, rate-li
   assert.equal(spaRes.series.title, 'SPA Novel');
   assert.equal(spaRes.series.chapters.length, 2);
   assert.equal(removedTabId, 42);
+});
+
+test('Regression snapshot: royalroad index + chapter back-link resolution + hidden watermark stripping', async () => {
+  const expected = SNAPSHOTS.royalroad;
+  mockFetchRoutes({
+    [expected.startingUrl]: readFixture('royalroad-index.html'),
+    [expected.chapters[0].url]: readFixture('royalroad-chapter.html')
+  });
+
+  // Loading from a chapter URL resolves back to the fiction index page
+  const { parser, series } = await loadSeriesWithParser(expected.chapters[0].url);
+  assert.equal(parser.id, expected.parserId);
+  assert.equal(series.startingUrl, expected.startingUrl);
+  assert.equal(series.title, expected.title);
+  assert.equal(series.author, expected.author);
+  assert.equal(series.language, expected.language);
+  assert.equal(series.status, expected.status);
+  assert.deepEqual(series.genres, expected.genres);
+  assert.equal(series.coverUrl, expected.coverUrl);
+  assert.equal(series.synopsis, expected.synopsis);
+  assert.deepEqual(
+    series.chapters.map((c) => ({ url: c.url, displayTitle: c.displayTitle, volume: c.volume })),
+    expected.chapters
+  );
+
+  const parsedCh = await parser.downloadChapter(series.chapters[0]);
+  assert.equal(parsedCh.chapterTitle, 'Chapter 1: First Spark');
+  assert.equal(parsedCh.subtitle, '');
+  assert.equal(parsedCh.images.length, 1);
+  assert.equal(parsedCh.images[0].originalUrl, 'https://i.imgur.com/sample01.png');
+
+  const chXhtml = parsedCh.serialize('../styles/stylesheet.css', true);
+  assert.match(chXhtml, /Sparks showered across the workshop floor/);
+  assert.doesNotMatch(chXhtml, /taken without approval/);
+  assert.doesNotMatch(chXhtml, /Author note outside chapter body/);
+
+  // Fallback to DOM table when window.chapters is absent
+  const tableOnlyDoc = new DOMParser().parseFromString(`
+    <html><body>
+      <table id="chapters"><tbody>
+        <tr class="chapter-row" data-volume-id="null">
+          <td><a href="/fiction/99900/clockwork-vanguard/chapter/1001/ch-1">Chapter 1: Fallback</a></td>
+          <td><time datetime="2026-02-01T00:00:00Z">2026-02-01</time></td>
+        </tr>
+      </tbody></table>
+    </body></html>`, 'text/html');
+  const fallbackChapters = royalRoadParser.collectChapterNodes(tableOnlyDoc, expected.startingUrl);
+  assert.equal(fallbackChapters.length, 1);
+  assert.equal(fallbackChapters[0].displayTitle, 'Chapter 1: Fallback');
+  assert.equal(fallbackChapters[0].dateText, '2026-02-01');
 });
