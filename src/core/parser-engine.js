@@ -1,4 +1,4 @@
-import { HtmlSanitizer, serializeChapterXhtml } from './sanitizer.js';
+import { HtmlSanitizer, extractHiddenClassesFromStyles, serializeChapterXhtml } from './sanitizer.js';
 
 /**
  * Build e-reader-friendly EPUB CSS without locking body font-family/px font-size
@@ -298,6 +298,19 @@ export function canUseTabScripting() {
   );
 }
 
+export function isAntiBotChallengeDocument(doc) {
+  if (!doc) return false;
+  const title = normalizeSpaces(doc.title || '');
+  const hasChallengeEl = Boolean(
+    doc.querySelector('#challenge-running, #cf-challenge-running, form#challenge-form, iframe[src*="challenges.cloudflare.com"]')
+  );
+  const isChallengeTitle =
+    /^(?:just a moment\b|attention required!\s*\|\s*cloudflare|ddos-guard|checking your browser)/i.test(title);
+  if (!hasChallengeEl && !isChallengeTitle) return false;
+  const hasContent = Boolean(doc.querySelector('#chp_raw, .epcontent, .reading-content, ol.toc_ol'));
+  return !hasContent;
+}
+
 /**
  * Render a page inside a browser tab (or read an existing open tab) to extract
  * JavaScript/SPA/React-hydrated DOM when plain background fetch() is insufficient.
@@ -318,7 +331,10 @@ export async function fetchRenderedTabDocument(url, { waitMs = 950, tabId = null
       });
       const liveHtml = results?.[0]?.result;
       if (liveHtml && liveHtml.length > 60) {
-        return new DOMParser().parseFromString(liveHtml, 'text/html');
+        const parsedLive = new DOMParser().parseFromString(liveHtml, 'text/html');
+        if (!isAntiBotChallengeDocument(parsedLive)) {
+          return parsedLive;
+        }
       }
     } catch {
       // Fall back to opening a background tab below
@@ -386,7 +402,16 @@ export async function fetchRenderedTabDocument(url, { waitMs = 950, tabId = null
     if (!renderedHtml) {
       throw new Error(`Não foi possível extrair o DOM renderizado da aba para ${url}`);
     }
-    return new DOMParser().parseFromString(renderedHtml, 'text/html');
+    const parsedDoc = new DOMParser().parseFromString(renderedHtml, 'text/html');
+    if (isAntiBotChallengeDocument(parsedDoc)) {
+      const err = new Error(
+        `Verificação anti-bot (Cloudflare) pendente em ${url}. Abra a página em uma aba normal e conclua a verificação antes de tentar novamente.`
+      );
+      err.status = 403;
+      err.isAntiBotChallenge = true;
+      throw err;
+    }
+    return parsedDoc;
   } finally {
     if (createdTab?.id !== undefined) {
       try {
@@ -402,10 +427,27 @@ export async function fetchDocumentWithOptions(url, options = {}, signal) {
   if (options.renderWithTab && canUseTabScripting()) {
     return fetchRenderedTabDocument(url, {
       waitMs: options.renderWaitMs ?? 950,
+      tabId: options.tabId ?? null,
       signal
     });
   }
-  return fetchWithRetry(url, { retries: 2, signal });
+  try {
+    return await fetchWithRetry(url, { retries: 2, signal });
+  } catch (err) {
+    if (
+      options.autoFallbackTab !== false &&
+      canUseTabScripting() &&
+      !err.isRateLimit &&
+      (err.status === 403 || err.status === 503)
+    ) {
+      return fetchRenderedTabDocument(url, {
+        waitMs: options.renderWaitMs ?? 1100,
+        tabId: options.tabId ?? null,
+        signal
+      });
+    }
+    throw err;
+  }
 }
 
 /**
@@ -414,9 +456,10 @@ export async function fetchDocumentWithOptions(url, options = {}, signal) {
  * index pagination, chapter extraction, and sanitization.
  */
 export class BaseParser {
-  constructor({ id, name }) {
+  constructor({ id, name, maxIndexPages = 20 }) {
     this.id = id;
     this.name = name;
+    this.maxIndexPages = maxIndexPages;
   }
 
   /**
@@ -426,7 +469,7 @@ export class BaseParser {
     return 0;
   }
 
-  async resolveIndexDocument(inputUrl, doc, _signal) {
+  async resolveIndexDocument(inputUrl, doc, _signal, _options = {}) {
     return { targetUrl: normalizeUrl(inputUrl), doc };
   }
 
@@ -576,51 +619,52 @@ export class BaseParser {
     }
   }
 
+  async collectAllChapters(indexDoc, targetUrl, options = {}, signal) {
+    const customListSelector = (options.customListSelector || '').trim();
+    const allChapters = [];
+    const seenUrls = new Set();
+    const visitedPages = new Set([targetUrl]);
+    const maxPages = this.maxIndexPages || 20;
+
+    let pageDoc = indexDoc;
+    let pageUrl = targetUrl;
+    const knownPrefixes = new Set();
+
+    for (let pageCount = 0; pageCount < maxPages; pageCount++) {
+      const pageItems = customListSelector
+        ? this.collectChaptersByCustomSelector(pageDoc, pageUrl, customListSelector)
+        : this.collectChapterNodes(pageDoc, pageUrl, options, { pageIndex: pageCount, knownPrefixes });
+
+      for (const ch of pageItems) {
+        const key = normalizeUrl(ch.url);
+        if (seenUrls.has(key)) continue;
+        seenUrls.add(key);
+        allChapters.push(ch);
+        try {
+          const parts = new URL(key).pathname.split('/').filter(Boolean);
+          if (parts.length > 1) knownPrefixes.add(`/${parts[0]}/`);
+        } catch {
+          // ignore
+        }
+      }
+
+      const nextUrl = this.findNextPageUrl(pageDoc, pageUrl);
+      if (!nextUrl || visitedPages.has(nextUrl)) break;
+      visitedPages.add(nextUrl);
+      pageUrl = nextUrl;
+      pageDoc = await fetchDocumentWithOptions(nextUrl, options, signal);
+    }
+
+    return allChapters;
+  }
+
   async loadSeries(inputUrl, options = {}, signal, preloadedDoc = null) {
     const initialUrl = normalizeUrl(inputUrl);
     const initialDoc = preloadedDoc || (await fetchDocumentWithOptions(initialUrl, options, signal));
-    let { targetUrl, doc: indexDoc } = await this.resolveIndexDocument(initialUrl, initialDoc, signal);
+    let { targetUrl, doc: indexDoc } = await this.resolveIndexDocument(initialUrl, initialDoc, signal, options);
+    let usedTabFallback = Boolean(options.renderWithTab || options._usedTabFallback);
 
-    const customListSelector = (options.customListSelector || '').trim();
-    const collectFromIndex = async (startDoc, startUrl, fetchOpts) => {
-      const allChapters = [];
-      const seenUrls = new Set();
-      const visitedPages = new Set([startUrl]);
-      const maxPages = 20;
-
-      let pageDoc = startDoc;
-      let pageUrl = startUrl;
-      const knownPrefixes = new Set();
-
-      for (let pageCount = 0; pageCount < maxPages; pageCount++) {
-        const pageItems = customListSelector
-          ? this.collectChaptersByCustomSelector(pageDoc, pageUrl, customListSelector)
-          : this.collectChapterNodes(pageDoc, pageUrl, fetchOpts, { pageIndex: pageCount, knownPrefixes });
-
-        for (const ch of pageItems) {
-          const key = normalizeUrl(ch.url);
-          if (seenUrls.has(key)) continue;
-          seenUrls.add(key);
-          allChapters.push(ch);
-          try {
-            const parts = new URL(key).pathname.split('/').filter(Boolean);
-            if (parts.length > 1) knownPrefixes.add(`/${parts[0]}/`);
-          } catch {
-            // ignore
-          }
-        }
-
-        const nextUrl = this.findNextPageUrl(pageDoc, pageUrl);
-        if (!nextUrl || visitedPages.has(nextUrl)) break;
-        visitedPages.add(nextUrl);
-        pageUrl = nextUrl;
-        pageDoc = await fetchDocumentWithOptions(nextUrl, fetchOpts, signal);
-      }
-
-      return allChapters;
-    };
-
-    let allChapters = await collectFromIndex(indexDoc, targetUrl, options);
+    let allChapters = await this.collectAllChapters(indexDoc, targetUrl, options, signal);
 
     // Automatic SPA / dynamic DOM fallback if static HTML yielded 0 chapters
     if (allChapters.length === 0 && !options.renderWithTab && options.autoFallbackTab !== false && canUseTabScripting()) {
@@ -629,14 +673,16 @@ export class BaseParser {
           waitMs: options.renderWaitMs ?? 1100,
           signal
         });
-        const retryChapters = await collectFromIndex(
+        const retryChapters = await this.collectAllChapters(
           renderedDoc,
           targetUrl,
-          { ...options, renderWithTab: true }
+          { ...options, renderWithTab: true },
+          signal
         );
         if (retryChapters.length > 0) {
           indexDoc = renderedDoc;
           allChapters = retryChapters;
+          usedTabFallback = true;
         }
       } catch {
         // Keep empty list if fallback tab rendering fails
@@ -658,6 +704,7 @@ export class BaseParser {
 
     return {
       ...metadata,
+      requiresTabRender: usedTabFallback,
       chapters
     };
   }
@@ -695,13 +742,33 @@ export class BaseParser {
 
   async downloadChapter(chapter, options = {}, signal) {
     const useTabFirst = Boolean(options.renderWithTab || (chapter.tabId && options.preferOpenTabDom));
-    let doc = useTabFirst
-      ? await fetchRenderedTabDocument(chapter.url, {
-          waitMs: options.renderWaitMs ?? 950,
-          tabId: chapter.tabId ?? null,
-          signal
-        })
-      : await fetchWithRetry(chapter.url, { retries: 2, signal });
+    let doc;
+    if (useTabFirst) {
+      doc = await fetchRenderedTabDocument(chapter.url, {
+        waitMs: options.renderWaitMs ?? 950,
+        tabId: chapter.tabId ?? null,
+        signal
+      });
+    } else {
+      try {
+        doc = await fetchWithRetry(chapter.url, { retries: 2, signal });
+      } catch (err) {
+        if (
+          options.autoFallbackTab !== false &&
+          canUseTabScripting() &&
+          !err.isRateLimit &&
+          (err.status === 403 || err.status === 503)
+        ) {
+          doc = await fetchRenderedTabDocument(chapter.url, {
+            waitMs: options.renderWaitMs ?? 1100,
+            tabId: chapter.tabId ?? null,
+            signal
+          });
+        } else {
+          throw err;
+        }
+      }
+    }
 
     let extracted = this.extractChapter(doc, chapter, options);
 
@@ -731,10 +798,12 @@ export class BaseParser {
       throw err;
     }
 
+    const hiddenClasses = extractHiddenClassesFromStyles(doc);
     const sanitizer = new HtmlSanitizer({
       skipImages: Boolean(options.skipImages),
       removeNavLinks: options.removeNavLinks !== false,
-      excludeSelector: options.customExcludeSelector || ''
+      excludeSelector: options.customExcludeSelector || '',
+      hiddenClasses
     });
     const sanitized = sanitizer.sanitize(extracted.contentRoot, chapter.url);
 

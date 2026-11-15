@@ -5,6 +5,7 @@ import {
   HtmlSanitizer,
   XHTML_NS,
   escapeXml,
+  extractHiddenClassesFromStyles,
   sanitizeChapterContent,
   serializeChapterXhtml
 } from '../src/core/sanitizer.js';
@@ -161,4 +162,31 @@ test('serializeChapterXhtml emits XHTML 1.1 head meta for EPUB 2 and escapes XML
   assert.doesNotMatch(xhtml2, /<meta charset=/);
   assert.equal((xhtml2.match(/<\?xml/g) || []).length, 1);
   assert.equal(escapeXml(`a&b<c>"d"'e'`), 'a&amp;b&lt;c&gt;&quot;d&quot;&apos;e&apos;');
+});
+
+test('extractHiddenClassesFromStyles detects top-level hidden classes while ignoring @media rules', () => {
+  const doc = new DOMParser().parseFromString(`
+    <html><head><style>
+      .decoyA { display: none; speak: never; }
+      .decoyB, .decoyC { visibility: hidden; }
+      @media print { .printHidden { display: none; } }
+    </style></head><body>
+      <div id="root">
+        <p class="decoyA">Watermark A</p>
+        <p class="decoyB">Watermark B</p>
+        <p class="printHidden">Visible in reader</p>
+      </div>
+    </body></html>`, 'text/html');
+
+  const hiddenClasses = extractHiddenClassesFromStyles(doc);
+  assert.equal(hiddenClasses.has('decoyA'), true);
+  assert.equal(hiddenClasses.has('decoyB'), true);
+  assert.equal(hiddenClasses.has('decoyC'), true);
+  assert.equal(hiddenClasses.has('printHidden'), false);
+
+  const res = sanitizeChapterContent(doc.querySelector('#root'), 'https://example.com/ch', { hiddenClasses });
+  const text = res.nodes.map((n) => n.textContent).join(' ');
+  assert.doesNotMatch(text, /Watermark A/);
+  assert.doesNotMatch(text, /Watermark B/);
+  assert.match(text, /Visible in reader/);
 });

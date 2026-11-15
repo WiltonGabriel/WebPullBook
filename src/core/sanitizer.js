@@ -40,11 +40,65 @@ const NAV_LINK_PATTERNS = [
   /[íi]ndice|sum[áa]rio|table\s+of\s+contents|lista\s+de\s+cap[íi]tulos/i
 ];
 
+/**
+ * Parse top-level `<style>` rules in a document to detect CSS classes that hide elements
+ * unconditionally (e.g., anti-scraping decoy elements with `display: none`).
+ */
+export function extractHiddenClassesFromStyles(doc) {
+  const hidden = new Set();
+  if (!doc?.querySelectorAll) return hidden;
+
+  for (const styleEl of doc.querySelectorAll('style')) {
+    const rawCss = String(styleEl.textContent || '').replace(/\/\*[\s\S]*?\*\//g, '');
+    // Skip @-rule blocks (@media, @supports, @keyframes) so responsive rules aren't treated as always-hidden
+    let stripped = '';
+    let i = 0;
+    while (i < rawCss.length) {
+      if (rawCss[i] === '@') {
+        const braceIdx = rawCss.indexOf('{', i);
+        const semiIdx = rawCss.indexOf(';', i);
+        if (semiIdx !== -1 && (braceIdx === -1 || semiIdx < braceIdx)) {
+          i = semiIdx + 1;
+          continue;
+        }
+        if (braceIdx !== -1) {
+          let depth = 1;
+          let j = braceIdx + 1;
+          while (j < rawCss.length && depth > 0) {
+            if (rawCss[j] === '{') depth++;
+            else if (rawCss[j] === '}') depth--;
+            j++;
+          }
+          i = j;
+          continue;
+        }
+      }
+      stripped += rawCss[i++];
+    }
+
+    for (const m of stripped.matchAll(/([^{}]+)\{([^}]*)\}/g)) {
+      const decls = m[2];
+      if (!/(?:^|;)\s*(?:display\s*:\s*none|visibility\s*:\s*hidden)\b/i.test(decls)) {
+        continue;
+      }
+      for (const part of m[1].split(',')) {
+        const clsMatch = part.trim().match(/^\.([A-Za-z0-9_-]+)$/);
+        if (clsMatch) hidden.add(clsMatch[1]);
+      }
+    }
+  }
+
+  return hidden;
+}
+
 export class HtmlSanitizer {
   constructor(options = {}) {
     this.skipImages = Boolean(options.skipImages);
     this.removeNavLinks = options.removeNavLinks !== false;
     this.excludeSelector = (options.excludeSelector || '').trim();
+    this.hiddenClasses = options.hiddenClasses instanceof Set
+      ? options.hiddenClasses
+      : new Set(options.hiddenClasses || []);
   }
 
   isHiddenElement(el) {
@@ -53,7 +107,13 @@ export class HtmlSanitizer {
     if (/display\s*:\s*none/i.test(style) || /visibility\s*:\s*hidden/i.test(style)) {
       return true;
     }
-    const cls = (el.getAttribute('class') || '').toLowerCase();
+    const rawCls = el.getAttribute('class') || '';
+    if (this.hiddenClasses.size > 0 && rawCls) {
+      for (const token of rawCls.trim().split(/\s+/)) {
+        if (token && this.hiddenClasses.has(token)) return true;
+      }
+    }
+    const cls = rawCls.toLowerCase();
     return /(^|\s)(code-block|ads|ad-slot|adsby|share-?buttons|naveg|nextprev|wp-block-buttons)(\s|$)/.test(cls);
   }
 
