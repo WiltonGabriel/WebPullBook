@@ -375,9 +375,21 @@ function wireEvents() {
       $('progress-label').textContent = state._prePauseProgressLabel;
     }
   });
+  const cancelDialog = $('confirm-cancel-modal');
   $('btn-cancel').addEventListener('click', () => {
     if (!state.running && !state.batchRunning) return;
-    state.abortController?.abort();
+    cancelDialog.showModal();
+  });
+  $('btn-confirm-cancel-run').addEventListener('click', () => {
+    cancelDialog.close('confirm');
+    if (state.running || state.batchRunning) state.abortController?.abort();
+  });
+
+  // Warn before closing/reloading the tab while an export is running (Chrome and Firefox)
+  window.addEventListener('beforeunload', (e) => {
+    if (!state.running && !state.batchRunning) return;
+    e.preventDefault();
+    e.returnValue = '';
   });
 
   const volDialog = $('volume-modal');

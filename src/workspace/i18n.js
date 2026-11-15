@@ -328,6 +328,11 @@ export const I18N_DICTIONARY = {
     typoPreviewSample2: 'Este texto demonstra ao vivo como a fonte, o alinhamento, o espaçamento entre linhas e o recuo ficarão no seu leitor.',
     summaryCustomCss: 'Editar CSS completo do EPUB',
     btnResetAllOpts: 'Restaurar Tudo',
+    modalCancelRunTitle: 'Cancelar a exportação?',
+    modalCancelRunDesc:
+      'A exportação será interrompida e nenhum arquivo novo será gerado. Os capítulos já baixados continuam salvos no cache, então você pode retomar depois. Para só dar uma pausa, use Pausar.',
+    btnKeepRunning: 'Continuar baixando',
+    btnConfirmCancelRun: 'Sim, cancelar',
     modalResetTitle: 'Restaurar todas as opções?',
     modalResetDesc: 'Isso restaurará TODAS as seções de Opções Avançadas para o padrão de fábrica. Suas Regras por Domínio, Biblioteca e Cache não serão apagados.',
     modalResetSectionTitle: 'Restaurar seção "{section}"?',
@@ -715,6 +720,11 @@ export const I18N_DICTIONARY = {
     typoPreviewSample2: 'This sample shows live how the font, alignment, line spacing, and paragraph indent will appear in your e-reader.',
     summaryCustomCss: 'Edit full EPUB CSS',
     btnResetAllOpts: 'Reset Everything',
+    modalCancelRunTitle: 'Cancel the export?',
+    modalCancelRunDesc:
+      'The export will stop and no new file will be generated. Chapters already downloaded stay in the cache, so you can resume later. To just take a break, use Pause.',
+    btnKeepRunning: 'Keep downloading',
+    btnConfirmCancelRun: 'Yes, cancel',
     modalResetTitle: 'Reset all options?',
     modalResetDesc: 'This will restore ALL Advanced Options sections to factory defaults. Your Domain Rules, Library, and Cache will not be deleted.',
     modalResetSectionTitle: 'Reset "{section}" section?',

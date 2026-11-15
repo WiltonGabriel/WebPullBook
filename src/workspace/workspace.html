@@ -911,6 +911,24 @@
     </div>
   </dialog>
 
+  <dialog id="confirm-cancel-modal" closedby="any" aria-labelledby="confirm-cancel-title">
+    <div class="dialog-header">
+      <h2 id="confirm-cancel-title" data-i18n="modalCancelRunTitle">Cancelar a exportação?</h2>
+      <form method="dialog">
+        <button type="submit" value="keep" class="btn ghost sm" aria-label="Fechar">✕</button>
+      </form>
+    </div>
+    <div class="dialog-body">
+      <p id="confirm-cancel-desc" data-i18n="modalCancelRunDesc">A exportação será interrompida e nenhum arquivo novo será gerado. Os capítulos já baixados continuam salvos no cache, então você pode retomar depois. Para só dar uma pausa, use Pausar.</p>
+    </div>
+    <div class="dialog-footer">
+      <form method="dialog" class="row-gap">
+        <button type="submit" value="keep" class="btn secondary" autofocus data-i18n="btnKeepRunning">Continuar baixando</button>
+        <button type="button" id="btn-confirm-cancel-run" class="btn danger" data-i18n="btnConfirmCancelRun">Sim, cancelar</button>
+      </form>
+    </div>
+  </dialog>
+
   <script type="module" src="workspace.js"></script>
 </body>
 </html>
