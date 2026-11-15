@@ -3,11 +3,14 @@
 List of websites and structural patterns tested with **WebPullBook**.
 Contributions are welcome—feel free to open a pull request adding sites you have tested.
 
+> **Contributor guideline:** List **only the site name** in the `Site / Source` column below—do **not** include URLs, links, or domain names (e.g., use `Site Name`, never `example.com` or `https://...`). Do **not** list compatible site names or URLs in `README.md` or `README.en.md` either.
+
 ## Verified Compatible
 
 | Site / Source | Adapter | Last Verified | Reference Fixture | Notes |
 | :--- | :--- | :--- | :--- | :--- |
 | Central Novel | `wp-lightnovel` | 2026-11-11 | [wp-lightnovel-index.html](../tests/fixtures/wp-lightnovel-index.html) | End-to-end verified: multi-volume detection, cover, synopsis, genres, and full chapter fidelity. |
+| Royal Road | `royalroad` | 2026-11-15 | [royalroad-index.html](../tests/fixtures/royalroad-index.html) | End-to-end verified (20 chapters): volume & chapter metadata, full synopsis, tags, cover, inline images, and hidden `<style>` watermark filtering. |
 
 ## Parser Regression Fixtures
 
@@ -17,6 +20,7 @@ Each parser adapter has automated HTML snapshot fixtures verified on every CI ru
 | :--- | :--- | :--- | :--- | :--- |
 | `wp-lightnovel` | 2026-11-11 | [wp-lightnovel-index.html](../tests/fixtures/wp-lightnovel-index.html) | [wp-lightnovel-chapter.html](../tests/fixtures/wp-lightnovel-chapter.html) | [snapshots.json](../tests/fixtures/snapshots.json) |
 | `madara-theme` | 2026-11-11 | [madara-index.html](../tests/fixtures/madara-index.html) | [madara-chapter.html](../tests/fixtures/madara-chapter.html) | [snapshots.json](../tests/fixtures/snapshots.json) |
+| `royalroad` | 2026-11-15 | [royalroad-index.html](../tests/fixtures/royalroad-index.html) | [royalroad-chapter.html](../tests/fixtures/royalroad-chapter.html) | [snapshots.json](../tests/fixtures/snapshots.json) |
 | `generic-html` | 2026-11-11 | [generic-index-p1.html](../tests/fixtures/generic-index-p1.html) | [generic-chapter.html](../tests/fixtures/generic-chapter.html) | [snapshots.json](../tests/fixtures/snapshots.json) |
 
 ## Potentially Compatible
