@@ -278,8 +278,8 @@ function wireEvents() {
   $('btn-merge-chapters').addEventListener('click', openMergeChaptersModal);
   $('btn-confirm-merge-chapters').addEventListener('click', applyMergeSelectedChapters);
   $('opt-cover-jpeg').addEventListener('change', updateCoverPreview);
-  $('reader-preset').addEventListener('change', async () => {
-    applyReaderPreset($('reader-preset').value);
+  const handleReaderPresetChange = async (presetKey) => {
+    applyReaderPreset(presetKey);
     const regenerated = buildEpubStylesheet({
       fontFamily: state.options.fontFamily,
       textAlign: state.options.textAlign,
@@ -290,7 +290,9 @@ function wireEvents() {
     state.options.stylesheet = regenerated;
     updateCoverPreview();
     await saveOptions();
-  });
+  };
+  $('reader-preset').addEventListener('change', () => handleReaderPresetChange($('reader-preset').value));
+  $('adv-reader-preset').addEventListener('change', () => handleReaderPresetChange($('adv-reader-preset').value));
 
   $('btn-filter-clear-vol').addEventListener('click', () => {
     state.volumeFilter = null;
@@ -513,7 +515,7 @@ function wireEvents() {
 
   const advInputs = document.querySelectorAll('#tab-advanced input, #tab-advanced select, #tab-advanced textarea');
   for (const el of advInputs) {
-    if (typoIds.includes(el.id) || el.id === 'opt-safe-mode') continue;
+    if (typoIds.includes(el.id) || el.id === 'opt-safe-mode' || el.id === 'adv-reader-preset') continue;
     el.addEventListener('change', async () => {
       readOptionsFromUi();
       await saveOptions();

@@ -209,10 +209,14 @@ async function runE2E() {
     await page.click('#preview-modal .dialog-footer form[method="dialog"] button');
     await page.waitForSelector('#preview-modal[open]', { state: 'detached' });
 
-    // 2. Test Reader Preset selector (kindle disables EPUB 3, legacy switches to EPUB 2, modern restores EPUB 3; no forced grayscale)
+    // 2. Test Reader Preset selector (kindle vs kindle-modern, legacy, kobo, modern, and custom auto-detection)
     await page.selectOption('#reader-preset', 'kindle');
     assert.equal(await page.isChecked('#opt-epub3'), false, 'Kindle preset should switch to EPUB 2');
     assert.equal(await page.isChecked('#opt-compress-images'), true, 'Kindle preset should optimize images');
+    await page.selectOption('#reader-preset', 'kindle-modern');
+    assert.equal(await page.isChecked('#opt-epub3'), true, 'Kindle Modern preset should enable EPUB 3');
+    assert.equal(await page.inputValue('#opt-img-res'), '1200', 'Kindle Modern preset should set 1200px resolution');
+    assert.equal(await page.inputValue('#adv-reader-preset'), 'kindle-modern', 'Advanced preset selector should stay synced');
     await page.selectOption('#reader-preset', 'legacy');
     assert.equal(await page.isChecked('#opt-epub3'), false, 'Legacy preset should switch to EPUB 2');
     assert.equal(
@@ -246,6 +250,30 @@ async function runE2E() {
     assert.match(await page.textContent('#library-grid .lib-status-pill'), /Em dia/i);
 
     await page.click('[data-tab="advanced"]');
+    // Test Advanced preset sync + auto-switch to Custom when manual field changes
+    await page.selectOption('#adv-reader-preset', 'kindle-modern');
+    assert.equal(await page.inputValue('#reader-preset'), 'kindle-modern', 'Main preset should sync from Advanced');
+    assert.equal(await page.isChecked('#opt-epub3'), true);
+    await page.fill('#opt-img-res', '900');
+    await page.dispatchEvent('#opt-img-res', 'change');
+    assert.equal(await page.inputValue('#adv-reader-preset'), 'custom', 'Manual change should switch Advanced preset to custom');
+    assert.equal(await page.inputValue('#reader-preset'), 'custom', 'Manual change should switch Main preset to custom');
+
+    // Test Export & Import JSON options bundle
+    const [exportedOptsDownload] = await Promise.all([
+      page.waitForEvent('download', { timeout: 10000 }),
+      page.click('#btn-export-opts')
+    ]);
+    const exportedJsonPath = path.join(userDataDir, 'exported-opts.json');
+    await exportedOptsDownload.saveAs(exportedJsonPath);
+    const exportedJson = JSON.parse(fs.readFileSync(exportedJsonPath, 'utf8'));
+    assert.equal(exportedJson.options.compressedResolution, 900);
+    exportedJson.options.compressedResolution = 750;
+    const importJsonPath = path.join(userDataDir, 'import-opts.json');
+    fs.writeFileSync(importJsonPath, JSON.stringify(exportedJson, null, 2));
+    await page.setInputFiles('#input-import-opts', importJsonPath);
+    await page.waitForFunction(() => document.querySelector('#opt-img-res')?.value === '750', null, { timeout: 5000 });
+
     await page.fill('#opt-content-selector', '.epcontent');
     await page.click('#btn-save-domain-rule');
     await page.waitForSelector('#domain-rules-list .domain-rule-chip');

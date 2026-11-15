@@ -275,7 +275,8 @@ export const I18N_DICTIONARY = {
     msgCoverUploadInvalid: 'Selecione um arquivo de imagem válido (JPG, PNG, WebP ou GIF).',
     labelReaderPreset: 'Perfil de Leitor',
     presetModern: 'Padrão Moderno',
-    presetKindle: 'Kindle',
+    presetKindle: 'Kindle (Send to Kindle)',
+    presetKindleModern: 'Kindle (Moderno / Calibre)',
     presetKobo: 'Kobo e Leitores Digitais',
     presetTextOnly: 'Somente Texto',
     presetLegacy: '⚠️ Padrão Antigo',
@@ -283,6 +284,9 @@ export const I18N_DICTIONARY = {
     presetLegacyWarning:
       '⚠️ Atenção: Padrão Antigo gera EPUB 2 clássico (sem navegação moderna nav.xhtml e com recursos HTML5/CSS3 limitados). Use apenas em aparelhos antigos ou leitores que não abrem EPUB 3.',
     presetCustom: 'Personalizado',
+    advPresetHeading: 'Perfil de Leitor',
+    advPresetDesc:
+      'Selecionar um perfil preenche automaticamente as opções avançadas abaixo. Alterar qualquer campo manualmente muda o perfil para Personalizado.',
     btnPreviewChapter: 'Pré-visualizar',
     btnPreviewTitle: 'Pré-visualizar este capítulo (Dry-Run)',
     modalPreviewTitle: 'Pré-visualização do Capítulo',
@@ -658,7 +662,8 @@ export const I18N_DICTIONARY = {
     msgCoverUploadInvalid: 'Please select a valid image file (JPG, PNG, WebP or GIF).',
     labelReaderPreset: 'Reader Profile',
     presetModern: 'Modern Default',
-    presetKindle: 'Kindle',
+    presetKindle: 'Kindle (Send to Kindle)',
+    presetKindleModern: 'Kindle (Modern / Calibre)',
     presetKobo: 'Kobo & E-Readers',
     presetTextOnly: 'Text Only',
     presetLegacy: '⚠️ Legacy Default',
@@ -666,6 +671,9 @@ export const I18N_DICTIONARY = {
     presetLegacyWarning:
       '⚠️ Notice: Legacy Default generates classic EPUB 2 (no modern nav.xhtml TOC and limited HTML5/CSS3 support). Use only for older devices or e-readers that cannot open EPUB 3.',
     presetCustom: 'Custom',
+    advPresetHeading: 'Reader Profile',
+    advPresetDesc:
+      'Choosing a profile automatically updates the advanced options below. Changing any setting manually switches the profile to Custom.',
     btnPreviewChapter: 'Preview',
     btnPreviewTitle: 'Preview this chapter (Dry-Run)',
     modalPreviewTitle: 'Chapter Preview',

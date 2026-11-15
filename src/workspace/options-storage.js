@@ -418,10 +418,11 @@ export function updateTypographyPreview() {
 }
 
 export function updateReaderPresetWarning() {
-  const warnEl = $('legacy-preset-warning');
-  if (!warnEl) return;
   const isLegacy = ($('reader-preset')?.value || state.options.readerPreset) === 'legacy';
-  warnEl.classList.toggle('hidden', !isLegacy);
+  for (const warnId of ['legacy-preset-warning', 'adv-legacy-preset-warning']) {
+    const warnEl = $(warnId);
+    if (warnEl) warnEl.classList.toggle('hidden', !isLegacy);
+  }
 }
 
 export function applyReaderPreset(presetKey) {
@@ -542,7 +543,9 @@ export function syncOptionsToUi() {
   $('opt-line-height').value = o.lineHeight ?? 1.55;
   $('opt-paragraph-indent').checked = Boolean(o.paragraphIndent);
   $('opt-stylesheet').value = o.stylesheet;
-  $('reader-preset').value = detectMatchingReaderPreset(o);
+  const detectedPreset = detectMatchingReaderPreset(o);
+  $('reader-preset').value = detectedPreset;
+  if ($('adv-reader-preset')) $('adv-reader-preset').value = detectedPreset;
   updateReaderPresetWarning();
   updateTypographyPreview();
   updatePackButtonLabel();
@@ -610,6 +613,7 @@ export function readOptionsFromUi() {
   };
   state.options.readerPreset = detectMatchingReaderPreset(state.options);
   $('reader-preset').value = state.options.readerPreset;
+  if ($('adv-reader-preset')) $('adv-reader-preset').value = state.options.readerPreset;
   updateReaderPresetWarning();
   if (state.options.parserId !== 'auto') {
     state.activeParser = getParserById(state.options.parserId) || state.activeParser;

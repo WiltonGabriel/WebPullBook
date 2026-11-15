@@ -60,17 +60,33 @@ export const READER_PRESETS = {
   modern: {
     outputFormat: 'epub',
     createEpub3: true,
+    popupFootnotes: true,
     restrictCoverJpeg: true,
     compressImages: false,
     grayscaleImages: false,
     skipImages: false,
     useSvgForImages: false,
     compressedResolution: 1080,
-    fontFamily: 'reader-default'
+    fontFamily: 'reader-default',
+    textAlign: 'justify'
   },
   kindle: {
     outputFormat: 'epub',
     createEpub3: false,
+    popupFootnotes: false,
+    restrictCoverJpeg: true,
+    compressImages: true,
+    grayscaleImages: false,
+    skipImages: false,
+    useSvgForImages: false,
+    compressedResolution: 1200,
+    fontFamily: 'reader-default',
+    textAlign: 'justify'
+  },
+  'kindle-modern': {
+    outputFormat: 'epub',
+    createEpub3: true,
+    popupFootnotes: true,
     restrictCoverJpeg: true,
     compressImages: true,
     grayscaleImages: false,
@@ -83,17 +99,20 @@ export const READER_PRESETS = {
   kobo: {
     outputFormat: 'epub',
     createEpub3: true,
+    popupFootnotes: true,
     restrictCoverJpeg: true,
     compressImages: true,
     grayscaleImages: false,
     skipImages: false,
     useSvgForImages: false,
     compressedResolution: 1080,
-    fontFamily: 'reader-default'
+    fontFamily: 'reader-default',
+    textAlign: 'justify'
   },
   textonly: {
     outputFormat: 'epub',
     createEpub3: true,
+    popupFootnotes: true,
     restrictCoverJpeg: true,
     compressImages: false,
     grayscaleImages: false,
@@ -103,13 +122,15 @@ export const READER_PRESETS = {
   legacy: {
     outputFormat: 'epub',
     createEpub3: false,
+    popupFootnotes: false,
     restrictCoverJpeg: true,
     compressImages: true,
     grayscaleImages: false,
     skipImages: false,
     useSvgForImages: false,
     compressedResolution: 1080,
-    fontFamily: 'reader-default'
+    fontFamily: 'reader-default',
+    textAlign: 'justify'
   }
 };
 
