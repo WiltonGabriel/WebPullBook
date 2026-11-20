@@ -4,6 +4,16 @@
 
 Todas as mudanças notáveis do **WebPullBook** estão documentadas neste arquivo (espelho de referência de [CHANGELOG.md](../../CHANGELOG.md)).
 
+## [1.6.0] - 2026-11-20 (Beta)
+
+### Novidades & Compatibilidade
+- **Adaptador Estrutural NovelBin (`src/parsers/novelbin.js`):** adicionado adaptador React SPA com detecção por sinais estruturais de DOM, resolução automática de URL direta de capítulo para o índice da obra, extração de autor via JSON-LD e metadados completos, suporte a capa e fixtures anonimizadas de regressão (testado de ponta a ponta em múltiplas obras com W3C EPUBCheck).
+- **Melhorias Genéricas no Motor SPA & Sanitizador:** corrigida condição de corrida por URL anterior obsoleta no `TabRenderPool` ao reutilizar aba em segundo plano entre capítulos; suporte a `waitForSelector` e checagem de `.skeleton` visível em `waitForDomStabilityInTab`; `looksLikeSpaShell()` agora ignora fallbacks de SEO em `<noscript>`; `BaseParser` ignora `meta[name="author"]` idêntico a `og:site_name`; `HtmlSanitizer` remove `.sr-only` / `.visually-hidden` sem imagens e cabeçalhos duplicados mesmo dentro de wrappers `<div>` diretos ou com separadores distintos.
+
+### Segurança, Site & Documentação
+- **Endurecimento de Segurança & Análise Contínua:** reforçada a validação de URLs e redirecionamentos (`resolveSafeHttpUrl`, `assertSafeHttpUrl`, `sanitizeCoverPreviewUrl`), eliminados padrões de TOCTOU em disco, ativado CodeQL `security-and-quality`, atualizadas as políticas `.github/SECURITY.md` e `.github/CODE_OF_CONDUCT.md` e atualizadas as ações do CI.
+- **Site Oficial & Documentação Bilíngue:** seletor com 5 temas, cabeçalho responsivo em linha única até 360px no celular, sincronização automática via `scripts/sync-website.mjs`, analytics GoatCounter sem cookies, padronização de docs principais e releases em inglês com espelhos em `docs/pt/`, expansão do `CONTRIBUTING` e filtro enxuto no workflow do GitHub Pages.
+
 ## [1.5.0] - 2026-11-20 (Beta)
 
 ### Novidades & Correções

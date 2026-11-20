@@ -1,6 +1,6 @@
 {
   "name": "webpullbook",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "private": true,
   "type": "module",
   "description": "Zero-dependency Manifest V3 browser extension for Chrome & Firefox that converts web novels, serialized fiction, articles, and open tabs into clean EPUB 2/3, HTML, Markdown, and TXT ebooks.",

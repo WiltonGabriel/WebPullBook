@@ -1,7 +1,7 @@
 # Chrome Web Store & Mozilla Add-ons Listing Readiness — WebPullBook
 
 > Last Updated: 2026-11-20
-> Current Release Status: **Beta (`v1.5.0-beta`)** — distributed via [GitHub Releases](https://github.com/WiltonGabriel/WebPullBook/releases); prepared for future store publication.
+> Current Release Status: **Beta (`v1.6.0-beta`)** — distributed via [GitHub Releases](https://github.com/WiltonGabriel/WebPullBook/releases); prepared for future store publication.
 
 ## Store Listing
 
@@ -43,7 +43,7 @@ PERMISSIONS
 SUPPORT
 Found a bug or want to suggest an improvement? Open an issue at https://github.com/WiltonGabriel/WebPullBook/issues or visit https://wiltongabriel.github.io/WebPullBook/
 
-Version 1.5.0-beta — Automatic default cover with WebPullBook emblem when source cover is absent, official documentation website, Reader Profiles for Kindle & Kobo, Ctrl/Shift range selection, per-site CSS selector isolation, Library batch updates, and Adaptive Safe Mode.
+Version 1.6.0-beta — Verified NovelBin React SPA parser adapter, generic SPA tab-pool & DOM-stability upgrades, XHTML `.sr-only`/duplicate-heading cleanup, CodeQL security hardening, official 5-theme website, and expanded contributor/security documentation.
 
 **Category** [REQUIRED]
 Productivity
@@ -135,11 +135,31 @@ Portuguese (Brazil) & English (Bilingual UI)
 
 ---
 
+## Mozilla Add-ons (AMO — Firefox) Submission Readiness
+
+Mozilla Add-ons (`addons.mozilla.org`) does not charge a developer registration fee and accepts the same cross-browser Manifest V3 package directly:
+
+- **Add-on ID (`gecko.id`):** `webpullbook@wiltongabriel.github.io` (configured under `browser_specific_settings.gecko` in `manifest.json`)
+- **Minimum Version & Event Script:** `strict_min_version: "128.0"` and `background.scripts` (`src/background/service-worker.js`)
+- **Data Collection Consent:** `data_collection_permissions: { "required": ["none"] }` (matches `addons-linter` canonical zero-collection declaration)
+- **Submission Package:** Upload `WebPullBook-v<version>.zip` from GitHub Releases directly at `https://addons.mozilla.org/developers/` (no separate source code archive is required because WebPullBook uses native ES modules with zero build steps, zero bundlers, and zero minification)
+- **Listing Metadata:**
+  - **License:** MIT
+  - **Summary (≤ 250 chars):** Extract web novels, serialized fiction, articles, and open browser tabs into volume-organized EPUB 2/3, single-file HTML, Markdown, and TXT ebooks offline in your browser.
+  - **Categories:** *Download Management*, *Other*
+  - **Homepage / Support / Privacy Policy:** `https://wiltongabriel.github.io/WebPullBook/`, `https://github.com/WiltonGabriel/WebPullBook/issues`, `https://wiltongabriel.github.io/WebPullBook/privacy.html`
+  - **Screenshots (`1280×800` PNG):** Reuse the 5 screenshots listed under `website/assets/screenshots/`
+- **Ready-to-Paste Notes for Reviewers:**
+  > WebPullBook is a 100% client-side, zero-dependency Manifest V3 extension with no build step or remote code execution (`src/` runs unmodified). `tabs` and `scripting` are used only when the user clicks the extension action (to read the active tab URL or DOM cleanly, populate the Merge Tabs dialog, or reuse one background tab when extracting React/JS-hydrated SPAs). `declarativeNetRequestWithHostAccess` sets Firefox session rule ID `1` to remove `Origin: moz-extension://` on extension-initiated fetches so images/chapters are not rejected by CORS, plus temporary rules ID `100..119` for navigation headers during extraction. `http://*/*` and `https://*/*` host permissions are required because users extract books and articles from arbitrary websites of their choice. No user telemetry or analytics are collected by the extension.
+
+---
+
 ## Version History
 
 | Version | Date | Changes | Status |
 |---------|------|---------|--------|
-| `1.5.0` (`1.5.0-beta`) | 2026-11-20 | Automatic default cover fallback with WebPullBook logo, official bilingual GitHub Pages site with dynamic version detection and direct `.zip` download, `AGENTS.md`, `CHROMEWEBSTORE.md`, and quiet/minimalist documentation review. | Draft (GitHub Release Beta) |
+| `1.6.0` (`1.6.0-beta`) | 2026-11-20 | Verified NovelBin React SPA adapter, generic SPA `TabRenderPool` & DOM stability upgrades, `.sr-only`/duplicate-heading sanitizer hardening, CodeQL security fixes, 5-theme website improvements, and updated policies/docs. | Draft (GitHub Release Beta) |
+| `1.5.0` (`1.5.0-beta`) | 2026-11-20 | Automatic default cover fallback with WebPullBook logo, official bilingual GitHub Pages site with dynamic version detection and direct `.zip` download, `AGENTS.md`, `CHROMEWEBSTORE.md`, and quiet/minimalist documentation review. | Released (GitHub Release Beta) |
 | `1.4.0` (`1.4.0-beta`) | 2026-11-20 | Reader Profiles for Kindle (Legacy/Modern) & Kobo, Start-of-Book TOC, customizable Information & End-of-Book pages, active-tab live DOM capture, resilient image pipeline, Ctrl/Shift range selection, per-site selector isolation, Library batch updates, and SRP modularization. | Released (GitHub Release Beta) |
 | `1.3.0` (`1.3.0-beta`) | 2026-11-15 | Mozilla Firefox 128+ MV3 compatibility, heuristic CSS selector assistant, Royal Road / Novel Mania / Scribble Hub verified adapters, 2-column UI, and 4 color themes. | Released (GitHub Release Beta) |
 

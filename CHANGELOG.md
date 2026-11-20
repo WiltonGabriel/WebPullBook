@@ -4,6 +4,16 @@
 
 All notable changes to **WebPullBook** are documented in this file.
 
+## [1.6.0] - 2026-11-20 (Beta)
+
+### New Features & Compatibility
+- **NovelBin Structural Adapter (`src/parsers/novelbin.js`):** Added React SPA adapter with structural DOM detection, automatic direct chapter-to-index resolution, JSON-LD author and full metadata extraction, cover support, and anonymized regression fixtures (verified end-to-end across multiple works with W3C EPUBCheck).
+- **Generic SPA Engine & Sanitizer Upgrades:** Fixed `TabRenderPool` stale-URL race condition when reusing a background tab across chapters; added `waitForSelector` and visible `.skeleton` checks in `waitForDomStabilityInTab`; fixed `looksLikeSpaShell()` to ignore `<noscript>` SEO fallbacks; ignored site-brand `meta[name="author"]` matching `og:site_name` in `BaseParser`; stripped `.sr-only` / `.visually-hidden` elements and separator-normalized / wrapper-nested duplicate chapter headings in `HtmlSanitizer`.
+
+### Security, Website & Documentation
+- **Security Hardening & Tooling:** Hardened URL and redirect validation (`resolveSafeHttpUrl`, `assertSafeHttpUrl`, `sanitizeCoverPreviewUrl`), eliminated filesystem TOCTOU patterns, enabled CodeQL `security-and-quality` scanning, updated `.github/SECURITY.md` and `.github/CODE_OF_CONDUCT.md`, and upgraded GitHub Actions workflow dependencies.
+- **Official Website & Bilingual Documentation:** Added a 5-theme selector, mobile single-row header down to 360px, automated `scripts/sync-website.mjs` synchronization, privacy-friendly GoatCounter analytics, English-default release/repository documentation with organized `docs/pt/` Portuguese mirrors, expanded `CONTRIBUTING.md`, and narrowed GitHub Pages deploy triggers.
+
 ## [1.5.0] - 2026-11-20 (Beta)
 
 ### New Features & Fixes
