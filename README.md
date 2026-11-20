@@ -214,8 +214,11 @@ WebPullBook/
 
 WebPullBook was created and is maintained by **Wilton Gabriel** ([@WiltonGabriel](https://github.com/WiltonGabriel)), with contributions from the open-source community. The project is released under the [MIT License](LICENSE) and follows our [Code of Conduct](.github/CODE_OF_CONDUCT.md).
 
-### Ways to Help (Code & Non-Code)
+### Ways to Help — Special Focus on Parser Development
 
-- **Test websites & expand compatibility:** Open a PR updating the table in [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md).
-- **Report layouts or bugs:** Open an issue in [Issues](https://github.com/WiltonGabriel/WebPullBook/issues) and attach the file saved via **Logs → Download Log**.
-- **Build parser adapters or UI improvements:** Read [CONTRIBUTING.md](CONTRIBUTING.md) to add structural adapters in [src/parsers/](src/parsers/index.js), improve generic heuristics, or contribute translations ([i18n.js](src/workspace/i18n.js)).
+Contributions to **parser development**—whether improving the shared generic extractor or adding new structural parser adapters—are the most impactful way to expand WebPullBook across the web:
+
+- **Develop and add new parser adapters (`src/parsers/`):** When a web novel platform, CMS, or documentation engine uses paginated JSON APIs, AJAX chapter lists, or custom DOM layouts that generic heuristics cannot cover, create a new `BaseParser` subclass in [src/parsers/](src/parsers/index.js) and register it with anonymized HTML test fixtures in [tests/fixtures/](tests/fixtures/snapshots.json). See the step-by-step parser guide in [CONTRIBUTING.md](CONTRIBUTING.md#adding-a-parser-adapter) or on the [Contributing page](https://wiltongabriel.github.io/WebPullBook/contributing.html).
+- **Improve generic DOM extraction heuristics (`src/core/` & `src/parsers/generic-html.js`):** Enhance [`BaseParser`](src/core/base-parser.js), [`GenericHtmlParser`](src/parsers/generic-html.js), or [`HtmlSanitizer`](src/core/sanitizer.js) so arbitrary websites, blogs, and mirror domains work out of the box without site-specific rules.
+- **Test websites & expand compatibility:** Test sites with WebPullBook and open a PR updating [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md) (which automatically updates the official website's compatibility tables).
+- **Report layouts or bugs with execution logs:** Open an issue in [Issues](https://github.com/WiltonGabriel/WebPullBook/issues) using the *New Site Layout / Adapter Support* or *Bug Report* template and attach the log file saved via **Logs → Download Log**.

@@ -1,6 +1,8 @@
 # Contributing to WebPullBook
 
-Thank you for your interest in contributing to **WebPullBook**. For AI coding agents (Codex, Cursor, Claude Code, Antigravity, Copilot), see [AGENTS.md](AGENTS.md) for complete architectural and security rules.
+Thank you for your interest in contributing to **WebPullBook**, created and maintained by **Wilton Gabriel** ([@WiltonGabriel](https://github.com/WiltonGabriel)) with community contributors. For AI coding agents (Codex, Cursor, Claude Code, Antigravity, Copilot), see [AGENTS.md](AGENTS.md) for complete architectural and security rules.
+
+> **High-Impact Contribution Area — Parser Development:** Helping develop, refine, and add **parsers** (both improving the universal heuristic extractor in `BaseParser` / `GenericHtmlParser` and adding structural site/CMS adapters in `src/parsers/`) is one of the best ways to help WebPullBook support more platforms reliably. See [Adding a Parser Adapter](#adding-a-parser-adapter) below for the complete step-by-step guide.
 
 ## Development Setup
 

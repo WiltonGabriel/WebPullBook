@@ -90,38 +90,38 @@
     <section class="section">
       <div class="container">
         <div class="section-header">
-          <h2>Ways to Contribute</h2>
-          <p>Both code and non-code contributions help maintain the project.</p>
+          <h2>Ways to Contribute — Focus on Parser Development</h2>
+          <p>Developing, improving, and adding parsers is the highest-impact way to expand WebPullBook across new platforms, CMS themes, and serialized fiction websites.</p>
         </div>
 
         <div class="grid-3">
           <article class="card">
-            <h3>1. Test Websites &amp; Compatibility</h3>
-            <p>Test WebPullBook on web novel platforms, blogs, or documentation sites and open a Pull Request updating <a href="https://github.com/WiltonGabriel/WebPullBook/blob/main/docs/COMPATIBILITY.md">docs/COMPATIBILITY.md</a> (following the 4-tier classification and listing only site names, never URLs).</p>
+            <h3>1. Develop &amp; Add Parser Adapters (<code>src/parsers/</code>)</h3>
+            <p>When a platform or CMS theme uses paginated JSON APIs, AJAX chapter lists, or non-standard DOM structures, implement a new subclass of <code>BaseParser</code> under <code>src/parsers/</code>, register it in <code>src/parsers/index.js</code>, and include anonymized HTML snapshot fixtures.</p>
           </article>
 
           <article class="card">
-            <h3>2. Report Bugs with Execution Logs</h3>
-            <p>If an extraction or EPUB export fails, open the <strong>Logs</strong> tab in WebPullBook, click <strong>Download Log</strong>, and attach the file to a <a href="https://github.com/WiltonGabriel/WebPullBook/issues">GitHub Issue</a> using the Bug Report template.</p>
+            <h3>2. Improve the Generic Heuristic Parser</h3>
+            <p>Following the <strong>General Compatibility First</strong> principle, improving <code>BaseParser</code>, <code>GenericHtmlParser</code>, or <code>HtmlSanitizer</code> allows entire families of websites and mirror domains to work automatically without domain-specific rules.</p>
           </article>
 
           <article class="card">
-            <h3>3. Request New Site Layout Support</h3>
-            <p>If a recurring CMS or theme cannot be extracted via generic heuristics, open a <em>New Site Layout / Adapter Support</em> issue describing the DOM selectors for the chapter list, chapter body, and volumes.</p>
+            <h3>3. Request or Map New Site Layouts</h3>
+            <p>Even if you do not write JavaScript, you can help parser development by inspecting a site's HTML (or using the <strong>🎯 Pick</strong> selector tool) and opening a <em>New Site Layout / Adapter Support</em> issue with the chapter list, chapter body, and volume CSS selectors.</p>
           </article>
 
           <article class="card">
-            <h3>4. Improve the Generic Extractor</h3>
-            <p>Following the <strong>General Compatibility First</strong> approach, improvements to <code>BaseParser</code>, <code>GenericHtmlParser</code>, or <code>HtmlSanitizer</code> are preferred over site-specific rules whenever a pattern is shared across sites.</p>
+            <h3>4. Test Websites &amp; Update Compatibility</h3>
+            <p>Test WebPullBook on web novel platforms, blogs, or documentation sites and open a Pull Request updating <a href="https://github.com/WiltonGabriel/WebPullBook/blob/main/docs/COMPATIBILITY.md">docs/COMPATIBILITY.md</a> (which automatically synchronizes the tables on this website).</p>
           </article>
 
           <article class="card">
-            <h3>5. Build Structural Parser Adapters</h3>
-            <p>When a platform uses custom paginated JSON APIs or non-standard DOM structures, implement a subclass of <code>BaseParser</code> under <code>src/parsers/</code> with anonymized HTML snapshot fixtures.</p>
+            <h3>5. Report Extraction Bugs with Logs</h3>
+            <p>If an extraction or EPUB export fails on a specific chapter or index structure, open the <strong>Logs</strong> tab in WebPullBook, click <strong>Download Log</strong>, and attach the log to a <a href="https://github.com/WiltonGabriel/WebPullBook/issues">GitHub Issue</a>.</p>
           </article>
 
           <article class="card">
-            <h3>6. Cross-Browser &amp; E-Reader Testing</h3>
+            <h3>6. Cross-Browser &amp; E-Reader Validation</h3>
             <p>Validate generated EPUB 2 and EPUB 3 files on Kindle, Kobo, PocketBook, Tolino, and mobile reading apps, or test the extension on Firefox 128+, Edge, and Brave.</p>
           </article>
         </div>
@@ -129,6 +129,56 @@
     </section>
 
     <section class="section alt">
+      <div class="container">
+        <div class="section-header">
+          <h2>How to Build and Add a New Parser Adapter</h2>
+          <p>All parser adapters inherit from <code>BaseParser</code> (<code>src/core/base-parser.js</code>) and use structural DOM scoring (<code>matchScore</code>) so they remain resilient even when a website changes domains.</p>
+        </div>
+
+        <figure>
+          <figcaption id="parser-example-caption">Minimal 4-step structure for adding a new parser adapter in <code>src/parsers/</code>:</figcaption>
+          <pre role="region" aria-labelledby="parser-example-caption" tabindex="0"><code>// 1. Create src/parsers/my-layout-adapter.js extending BaseParser
+import { BaseParser } from '../core/parser-engine.js';
+
+export class MyLayoutParser extends BaseParser {
+  constructor() {
+    super({ id: 'my-layout', name: 'My Layout / CMS Adapter' });
+  }
+
+  // Score structural DOM signals (0 = no match, 70-95 = strong structural match)
+  matchScore(doc, _url) {
+    return doc.querySelector('.custom-chapter-index, #novel-toc-list') ? 85 : 0;
+  }
+
+  extractSiteMetadata(doc, _targetUrl) {
+    return {
+      title: doc.querySelector('h1.novel-title')?.textContent?.trim(),
+      author: doc.querySelector('.novel-author a')?.textContent?.trim()
+    };
+  }
+
+  collectChapterNodes(doc, targetUrl) {
+    return Array.from(doc.querySelectorAll('#novel-toc-list a')).map((a) =&gt; ({
+      url: new URL(a.getAttribute('href'), targetUrl).toString(),
+      displayTitle: a.textContent.trim(),
+      volume: 'Volume 01',
+      included: true
+    }));
+  }
+
+  findChapterContentRoot(doc) {
+    return doc.querySelector('article.chapter-reader-body');
+  }
+}
+
+// 2. Register an instance in src/parsers/index.js before genericHtmlParser
+// 3. Add anonymized HTML fixtures in tests/fixtures/ and expectations in snapshots.json
+// 4. Run `npm run check` and document the adapter in docs/COMPATIBILITY.md</code></pre>
+        </figure>
+      </div>
+    </section>
+
+    <section class="section">
       <div class="container">
         <div class="section-header">
           <h2>Local Development &amp; Testing</h2>

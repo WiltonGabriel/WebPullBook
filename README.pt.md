@@ -214,8 +214,11 @@ WebPullBook/
 
 O WebPullBook foi criado e é mantido por **Wilton Gabriel** ([@WiltonGabriel](https://github.com/WiltonGabriel)), contando com a colaboração de contribuidores da comunidade open source. O projeto é distribuído sob a [Licença MIT](LICENSE) e segue nosso [Código de Conduta](.github/CODE_OF_CONDUCT.md).
 
-### Formas de Contribuir (Código e Documentação)
+### Formas de Contribuir — Destaque para Desenvolvimento e Adição de Parsers
 
-- **Testar sites e atualizar a compatibilidade:** Abra um PR adicionando sites testados na tabela de [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md).
-- **Reportar layouts ou bugs:** Abra uma issue em [Issues](https://github.com/WiltonGabriel/WebPullBook/issues) anexando o arquivo salvo em **Logs → Baixar Log**.
-- **Desenvolver novos adaptadores e melhorias:** Leia [CONTRIBUTING.md](CONTRIBUTING.md) para criar parsers estruturais em [src/parsers/](src/parsers/index.js), aprimorar a heurística ou contribuir com traduções ([i18n.js](src/workspace/i18n.js)).
+Contribuições voltadas para **parsers (adaptadores de sites e heurísticas de extração)** são a forma de maior impacto para expandir o alcance do WebPullBook:
+
+- **Desenvolver e adicionar novos parsers (`src/parsers/`):** Quando uma plataforma de web novels, CMS ou portal utiliza APIs JSON paginadas, listas de capítulos via AJAX ou estruturas DOM próprias que o extrator genérico não cobre sozinho, crie uma nova subclasse de `BaseParser` em [src/parsers/](src/parsers/index.js) e registre-a acompanhada de fixtures HTML anonimizadas em [tests/fixtures/](tests/fixtures/snapshots.json). Veja o passo a passo completo em [CONTRIBUTING.md](CONTRIBUTING.md#adding-a-parser-adapter) ou na [página Como Contribuir](https://wiltongabriel.github.io/WebPullBook/pt/contributing.html).
+- **Aprimorar o extrator heurístico genérico (`src/core/` & `src/parsers/generic-html.js`):** Evolua o [`BaseParser`](src/core/base-parser.js), o [`GenericHtmlParser`](src/parsers/generic-html.js) ou o [`HtmlSanitizer`](src/core/sanitizer.js) para que sites, blogs e domínios espelho funcionem automaticamente sem depender de regras específicas por domínio.
+- **Testar sites e atualizar a compatibilidade:** Teste o WebPullBook em novos sites e abra um PR atualizando [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md) (o site oficial sincroniza as tabelas automaticamente a partir desse documento).
+- **Reportar layouts ou bugs com logs de execução:** Abra uma issue em [Issues](https://github.com/WiltonGabriel/WebPullBook/issues) usando o modelo *New Site Layout / Adapter Support* ou *Bug Report* e anexe o arquivo salvo em **Logs → Baixar Log**.
