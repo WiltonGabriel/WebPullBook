@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <title>Frequently Asked Questions (FAQ) — WebPullBook Web-to-EPUB Extension</title>
+  <meta name="description" content="Answers to common questions about WebPullBook: Kindle and Kobo Reader Profiles, Send to Kindle EPUB 2 vs EPUB 3, custom CSS selectors, SPA websites, Safe Mode, privacy, and Beta installation.">
+  <link rel="canonical" href="https://wiltongabriel.github.io/WebPullBook/faq.html">
+  <link rel="alternate" hreflang="en" href="https://wiltongabriel.github.io/WebPullBook/faq.html">
+  <link rel="alternate" hreflang="pt-BR" href="https://wiltongabriel.github.io/WebPullBook/pt/faq.html">
+  <link rel="alternate" hreflang="x-default" href="https://wiltongabriel.github.io/WebPullBook/faq.html">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="WebPullBook">
+  <meta property="og:title" content="Frequently Asked Questions (FAQ) — WebPullBook">
+  <meta property="og:description" content="Answers about converting web novels and pages to EPUB 2/3 for Kindle, Kobo, Calibre, and offline reading.">
+  <meta property="og:url" content="https://wiltongabriel.github.io/WebPullBook/faq.html">
+  <meta property="og:image" content="https://wiltongabriel.github.io/WebPullBook/assets/images/social-preview.png">
+  <meta property="og:image:width" content="1280">
+  <meta property="og:image:height" content="640">
+  <meta property="og:image:alt" content="WebPullBook FAQ">
+  <meta property="og:locale" content="en_US">
+  <meta property="og:locale:alternate" content="pt_BR">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Frequently Asked Questions (FAQ) — WebPullBook">
+  <meta name="twitter:description" content="Answers on Kindle &amp; Kobo profiles, SPA extraction, Safe Mode, privacy, and troubleshooting.">
+  <meta name="twitter:image" content="https://wiltongabriel.github.io/WebPullBook/assets/images/social-preview.png">
+  <meta name="twitter:image:alt" content="WebPullBook FAQ">
+  <link rel="icon" type="image/svg+xml" href="assets/images/icon.svg">
+  <link rel="icon" type="image/png" sizes="128x128" href="assets/images/icon-128.png">
+  <link rel="stylesheet" href="assets/css/styles.css">
+  <script src="assets/js/site.js" defer></script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "Which Reader Profile should I choose for Kindle or Kobo?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "If you send books via Amazon Send to Kindle (email, web, or app), choose Kindle (Legacy) to output classic EPUB 2 with 1200px JPEG images. If you transfer via Calibre USB (KFX/AZW3), choose Kindle (Modern) for EPUB 3 with pop-up footnotes. For Kobo, Tolino, or PocketBook, choose Kobo & E-Readers."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Does any data leave my browser when using WebPullBook?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "WebPullBook has no backend server, no telemetry, and no analytics. All parsing, XHTML sanitization, image conversion, and ZIP/EPUB packaging run locally in your browser. Network requests are made directly from your browser only to the websites you choose to extract."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Why is WebPullBook installed manually from GitHub Releases instead of extension stores?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "WebPullBook is currently in open-source Beta. Official distribution during Beta happens through GitHub Releases while features, tests, and store listing compliance are finalized."
+        }
+      }
+    ]
+  }
+  </script>
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+
+  <div class="beta-bar" role="region" aria-label="Release status">
+    <div class="container beta-bar-inner">
+      <span class="badge accent" data-wpb-version data-wpb-version-prefix="Beta ">Beta v1.5.0-beta</span>
+      <span>For questions not covered below, check the GitHub Issue Tracker.</span>
+      <a href="https://github.com/WiltonGabriel/WebPullBook/issues">GitHub Issues &rarr;</a>
+    </div>
+  </div>
+
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="brand-link" href="index.html">
+        <img class="brand-logo" src="assets/images/icon.svg" alt="" width="32" height="32">
+        <span>WebPullBook</span>
+      </a>
+
+      <nav class="site-nav" aria-label="Primary navigation">
+        <button id="nav-toggle" class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-menu">
+          <span>Menu</span>
+        </button>
+        <ul id="site-menu" class="nav-list">
+          <li><a href="index.html">Home</a></li>
+          <li><a href="features.html">Features</a></li>
+          <li><a href="installation.html">Installation</a></li>
+          <li><a href="compatibility.html">Compatibility</a></li>
+          <li><a href="faq.html" aria-current="page">FAQ</a></li>
+          <li><a href="privacy.html">Privacy</a></li>
+          <li><a href="contributing.html">Contributing</a></li>
+        </ul>
+      </nav>
+
+      <div class="header-actions">
+        <a class="lang-switch" href="pt/faq.html" hreflang="pt-BR" lang="pt-BR" aria-label="Mudar idioma para Português Brasileiro">🇧🇷 PT-BR</a>
+        <button id="theme-toggle" class="theme-btn" type="button">Theme: Auto</button>
+        <a class="btn primary sm" data-wpb-download href="https://github.com/WiltonGabriel/WebPullBook/releases/download/v1.4.0/WebPullBook-v1.4.0.zip">Download (.zip)</a>
+      </div>
+    </div>
+  </header>
+
+  <main id="main-content">
+    <section class="page-hero">
+      <div class="container">
+        <span class="badge accent">Support &amp; Troubleshooting</span>
+        <h1>Frequently Asked Questions (FAQ)</h1>
+        <p>Answers regarding e-reader profiles, website extraction, rate-limit handling, and privacy.</p>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <h2>E-Readers, Kindle &amp; Kobo Profiles</h2>
+        <div class="accordion" aria-label="E-Readers and Profiles FAQ">
+          <details>
+            <summary>What is the difference between Kindle (Legacy) and Kindle (Modern)?</summary>
+            <div class="details-body">
+              <p><strong>Kindle (Legacy)</strong> generates an <strong>EPUB 2 (2.0.1)</strong> archive with classic <code>toc.ncx</code> navigation, 1200px JPEG images, and no EPUB 3 HTML5 tags. It is intended for Amazon's <em>Send to Kindle</em> service (email, web uploader, or mobile app), which can reject certain EPUB 3 tags.</p>
+              <p><strong>Kindle (Modern)</strong> generates an <strong>EPUB 3</strong> archive with semantic <code>nav.xhtml</code>, series collection metadata, 1200px JPEG images, and <strong>EPUB 3 Pop-up Footnotes</strong>. Choose it when converting or transferring via <strong>Calibre (USB &rarr; KFX or AZW3)</strong> or reading in EPUB 3 apps.</p>
+            </div>
+          </details>
+
+          <details>
+            <summary>Which profile should I use for Kobo, Tolino, or PocketBook?</summary>
+            <div class="details-body">
+              <p>Choose <strong>Kobo &amp; E-Readers</strong>. It outputs EPUB 3 with pop-up footnotes, series/volume metadata, and 1080px JPEG optimization while preserving full color on color E-Ink displays.</p>
+            </div>
+          </details>
+
+          <details>
+            <summary>Why did my Reader Profile switch to "Custom" automatically?</summary>
+            <div class="details-body">
+              <p>Reader Profiles are fixed presets. Whenever you modify any individual setting under <strong>Advanced Options</strong> (including options outside typography or images, such as manual request latency), the selector switches to <strong>Custom</strong> so your manual edits are preserved. Selecting a named profile again restores all fields of that profile.</p>
+            </div>
+          </details>
+
+          <details>
+            <summary>What happens when a book page does not have a cover image?</summary>
+            <div class="details-body">
+              <p>When WebPullBook cannot detect a cover image on the source page (or when creating a book via <strong>Merge Tabs</strong>), it automatically generates a default cover with the WebPullBook logo emblem, the book title, and the author. You can also upload a local image file, click <strong>Generate Cover</strong> after editing the title, or click <strong>Clear Cover</strong> if you prefer no cover.</p>
+            </div>
+          </details>
+        </div>
+
+        <h2 style="margin-block-start: 2.5rem;">Website Extraction, Selectors &amp; SPA Mode</h2>
+        <div class="accordion" aria-label="Extraction and Selectors FAQ">
+          <details>
+            <summary>What should I do if a website loads 0 chapters or misses chapter content?</summary>
+            <div class="details-body">
+              <p>WebPullBook tries active-tab DOM capture, SPA tab rendering, and heuristic selector detection automatically. If a custom layout still needs manual adjustment:</p>
+              <p>1. Open <strong>Advanced Options &rarr; Extraction, Parser &amp; Rules</strong>.<br>
+              2. Click <strong>🎯 Pick</strong> next to <em>Chapter list CSS selector</em> or <em>Chapter content CSS selector</em> to click the element directly on the open web page, or click <strong>Auto-detect selectors</strong>.<br>
+              3. Click <strong>Save for Domain</strong> to keep the rule for that domain, then click <strong>Load Series</strong> again.</p>
+            </div>
+          </details>
+
+          <details>
+            <summary>How can I package a story or blog that has no Table of Contents page?</summary>
+            <div class="details-body">
+              <p>Two options are available for sites without an index page:</p>
+              <p>• <strong>Sequential "Next Chapter" Crawling:</strong> Open the first chapter you want to include and load its URL in WebPullBook. When <em>Follow "Next Chapter" link automatically</em> is enabled (default), the generic extractor follows the next-chapter links in order.<br>
+              • <strong>Merge Open Tabs:</strong> Open the chapters or articles in browser tabs, click <strong>Merge Tabs</strong> in WebPullBook's top bar, reorder or preview them, and export them as a single book or separate files.</p>
+            </div>
+          </details>
+
+          <details>
+            <summary>Why did the export pause with an Anti-Bot (Cloudflare) or Rate-Limit banner?</summary>
+            <div class="details-body">
+              <p>When a website responds with a Cloudflare challenge or HTTP 429/503 rate limit, WebPullBook pauses the queue to avoid repeated blocked requests. Click <strong>Open page to verify ↗</strong> on the banner, complete the check in that browser tab, enable <strong>Safe Mode</strong>, and click <strong>Resume</strong>. Already downloaded chapters remain cached in <code>IndexedDB</code>.</p>
+            </div>
+          </details>
+        </div>
+
+        <h2 style="margin-block-start: 2.5rem;">Privacy, Beta Status &amp; Troubleshooting</h2>
+        <div class="accordion" aria-label="Privacy and Beta FAQ">
+          <details>
+            <summary>Does any data leave my browser?</summary>
+            <div class="details-body">
+              <p>All HTML parsing, XHTML sanitization, image conversion, and ZIP/EPUB packaging run locally inside your browser. No data is sent to a WebPullBook server or third-party analytics service. Your browser only makes direct HTTP/HTTPS requests to the websites and image CDNs you choose to download from. See the <a href="privacy.html">Privacy &amp; Permissions Policy</a>.</p>
+            </div>
+          </details>
+
+          <details>
+            <summary>Why is WebPullBook not on the Chrome Web Store or Firefox Add-ons yet?</summary>
+            <div class="details-body">
+              <p>WebPullBook is currently in open-source <strong>Beta</strong>. During Beta, packages are distributed on <a href="https://github.com/WiltonGabriel/WebPullBook/releases">GitHub Releases</a> while features and testing are stabilized ahead of store submission.</p>
+            </div>
+          </details>
+
+          <details>
+            <summary>How do I report a bug or request support for a website layout?</summary>
+            <div class="details-body">
+              <p>Open the <strong>Logs</strong> tab inside WebPullBook and click <strong>Download Log</strong> (or <strong>Copy Log</strong>), then open an issue on <a href="https://github.com/WiltonGabriel/WebPullBook/issues">GitHub Issues</a> using the <em>Bug Report</em> or <em>New Site Layout / Adapter Support</em> template.</p>
+            </div>
+          </details>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-col">
+          <a class="brand-link" href="index.html" style="margin-block-end: 0.5rem;">
+            <img class="brand-logo" src="assets/images/icon.svg" alt="" width="28" height="28">
+            <span>WebPullBook</span>
+          </a>
+          <p>Open-source Manifest V3 browser extension for extracting web novels, serialized fiction, articles, and open tabs into EPUB 2/3, HTML, Markdown, and TXT ebooks.</p>
+        </div>
+
+        <div class="footer-col">
+          <h3>Documentation</h3>
+          <ul>
+            <li><a href="features.html">Features &amp; Profiles</a></li>
+            <li><a href="installation.html">Beta Installation</a></li>
+            <li><a href="compatibility.html">Compatibility Matrix</a></li>
+            <li><a href="faq.html" aria-current="page">FAQ</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h3>Project &amp; Community</h3>
+          <ul>
+            <li><a href="contributing.html">Contributing Guide</a></li>
+            <li><a href="privacy.html">Privacy &amp; Permissions</a></li>
+            <li><a href="https://github.com/WiltonGabriel/WebPullBook">GitHub Repository</a></li>
+            <li><a href="https://github.com/WiltonGabriel/WebPullBook/releases">Official Releases (Beta)</a></li>
+            <li><a href="https://github.com/WiltonGabriel/WebPullBook/issues">Issue Tracker</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h3>Languages</h3>
+          <ul>
+            <li><a href="faq.html" aria-current="page">🇺🇸 English (Default)</a></li>
+            <li><a href="pt/faq.html" hreflang="pt-BR" lang="pt-BR">🇧🇷 Português (Brasil)</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <span>Released under the <a href="https://github.com/WiltonGabriel/WebPullBook/blob/main/LICENSE">MIT License</a> • <span data-wpb-version data-wpb-version-prefix="Version ">Version v1.5.0-beta</span></span>
+        <span>Zero runtime dependencies • Local browser execution</span>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>

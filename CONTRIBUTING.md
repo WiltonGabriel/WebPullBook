@@ -1,10 +1,10 @@
 # Contributing to WebPullBook
 
-Thank you for your interest in improving **WebPullBook**!
+Thank you for your interest in contributing to **WebPullBook**. For AI coding agents (Codex, Cursor, Claude Code, Antigravity, Copilot), see [AGENTS.md](AGENTS.md) for complete architectural and security rules.
 
 ## Development Setup
 
-WebPullBook uses native ES modules and browser APIs with **zero build steps or npm dependencies**.
+WebPullBook uses native ES modules and browser APIs with no build step or runtime npm dependencies.
 
 1. Clone the repository:
    ```bash
@@ -26,6 +26,7 @@ WebPullBook uses native ES modules and browser APIs with **zero build steps or n
 - [src/exporters/](src/exporters/index.js) — `BaseExporter` and `ExporterRegistry` (`epub`, `html`, `md`, `txt`).
 - [src/parsers/](src/parsers/index.js) — `ParserRegistry`, multi-domain chapter parser resolution, and `BaseParser` subclasses.
 - [src/workspace/](src/workspace/workspace.html) — Modular MV3 workspace (`state.js`, `i18n.js` + `locales/`, `logger.js`, `options-storage.js`, `directory-handle.js`, `domain-rules-ui.js`, `chapters-ui.js`, `cover-ui.js`, `chapter-modals.js`, `volume-modals.js`, `series-loader.js`, `export-runner.js`, `download-storage.js`, `library-ui.js`, `library-view.js`, `cache-sessions-ui.js`, `settings-io.js`, `tab-picker.js`, and `workspace.js`).
+- `website/` — Static bilingual website deployed via GitHub Pages (never bundled in extension releases; validated with `node scripts/verify-website.mjs`).
 
 ## Adding a Parser Adapter
 
@@ -109,6 +110,11 @@ The extension runtime has **zero npm dependencies and zero build steps** (`node 
    npm install
    npx playwright install chromium
    npm run test:e2e
+   ```
+   > **Note on Browser E2E Coverage:** Automated unpacked-extension E2E runs on Chromium via Playwright (`--load-extension`). Firefox MV3 manifest compatibility (`background.scripts` + `browser_specific_settings.gecko`) is statically verified by `npm run lint`, while interactive Firefox runtime testing is performed manually via `about:debugging#/runtime/this-firefox`.
+5. **Static Website & SEO Verification (zero dependencies):**
+   ```bash
+   node scripts/verify-website.mjs
    ```
 
 ### Adding Parser Fixtures & Regression Snapshots

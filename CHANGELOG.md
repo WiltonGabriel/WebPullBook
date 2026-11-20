@@ -2,13 +2,15 @@
 
 Todas as mudanças notáveis do **WebPullBook** serão documentadas neste arquivo.
 
-## [Não lançado / Unreleased]
+## [1.5.0] - 2026-11-20 (Beta)
 
 ### Novidades & Correções / New Features & Fixes
-- **Página Final do Livro (`OEBPS/text/end.xhtml` — Encerramento / Colofão):** nova página final configurável em **Opções Avançadas → Arquivos & Padrão EPUB** (com título, mensagem de encerramento em múltiplas linhas, resumo da obra, link da fonte original e créditos/data de geração) para o livro não terminar abruptamente após o último capítulo; o Sumário (`nav.xhtml` / `text/toc.xhtml`) agora fica sempre no início do livro quando ativado.
-- **Seleção de Volumes e Capítulos com `Ctrl+Clique` e `Shift+Clique`:** botão **Selecionar Todos** em Volumes com alternância (marca todos os volumes ou desmarca todos ao clicar novamente), suporte a `Ctrl+Clique` (itens avulsos) e `Shift+Clique` (intervalo contínuo) diretamente nos chips de volumes e nas linhas da tabela de capítulos, além de normalização de cabeçalhos genéricos (`"Capítulos"`, `"Chapters"`, `"Sumário"`) para **`Volume 01`**.
-- **Isolamento de Seletores CSS por Domínio:** seletores CSS e filtros regex (`customListSelector`, `customContentSelector`, `customExcludeSelector`, `customStripPatterns`) nunca mais são persistidos globalmente em `wpbOptions` (ficando restritos à sessão atual do site ou às **Regras por Domínio** salvas), com fallback automático no `BaseParser` para a extração nativa do adaptador caso um seletor customizado retorne `0` capítulos.
+- **Capa Padrão Automática com Logo (`src/workspace/cover-ui.js`):** quando a página de origem não possui imagem de capa detectável (ou em coletâneas criadas via **Juntar Abas** / falha de carregamento remoto), o WebPullBook gera e aplica automaticamente uma capa padrão com o emblema oficial do projeto, título da obra e autor (também disponível manualmente no botão **Gerar Capa**).
+- **Página Final do Livro (`OEBPS/text/end.xhtml` — Encerramento / Colofão):** nova página final configurável em **Opções Avançadas → Arquivos & Padrão EPUB** (com título, mensagem de encerramento em múltiplas linhas, resumo da obra, link da fonte original e créditos/data de geração); o Sumário (`nav.xhtml` / `text/toc.xhtml`) fica sempre no início do livro quando ativado.
+- **Seleção de Volumes e Capítulos com `Ctrl+Clique` e `Shift+Clique`:** botão **Selecionar Todos** em Volumes com alternância (marca ou desmarca todos ao clicar novamente), suporte a `Ctrl+Clique` (itens avulsos) e `Shift+Clique` (intervalo contínuo) diretamente nos chips de volumes e nas linhas da tabela de capítulos, além de normalização de cabeçalhos genéricos (`"Capítulos"`, `"Chapters"`, `"Sumário"`) para **`Volume 01`**.
+- **Isolamento de Seletores CSS por Domínio:** seletores CSS e filtros regex (`customListSelector`, `customContentSelector`, `customExcludeSelector`, `customStripPatterns`) não são mais persistidos globalmente em `wpbOptions` (ficando restritos à sessão atual do site ou às **Regras por Domínio** salvas), com fallback automático no `BaseParser` para a extração nativa do adaptador caso um seletor customizado retorne `0` capítulos.
 - **Latência Manual centralizada em Opções Avançadas:** controle de latência manual entre capítulos (`0–30000 ms`, ajustável ao vivo e independente do Modo Seguro) mantido exclusivamente em **Opções Avançadas → Rede, SPA & Resiliência**.
+- **Site Oficial (GitHub Pages), Documentação e Open Source:** site estático bilíngue em `website/` (com detecção automática da versão mais recente, botão de download direto do pacote `.zip` via GitHub Releases e tutorial objetivo de uso), `AGENTS.md`, `CHROMEWEBSTORE.md`, workflow de publicação do GitHub Pages (`pages.yml`), análise CodeQL (`codeql.yml`) e monitoramento Dependabot (`dependabot.yml`).
 
 ## [1.4.0] - 2026-11-20 (Beta)
 

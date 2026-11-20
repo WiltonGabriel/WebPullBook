@@ -10,11 +10,12 @@ Only the latest released version of **WebPullBook** on the `main` branch receive
 
 ## Security Model
 
-WebPullBook runs completely client-side inside the user's browser with zero external backend dependencies:
+WebPullBook runs locally inside the user's browser with no external backend servers:
 
 - Untrusted web page HTML is sanitized via `HtmlSanitizer` ([`src/core/sanitizer.js`](../src/core/sanitizer.js)) into strict XHTML before packaging EPUBs or offline HTML files (`<script>`, `<iframe>`, `<object>`, and inline `on*` handlers are stripped).
 - No remote analytics, telemetry, or external code loading is used anywhere in the extension.
-- Local preferences and Library entries remain inside `chrome.storage.local`.
+- Local preferences and Library entries remain inside `chrome.storage.local` and `IndexedDB` (`WebPullBookCache`), while network requests are made directly from the user's browser only to the origin websites the user chooses to extract.
+- Full privacy details are documented at `https://wiltongabriel.github.io/WebPullBook/privacy.html`.
 
 ## Reporting a Vulnerability
 

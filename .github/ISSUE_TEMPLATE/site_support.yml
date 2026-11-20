@@ -27,5 +27,5 @@ body:
     attributes:
       label: Verificações prévias / Pre-checks
       options:
-        - label: Testei informar os seletores manualmente em Opções Avançadas
+        - label: Testei informar os seletores manualmente ou usar "🎯 Apontar" / "Auto-detectar seletores" em Opções Avançadas
         - label: Testei ativar o "Modo SPA / JavaScript" caso a página carregue via JS

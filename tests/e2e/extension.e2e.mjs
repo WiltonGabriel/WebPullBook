@@ -145,6 +145,31 @@ function createMockNovelServer() {
   return server;
 }
 
+function resolveChromiumExecutablePath() {
+  if (process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH) {
+    return process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
+  }
+  try {
+    const defaultBin = chromium.executablePath();
+    if (defaultBin && fs.existsSync(defaultBin)) return undefined;
+  } catch {
+    // ignore and check local playwright cache
+  }
+  const cacheDir = path.join(os.homedir(), '.cache', 'ms-playwright');
+  if (fs.existsSync(cacheDir)) {
+    const dirs = fs
+      .readdirSync(cacheDir)
+      .filter((d) => /^chromium-\d+$/.test(d))
+      .sort()
+      .reverse();
+    for (const d of dirs) {
+      const candidate = path.join(cacheDir, d, 'chrome-linux64', 'chrome');
+      if (fs.existsSync(candidate)) return candidate;
+    }
+  }
+  return undefined;
+}
+
 async function runE2E() {
   const repoRoot = path.resolve('.');
   const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'wpb-e2e-profile-'));
@@ -156,7 +181,7 @@ async function runE2E() {
 
   let context;
   try {
-    const executablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH || undefined;
+    const executablePath = resolveChromiumExecutablePath();
     context = await chromium.launchPersistentContext(userDataDir, {
       ...(executablePath ? { executablePath } : { channel: 'chromium' }),
       headless: true,
@@ -617,6 +642,11 @@ async function runE2E() {
     const autoContentSel = await page.inputValue('#opt-content-selector');
     assert.ok(autoListSel.includes('novel-toc'), `Expected auto-detected list selector, got "${autoListSel}"`);
     assert.ok(autoContentSel.includes('prose-story'), `Expected auto-detected content selector, got "${autoContentSel}"`);
+    assert.match(
+      await page.inputValue('#meta-cover-url'),
+      /^data:image\/jpeg;base64,/,
+      'Series without a detected cover should automatically receive the default WebPullBook cover'
+    );
 
     console.log('[OK] E2E extension flow passed end-to-end (load -> parse -> pack EPUB -> report -> jump to log -> merge tabs)');
   } finally {

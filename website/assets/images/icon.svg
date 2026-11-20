@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" fill="none">
+  <defs>
+    <filter id="book-shadow" x="-10%" y="-10%" width="130%" height="130%">
+      <feDropShadow dx="3" dy="4" stdDeviation="2.5" flood-color="#0f172a" flood-opacity="0.32" />
+    </filter>
+  </defs>
+
+  <g filter="url(#book-shadow)">
+    <!-- Book cover (right body) -->
+    <path
+      d="M36 12 H88 C100.15 12 110 21.85 110 34 V94 C110 106.15 100.15 116 88 116 H36 V12 Z"
+      fill="#263447"
+    />
+    <!-- Subtle edge highlight so the book stays distinct on dark toolbars -->
+    <path
+      d="M36 12.75 H88 C99.736 12.75 109.25 22.264 109.25 34 V94 C109.25 105.736 99.736 115.25 88 115.25 H36"
+      stroke="#5b7aa1"
+      stroke-opacity="0.45"
+      stroke-width="1.5"
+    />
+    <!-- Book spine (left band) -->
+    <path
+      d="M18 22 C18 16.477 22.477 12 28 12 H40 V116 H28 C22.477 116 18 111.523 18 106 V22 Z"
+      fill="#0284c7"
+    />
+    <!-- Spine crease highlight -->
+    <rect x="37.5" y="12" width="4" height="104" fill="#60a5fa" fill-opacity="0.55" />
+  </g>
+
+  <!-- Download arrow shaft & chevron -->
+  <path
+    d="M73 34 V72"
+    stroke="#38bdf8"
+    stroke-width="10.5"
+    stroke-linecap="round"
+  />
+  <path
+    d="M55 55.5 L73 73.5 L91 55.5"
+    stroke="#38bdf8"
+    stroke-width="10.5"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <!-- Bottom bar -->
+  <path
+    d="M49 91 H97"
+    stroke="#38bdf8"
+    stroke-width="10.5"
+    stroke-linecap="round"
+  />
+</svg>

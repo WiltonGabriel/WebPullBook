@@ -89,6 +89,8 @@ const mdFiles = [
   'README.pt.md',
   'CONTRIBUTING.md',
   'CHANGELOG.md',
+  'AGENTS.md',
+  'CHROMEWEBSTORE.md',
   '.github/SECURITY.md',
   ...walk('docs').filter((f) => f.endsWith('.md'))
 ];
@@ -152,14 +154,15 @@ try {
   fail(`Consistency check error: ${err.message}`);
 }
 
-// 7. Formatting & hygiene lint across src/, tests/, scripts/
+// 7. Formatting & hygiene lint across src/, tests/, scripts/, website/
 const lintableExts = new Set(['.js', '.mjs', '.html', '.css', '.json']);
 const textFiles = [
   'manifest.json',
   'package.json',
   ...walk('src'),
   ...walk('tests').filter((f) => !f.includes(`${path.sep}fixtures${path.sep}`)),
-  ...walk('scripts')
+  ...walk('scripts'),
+  ...walk('website')
 ].filter((f) => lintableExts.has(path.extname(f)));
 
 for (const file of textFiles) {
@@ -192,6 +195,19 @@ for (const file of textFiles) {
 console.log(`[OK] Formatting & hygiene lint (${textFiles.length} files)`);
 if (fixedFiles.length > 0) {
   console.log(`Fixed formatting in ${fixedFiles.length} file(s):`, fixedFiles.join(', '));
+}
+
+// 8. Official website & SEO static verification
+if (fs.existsSync(path.join('scripts', 'verify-website.mjs'))) {
+  try {
+    const out = execFileSync(process.execPath, [path.join('scripts', 'verify-website.mjs')], {
+      encoding: 'utf8',
+      stdio: 'pipe'
+    });
+    if (out.trim()) console.log(out.trim());
+  } catch (err) {
+    fail(err.stderr?.toString().trim() || err.stdout?.toString().trim() || err.message);
+  }
 }
 
 if (errors.length > 0) {

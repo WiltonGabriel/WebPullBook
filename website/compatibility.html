@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <title>Compatibility Matrix &amp; Supported Patterns — WebPullBook</title>
+  <meta name="description" content="Four-tier compatibility classification for WebPullBook: Verified &amp; Tested sites, Added / Not Officially Tested layouts, Potentially Compatible HTML/SPA patterns, Not Compatible limitations, and browser test coverage.">
+  <link rel="canonical" href="https://wiltongabriel.github.io/WebPullBook/compatibility.html">
+  <link rel="alternate" hreflang="en" href="https://wiltongabriel.github.io/WebPullBook/compatibility.html">
+  <link rel="alternate" hreflang="pt-BR" href="https://wiltongabriel.github.io/WebPullBook/pt/compatibility.html">
+  <link rel="alternate" hreflang="x-default" href="https://wiltongabriel.github.io/WebPullBook/compatibility.html">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="WebPullBook">
+  <meta property="og:title" content="Compatibility Matrix &amp; Supported Patterns — WebPullBook">
+  <meta property="og:description" content="Verified adapters, structural WordPress/Madara layouts, generic HTML and SPA extraction capabilities, known limitations, and browser compatibility.">
+  <meta property="og:url" content="https://wiltongabriel.github.io/WebPullBook/compatibility.html">
+  <meta property="og:image" content="https://wiltongabriel.github.io/WebPullBook/assets/images/social-preview.png">
+  <meta property="og:image:width" content="1280">
+  <meta property="og:image:height" content="640">
+  <meta property="og:image:alt" content="WebPullBook compatibility matrix">
+  <meta property="og:locale" content="en_US">
+  <meta property="og:locale:alternate" content="pt_BR">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Compatibility Matrix &amp; Supported Patterns — WebPullBook">
+  <meta name="twitter:description" content="Four-tier compatibility classification and browser support matrix for WebPullBook.">
+  <meta name="twitter:image" content="https://wiltongabriel.github.io/WebPullBook/assets/images/social-preview.png">
+  <meta name="twitter:image:alt" content="WebPullBook compatibility matrix">
+  <link rel="icon" type="image/svg+xml" href="assets/images/icon.svg">
+  <link rel="icon" type="image/png" sizes="128x128" href="assets/images/icon-128.png">
+  <link rel="stylesheet" href="assets/css/styles.css">
+  <script src="assets/js/site.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+
+  <div class="beta-bar" role="region" aria-label="Release status">
+    <div class="container beta-bar-inner">
+      <span class="badge accent" data-wpb-version data-wpb-version-prefix="Beta ">Beta v1.5.0-beta</span>
+      <span>Compatibility reports can be submitted via Pull Request to docs/COMPATIBILITY.md.</span>
+      <a href="contributing.html">Contributing Guide &rarr;</a>
+    </div>
+  </div>
+
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="brand-link" href="index.html">
+        <img class="brand-logo" src="assets/images/icon.svg" alt="" width="32" height="32">
+        <span>WebPullBook</span>
+      </a>
+
+      <nav class="site-nav" aria-label="Primary navigation">
+        <button id="nav-toggle" class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-menu">
+          <span>Menu</span>
+        </button>
+        <ul id="site-menu" class="nav-list">
+          <li><a href="index.html">Home</a></li>
+          <li><a href="features.html">Features</a></li>
+          <li><a href="installation.html">Installation</a></li>
+          <li><a href="compatibility.html" aria-current="page">Compatibility</a></li>
+          <li><a href="faq.html">FAQ</a></li>
+          <li><a href="privacy.html">Privacy</a></li>
+          <li><a href="contributing.html">Contributing</a></li>
+        </ul>
+      </nav>
+
+      <div class="header-actions">
+        <a class="lang-switch" href="pt/compatibility.html" hreflang="pt-BR" lang="pt-BR" aria-label="Mudar idioma para Português Brasileiro">🇧🇷 PT-BR</a>
+        <button id="theme-toggle" class="theme-btn" type="button">Theme: Auto</button>
+        <a class="btn primary sm" data-wpb-download href="https://github.com/WiltonGabriel/WebPullBook/releases/download/v1.4.0/WebPullBook-v1.4.0.zip">Download (.zip)</a>
+      </div>
+    </div>
+  </header>
+
+  <main id="main-content">
+    <section class="page-hero">
+      <div class="container">
+        <span class="badge accent">Four-Tier Classification</span>
+        <h1>Website &amp; Browser Compatibility</h1>
+        <p>WebPullBook prioritizes structural DOM compatibility over domain-specific rules, combining dedicated layout adapters with a generic heuristic extractor, visual CSS selector picking, and tab rendering.</p>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <div class="section-header">
+          <h2>1. Verified &amp; Tested (Verificados e Testados)</h2>
+          <p>Sites and adapters tested end-to-end in live usage and covered by automated HTML regression fixtures in CI:</p>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Site / Source</th>
+                <th>Adapter ID</th>
+                <th>Last Verified</th>
+                <th>Verified Scope &amp; Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Central Novel</strong></td>
+                <td><code>wp-lightnovel</code></td>
+                <td>2026-11-19</td>
+                <td>End-to-end tested (static SSR, zero SPA tabs): multi-volume detection, cover, synopsis, genres, and chapter fidelity.</td>
+              </tr>
+              <tr>
+                <td><strong>Royal Road</strong></td>
+                <td><code>royalroad</code></td>
+                <td>2026-11-15</td>
+                <td>End-to-end tested (20 chapters): volume &amp; chapter metadata, full synopsis, tags, cover, inline images, and hidden <code>&lt;style&gt;</code> watermark filtering.</td>
+              </tr>
+              <tr>
+                <td><strong>Novel Mania</strong></td>
+                <td><code>novelmania</code></td>
+                <td>2026-11-15</td>
+                <td>End-to-end tested (20 chapters): paginated chapter API &amp; multi-volume detection, full synopsis, genres, status, original cover, inline images, <code>.sr-only</code> heading cleanup, and footnote anchors.</td>
+              </tr>
+              <tr>
+                <td><strong>Scribble Hub</strong></td>
+                <td><code>scribblehub</code></td>
+                <td>2026-11-19</td>
+                <td>End-to-end tested (index &amp; direct chapter URL): AJAX full TOC, open-tab reuse, chronological ordering, metadata, inline images, and author note cleanup.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section class="section alt">
+      <div class="container">
+        <div class="section-header">
+          <h2>2. Added / Not Officially Tested (Adicionados, mas Não Testados Oficialmente)</h2>
+          <p>Adapters or structural layouts implemented with unit fixtures, awaiting formal live verification across complete books:</p>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Site / Structural Layout</th>
+                <th>Adapter ID</th>
+                <th>Current Status</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Madara-based platforms</strong> (<code>.wp-manga-chapter</code>, <code>.reading-content</code>)</td>
+                <td><code>madara-theme</code></td>
+                <td><span class="badge warn">Fixture-tested only</span></td>
+                <td>Implemented with volume grouping and chapter extraction; pending official live-site testing checklist.</td>
+              </tr>
+              <tr>
+                <td><strong>Other WordPress novel theme clones</strong> (<code>.eplister</code>, <code>.ts-chl-collapsible</code>, <code>.epcontent</code>)</td>
+                <td><code>wp-lightnovel</code></td>
+                <td><span class="badge warn">Structural match</span></td>
+                <td>Shares the same WordPress novel DOM layout as Central Novel; awaiting individual live reports.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <div class="section-header">
+          <h2>3. Potentially Compatible (Potencialmente Compatíveis)</h2>
+          <p>Websites without a dedicated adapter that can be extracted using the generic parser and fallback tools:</p>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Pattern / Layout</th>
+                <th>Adapter / Mode</th>
+                <th>How It Works</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Static HTML chapter indexes, blogs &amp; paginated lists (<code>rel="next"</code>)</strong></td>
+                <td><code>generic-html</code></td>
+                <td>Uses link-cluster scoring, prose density extraction (<em>Innermost Node Wins</em>), heuristic selector assistant, and the visual <strong>🎯 Pick</strong> selector tool.</td>
+              </tr>
+              <tr>
+                <td><strong>Sequential chapters without a TOC page</strong></td>
+                <td><code>generic-html</code> ("Next Chapter" crawl)</td>
+                <td>Crawls sequential <em>"Next Chapter"</em> links when starting directly from a prose chapter page.</td>
+              </tr>
+              <tr>
+                <td><strong>JavaScript / SPA pages (React, Vue, Next.js)</strong></td>
+                <td>Tab rendering (<code>renderWithTab</code>)</td>
+                <td>Extracts hydrated DOM via an open tab or a managed background worker tab when static HTML is an empty shell.</td>
+              </tr>
+              <tr>
+                <td><strong>Open browser tabs</strong></td>
+                <td>Merge Tabs</td>
+                <td>Compiles open HTTP/HTTPS tabs into a single anthology or standalone ebooks.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section class="section alt">
+      <div class="container">
+        <div class="section-header">
+          <h2>4. Not Compatible (Não Compatíveis)</h2>
+          <p>Categories that cannot be extracted due to technical or access boundaries:</p>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Pattern / Limitation</th>
+                <th>Technical Reason</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Proprietary DRM platforms</strong></td>
+                <td>Content is encrypted and inaccessible as standard DOM text nodes. WebPullBook does not circumvent DRM.</td>
+              </tr>
+              <tr>
+                <td><strong><code>&lt;canvas&gt;</code> or scrambled-image chapters</strong></td>
+                <td>Text is rendered purely as raster pixels without underlying HTML prose elements.</td>
+              </tr>
+              <tr>
+                <td><strong>Locked paywalls without session access</strong></td>
+                <td>If your browser session cannot access a locked chapter, WebPullBook cannot access it either.</td>
+              </tr>
+              <tr>
+                <td><strong>Hard non-bypassable anti-bot / CAPTCHA gates</strong></td>
+                <td>Automated requests pause when a challenge is detected until the user manually completes verification in a normal browser tab.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <div class="section-header">
+          <h2>Browser Compatibility &amp; Test Coverage</h2>
+          <p>Difference between declared compatibility, automated CI verification, and manual validation:</p>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Browser Family</th>
+                <th>Minimum Version</th>
+                <th>Declared Compatibility</th>
+                <th>Verification Coverage (CI vs. Manual)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Google Chrome / Chromium</strong></td>
+                <td>Chrome 114+</td>
+                <td><span class="badge success">Supported (MV3)</span></td>
+                <td><strong>Automated in CI:</strong> Playwright Chromium E2E test suite (loading unpacked extension, extracting series, previewing/editing, Library, exporting EPUB, and W3C EPUBCheck validation) + 56 Node.js unit/snapshot tests.</td>
+              </tr>
+              <tr>
+                <td><strong>Microsoft Edge / Brave / Vivaldi</strong></td>
+                <td>Chromium 114+</td>
+                <td><span class="badge success">Supported (MV3)</span></td>
+                <td><strong>Automated Engine + Manual UI:</strong> Uses the same Chromium Manifest V3 extension runtime tested in CI; verified manually via unpacked loading.</td>
+              </tr>
+              <tr>
+                <td><strong>Mozilla Firefox</strong></td>
+                <td>Firefox 128.0+</td>
+                <td><span class="badge success">Supported (MV3 Gecko)</span></td>
+                <td><strong>Static CI Checks + Manual Browser Validation:</strong> CI statically validates <code>background.scripts</code>, <code>browser_specific_settings.gecko</code> (Firefox 128+), and Firefox <code>Origin</code> header DNR rules. Live browser testing in Firefox is performed manually via <code>about:debugging</code> because Playwright's Firefox driver does not support loading unpacked WebExtensions via CLI flags.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-col">
+          <a class="brand-link" href="index.html" style="margin-block-end: 0.5rem;">
+            <img class="brand-logo" src="assets/images/icon.svg" alt="" width="28" height="28">
+            <span>WebPullBook</span>
+          </a>
+          <p>Open-source Manifest V3 browser extension for extracting web novels, serialized fiction, articles, and open tabs into EPUB 2/3, HTML, Markdown, and TXT ebooks.</p>
+        </div>
+
+        <div class="footer-col">
+          <h3>Documentation</h3>
+          <ul>
+            <li><a href="features.html">Features &amp; Profiles</a></li>
+            <li><a href="installation.html">Beta Installation</a></li>
+            <li><a href="compatibility.html" aria-current="page">Compatibility Matrix</a></li>
+            <li><a href="faq.html">FAQ</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h3>Project &amp; Community</h3>
+          <ul>
+            <li><a href="contributing.html">Contributing Guide</a></li>
+            <li><a href="privacy.html">Privacy &amp; Permissions</a></li>
+            <li><a href="https://github.com/WiltonGabriel/WebPullBook">GitHub Repository</a></li>
+            <li><a href="https://github.com/WiltonGabriel/WebPullBook/releases">Official Releases (Beta)</a></li>
+            <li><a href="https://github.com/WiltonGabriel/WebPullBook/issues">Issue Tracker</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h3>Languages</h3>
+          <ul>
+            <li><a href="compatibility.html" aria-current="page">🇺🇸 English (Default)</a></li>
+            <li><a href="pt/compatibility.html" hreflang="pt-BR" lang="pt-BR">🇧🇷 Português (Brasil)</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <span>Released under the <a href="https://github.com/WiltonGabriel/WebPullBook/blob/main/LICENSE">MIT License</a> • <span data-wpb-version data-wpb-version-prefix="Version ">Version v1.5.0-beta</span></span>
+        <span>Zero runtime dependencies • Local browser execution</span>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>

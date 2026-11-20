@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <title>Privacy Policy &amp; Permissions Disclosure — WebPullBook</title>
+  <meta name="description" content="Privacy Policy and Manifest V3 permissions justification for WebPullBook: local browser execution, zero telemetry, direct origin requests, and local storage details.">
+  <link rel="canonical" href="https://wiltongabriel.github.io/WebPullBook/privacy.html">
+  <link rel="alternate" hreflang="en" href="https://wiltongabriel.github.io/WebPullBook/privacy.html">
+  <link rel="alternate" hreflang="pt-BR" href="https://wiltongabriel.github.io/WebPullBook/pt/privacy.html">
+  <link rel="alternate" hreflang="x-default" href="https://wiltongabriel.github.io/WebPullBook/privacy.html">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="WebPullBook">
+  <meta property="og:title" content="Privacy Policy &amp; Permissions Disclosure — WebPullBook">
+  <meta property="og:description" content="Code-audited privacy policy and Manifest V3 permissions explanation for the WebPullBook browser extension.">
+  <meta property="og:url" content="https://wiltongabriel.github.io/WebPullBook/privacy.html">
+  <meta property="og:image" content="https://wiltongabriel.github.io/WebPullBook/assets/images/social-preview.png">
+  <meta property="og:image:width" content="1280">
+  <meta property="og:image:height" content="640">
+  <meta property="og:image:alt" content="WebPullBook Privacy Policy and Permissions">
+  <meta property="og:locale" content="en_US">
+  <meta property="og:locale:alternate" content="pt_BR">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Privacy Policy &amp; Permissions Disclosure — WebPullBook">
+  <meta name="twitter:description" content="How WebPullBook processes web content locally, handles origin network requests, and uses each Manifest V3 permission.">
+  <meta name="twitter:image" content="https://wiltongabriel.github.io/WebPullBook/assets/images/social-preview.png">
+  <meta name="twitter:image:alt" content="WebPullBook Privacy Policy and Permissions">
+  <link rel="icon" type="image/svg+xml" href="assets/images/icon.svg">
+  <link rel="icon" type="image/png" sizes="128x128" href="assets/images/icon-128.png">
+  <link rel="stylesheet" href="assets/css/styles.css">
+  <script src="assets/js/site.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+
+  <div class="beta-bar" role="region" aria-label="Release status">
+    <div class="container beta-bar-inner">
+      <span class="badge success">No Telemetry • Local Processing</span>
+      <span>The source code of WebPullBook is open and auditable on GitHub.</span>
+      <a href="https://github.com/WiltonGabriel/WebPullBook">View Source Code &rarr;</a>
+    </div>
+  </div>
+
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="brand-link" href="index.html">
+        <img class="brand-logo" src="assets/images/icon.svg" alt="" width="32" height="32">
+        <span>WebPullBook</span>
+      </a>
+
+      <nav class="site-nav" aria-label="Primary navigation">
+        <button id="nav-toggle" class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-menu">
+          <span>Menu</span>
+        </button>
+        <ul id="site-menu" class="nav-list">
+          <li><a href="index.html">Home</a></li>
+          <li><a href="features.html">Features</a></li>
+          <li><a href="installation.html">Installation</a></li>
+          <li><a href="compatibility.html">Compatibility</a></li>
+          <li><a href="faq.html">FAQ</a></li>
+          <li><a href="privacy.html" aria-current="page">Privacy</a></li>
+          <li><a href="contributing.html">Contributing</a></li>
+        </ul>
+      </nav>
+
+      <div class="header-actions">
+        <a class="lang-switch" href="pt/privacy.html" hreflang="pt-BR" lang="pt-BR" aria-label="Mudar idioma para Português Brasileiro">🇧🇷 PT-BR</a>
+        <button id="theme-toggle" class="theme-btn" type="button">Theme: Auto</button>
+        <a class="btn primary sm" data-wpb-download href="https://github.com/WiltonGabriel/WebPullBook/releases/download/v1.4.0/WebPullBook-v1.4.0.zip">Download (.zip)</a>
+      </div>
+    </div>
+  </header>
+
+  <main id="main-content">
+    <section class="page-hero">
+      <div class="container">
+        <span class="badge success">Last Updated: November 20, 2026</span>
+        <h1>Privacy Policy &amp; Permissions Disclosure</h1>
+        <p>This document explains what runs locally in your browser, how network requests to target websites work, what data is stored on your device, and why each Manifest V3 permission is declared.</p>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <div class="callout success">
+          <strong>Summary</strong>
+          <p>WebPullBook <strong>does not collect, transmit, rent, or sell personal data, browsing history, or usage analytics</strong>. The project operates <strong>no backend servers</strong> and includes <strong>no third-party tracking or telemetry scripts</strong>. All content extraction, XHTML sanitization, image processing, and ebook packaging happen locally on your device.</p>
+        </div>
+
+        <div class="grid-2" style="margin-block-start: 2rem;">
+          <article class="card">
+            <h2>1. Local Processing vs. Origin Network Requests</h2>
+            <p>WebPullBook separates third-party data transmission (which does not occur) from user-initiated downloads from origin websites:</p>
+            <ul>
+              <li><strong>Local Processing:</strong> DOM parsing, HTML-to-XHTML sanitization (<code>HtmlSanitizer</code>), Canvas image resizing, and ZIP/EPUB archive compression (<code>CompressionStream</code>) run in your browser's local memory.</li>
+              <li><strong>Direct Requests to User-Chosen Websites:</strong> When you load a series URL, check your saved Library for new chapters, or export an ebook, your browser sends standard HTTP/HTTPS requests directly to the target website (and its image CDNs) to download those chapters and illustrations.</li>
+              <li><strong>No Intermediate Servers:</strong> Requests do not pass through any proxy or server operated by WebPullBook.</li>
+            </ul>
+          </article>
+
+          <article class="card">
+            <h2>2. Browser Sessions, Cookies &amp; Image Fallbacks</h2>
+            <p>WebPullBook does not read, store, or export your passwords, cookies, or authentication tokens:</p>
+            <ul>
+              <li><strong>Standard Browser Session Context:</strong> When fetching chapter pages or images from a target site, the browser's <code>fetch()</code> API uses <code>credentials: 'include'</code> by default so pages already accessible in your current browser session load normally.</li>
+              <li><strong>Anonymous Image Retry:</strong> If an image host or CDN bucket rejects credentialed requests or <code>Referer</code> headers (for example, returning HTTP 401/403 or CORS errors), <code>fetchImageBytes</code> retries the image request with <code>credentials: 'omit'</code> and <code>referrerPolicy: 'no-referrer'</code>.</li>
+              <li><strong>Cover URL Normalization:</strong> When a cover image URL points to a resized WordPress Jetpack proxy (<code>i0.wp.com</code>), <code>toHighResCoverUrl</code> resolves the direct origin image URL to fetch the original cover.</li>
+            </ul>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section alt">
+      <div class="container">
+        <div class="section-header">
+          <h2>3. What Data Is Stored Locally on Your Device</h2>
+          <p>All persistent settings and caches remain inside your local browser profile (never synced via <code>chrome.storage.sync</code>) and can be cleared at any time:</p>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Storage Mechanism</th>
+                <th>Key / Database Name</th>
+                <th>Purpose</th>
+                <th>Retention &amp; User Control</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>chrome.storage.local</code></td>
+                <td><code>wpbOptions</code></td>
+                <td>Saves global UI preferences (language, theme, Reader Profile, typography, output folder template, Safe Mode settings). Per-site CSS selectors are excluded from global options automatically.</td>
+                <td>Kept until you click <strong>Reset All Advanced Options</strong> or uninstall the extension. Can also be exported/imported as a local JSON file.</td>
+              </tr>
+              <tr>
+                <td><code>chrome.storage.local</code></td>
+                <td><code>wpbLibrary</code></td>
+                <td>Stores series you save to your Library (title, author, cover URL, source URL, chapter count, and known chapter URLs) so you can check for new chapters.</td>
+                <td>Kept until you click <strong>Remove</strong> on a Library card or uninstall the extension.</td>
+              </tr>
+              <tr>
+                <td><code>chrome.storage.local</code></td>
+                <td><code>wpbDomainRules</code></td>
+                <td>Stores custom CSS selectors and SPA rendering rules saved for specific domains via <strong>Save for Domain</strong>.</td>
+                <td>Kept until you delete the domain rule chip in Advanced Options.</td>
+              </tr>
+              <tr>
+                <td><code>IndexedDB</code></td>
+                <td><code>WebPullBookCache</code></td>
+                <td>Temporarily caches sanitized chapter XHTML and active download sessions so interrupted downloads can resume without re-fetching chapters. Capped at 64 MB with automatic LRU eviction.</td>
+                <td>Expires after the configured TTL (default: <strong>7 days</strong>; can be set to <strong>Cache disabled</strong> or cleared via <strong>Clear Cache</strong>).</td>
+              </tr>
+              <tr>
+                <td><code>IndexedDB</code></td>
+                <td><code>WebPullBookDirHandles</code></td>
+                <td>Stores the optional local folder permission handle (<code>FileSystemDirectoryHandle</code>) when you choose a custom output folder on your computer.</td>
+                <td>Kept until you click <strong>Use Downloads</strong> or clear browser extension data.</td>
+              </tr>
+              <tr>
+                <td><code>localStorage</code></td>
+                <td><code>wpb-color-scheme</code></td>
+                <td>Caches the selected UI theme token (<code>light</code>, <code>dark</code>, <code>sepia</code>, <code>midnight</code>) to avoid a white flash on workspace load.</td>
+                <td>Cleared when switching back to System theme or uninstalling the extension.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <div class="section-header">
+          <h2>4. Technical Justification of Manifest V3 Permissions</h2>
+          <p>WebPullBook declares the following browser permissions in <code>manifest.json</code>:</p>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Permission</th>
+                <th>Category</th>
+                <th>Technical Justification &amp; Feature</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>tabs</code></td>
+                <td><code>permissions</code></td>
+                <td>Reads the active tab's URL when opening the workspace from the toolbar icon, lists open browser tabs in the <strong>Merge Tabs</strong> modal, and manages the single reusable background tab (<code>TabRenderPool</code>) when rendering JavaScript/SPA pages.</td>
+              </tr>
+              <tr>
+                <td><code>scripting</code></td>
+                <td><code>permissions</code></td>
+                <td>Captures the already-rendered live DOM from the originating tab, extracts hydrated HTML in SPA/JavaScript Tab Mode, and runs the interactive <strong>🎯 Pick</strong> CSS selector overlay when triggered by the user.</td>
+              </tr>
+              <tr>
+                <td><code>storage</code></td>
+                <td><code>permissions</code></td>
+                <td>Persists user preferences (<code>wpbOptions</code>), tracked Library series (<code>wpbLibrary</code>), and saved per-domain CSS rules (<code>wpbDomainRules</code>) locally in <code>chrome.storage.local</code>.</td>
+              </tr>
+              <tr>
+                <td><code>downloads</code></td>
+                <td><code>permissions</code></td>
+                <td>Saves generated <code>.epub</code>, <code>.html</code>, <code>.md</code>, <code>.txt</code>, and diagnostic log files into your computer's Downloads folder (including custom relative subfolders like <code>Downloads/WebPullBook/&lt;Title&gt;/</code>).</td>
+              </tr>
+              <tr>
+                <td><code>declarativeNetRequestWithHostAccess</code></td>
+                <td><code>permissions</code></td>
+                <td>Used for temporary session-scoped rules: on Firefox, rule ID <code>1</code> removes the <code>Origin: moz-extension://</code> header so cross-origin chapter/image fetches are not rejected by server CORS checks; session rules <code>100..119</code> attach standard navigation headers when required by protected hosts.</td>
+              </tr>
+              <tr>
+                <td><code>https://*/*</code> &amp; <code>http://*/*</code></td>
+                <td><code>host_permissions</code></td>
+                <td>WebPullBook is a general-purpose Web-to-EPUB converter meant to work on any website, blog, documentation site, or local archive selected by the user. Because target domains are chosen by the user at runtime, HTTP/HTTPS host access is required to fetch chapter HTML and illustrations on demand.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="callout" style="margin-block-start: 2rem;">
+          <strong>Contact &amp; Security Reporting</strong>
+          <p>For privacy questions, open an issue on <a href="https://github.com/WiltonGabriel/WebPullBook/issues">GitHub Issues</a>. To report a security vulnerability (such as an HTML sanitization bypass or CSP issue), use <a href="https://github.com/WiltonGabriel/WebPullBook/security/advisories/new">GitHub Private Security Advisories</a> as documented in <a href="https://github.com/WiltonGabriel/WebPullBook/blob/main/.github/SECURITY.md">SECURITY.md</a>.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-col">
+          <a class="brand-link" href="index.html" style="margin-block-end: 0.5rem;">
+            <img class="brand-logo" src="assets/images/icon.svg" alt="" width="28" height="28">
+            <span>WebPullBook</span>
+          </a>
+          <p>Open-source Manifest V3 browser extension for extracting web novels, serialized fiction, articles, and open tabs into EPUB 2/3, HTML, Markdown, and TXT ebooks.</p>
+        </div>
+
+        <div class="footer-col">
+          <h3>Documentation</h3>
+          <ul>
+            <li><a href="features.html">Features &amp; Profiles</a></li>
+            <li><a href="installation.html">Beta Installation</a></li>
+            <li><a href="compatibility.html">Compatibility Matrix</a></li>
+            <li><a href="faq.html">FAQ</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h3>Project &amp; Community</h3>
+          <ul>
+            <li><a href="contributing.html">Contributing Guide</a></li>
+            <li><a href="privacy.html" aria-current="page">Privacy &amp; Permissions</a></li>
+            <li><a href="https://github.com/WiltonGabriel/WebPullBook">GitHub Repository</a></li>
+            <li><a href="https://github.com/WiltonGabriel/WebPullBook/releases">Official Releases (Beta)</a></li>
+            <li><a href="https://github.com/WiltonGabriel/WebPullBook/issues">Issue Tracker</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h3>Languages</h3>
+          <ul>
+            <li><a href="privacy.html" aria-current="page">🇺🇸 English (Default)</a></li>
+            <li><a href="pt/privacy.html" hreflang="pt-BR" lang="pt-BR">🇧🇷 Português (Brasil)</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <span>Released under the <a href="https://github.com/WiltonGabriel/WebPullBook/blob/main/LICENSE">MIT License</a> • <span data-wpb-version data-wpb-version-prefix="Version ">Version v1.5.0-beta</span></span>
+        <span>Zero runtime dependencies • Local browser execution</span>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>

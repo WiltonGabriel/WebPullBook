@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <title>Features &amp; Reader Profiles — WebPullBook Web-to-EPUB Extension</title>
+  <meta name="description" content="Technical overview of WebPullBook features: active-tab DOM capture, SPA Tab Mode, Kindle and Kobo Reader Profiles, chapter preview, default cover fallback, image deduplication, Safe Mode, and Library.">
+  <link rel="canonical" href="https://wiltongabriel.github.io/WebPullBook/features.html">
+  <link rel="alternate" hreflang="en" href="https://wiltongabriel.github.io/WebPullBook/features.html">
+  <link rel="alternate" hreflang="pt-BR" href="https://wiltongabriel.github.io/WebPullBook/pt/features.html">
+  <link rel="alternate" hreflang="x-default" href="https://wiltongabriel.github.io/WebPullBook/features.html">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="WebPullBook">
+  <meta property="og:title" content="Features &amp; Reader Profiles — WebPullBook Web-to-EPUB Extension">
+  <meta property="og:description" content="DOM extraction, SPA rendering, Kindle &amp; Kobo Reader Profiles, chapter preview &amp; edit, Merge Open Tabs, image deduplication, Safe Mode, and Library tracking.">
+  <meta property="og:url" content="https://wiltongabriel.github.io/WebPullBook/features.html">
+  <meta property="og:image" content="https://wiltongabriel.github.io/WebPullBook/assets/images/social-preview.png">
+  <meta property="og:image:width" content="1280">
+  <meta property="og:image:height" content="640">
+  <meta property="og:image:alt" content="WebPullBook features and workspace preview">
+  <meta property="og:locale" content="en_US">
+  <meta property="og:locale:alternate" content="pt_BR">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Features &amp; Reader Profiles — WebPullBook">
+  <meta name="twitter:description" content="How WebPullBook converts web novels, serialized fiction, and open tabs into EPUB 2/3, HTML, Markdown, and TXT ebooks.">
+  <meta name="twitter:image" content="https://wiltongabriel.github.io/WebPullBook/assets/images/social-preview.png">
+  <meta name="twitter:image:alt" content="WebPullBook features and workspace preview">
+  <link rel="icon" type="image/svg+xml" href="assets/images/icon.svg">
+  <link rel="icon" type="image/png" sizes="128x128" href="assets/images/icon-128.png">
+  <link rel="stylesheet" href="assets/css/styles.css">
+  <script src="assets/js/site.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+
+  <div class="beta-bar" role="region" aria-label="Release status">
+    <div class="container beta-bar-inner">
+      <span class="badge accent" data-wpb-version data-wpb-version-prefix="Beta ">Beta v1.5.0-beta</span>
+      <span>Available via manual installation from GitHub Releases during Beta.</span>
+      <a href="installation.html">How to Install &rarr;</a>
+    </div>
+  </div>
+
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="brand-link" href="index.html">
+        <img class="brand-logo" src="assets/images/icon.svg" alt="" width="32" height="32">
+        <span>WebPullBook</span>
+      </a>
+
+      <nav class="site-nav" aria-label="Primary navigation">
+        <button id="nav-toggle" class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-menu">
+          <span>Menu</span>
+        </button>
+        <ul id="site-menu" class="nav-list">
+          <li><a href="index.html">Home</a></li>
+          <li><a href="features.html" aria-current="page">Features</a></li>
+          <li><a href="installation.html">Installation</a></li>
+          <li><a href="compatibility.html">Compatibility</a></li>
+          <li><a href="faq.html">FAQ</a></li>
+          <li><a href="privacy.html">Privacy</a></li>
+          <li><a href="contributing.html">Contributing</a></li>
+        </ul>
+      </nav>
+
+      <div class="header-actions">
+        <a class="lang-switch" href="pt/features.html" hreflang="pt-BR" lang="pt-BR" aria-label="Mudar idioma para Português Brasileiro">🇧🇷 PT-BR</a>
+        <button id="theme-toggle" class="theme-btn" type="button">Theme: Auto</button>
+        <a class="btn primary sm" data-wpb-download href="https://github.com/WiltonGabriel/WebPullBook/releases/download/v1.4.0/WebPullBook-v1.4.0.zip">Download (.zip)</a>
+      </div>
+    </div>
+  </header>
+
+  <main id="main-content">
+    <section class="page-hero">
+      <div class="container">
+        <span class="badge accent">Technical Overview</span>
+        <h1>Features &amp; Extraction Architecture</h1>
+        <p>An overview of how WebPullBook extracts multi-chapter web content, handles dynamic pages, formats EPUB 2 and EPUB 3 archives, and manages local caching.</p>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <div class="section-header">
+          <h2>1. Extraction &amp; Dynamic Page Handling</h2>
+          <p>WebPullBook combines structural DOM scoring, heuristic discovery, and browser tab capture for both static HTML pages and client-rendered JavaScript sites.</p>
+        </div>
+
+        <div class="grid-3">
+          <article class="card">
+            <h3>Active-Tab DOM Capture</h3>
+            <p>Clicking the toolbar icon reads the already-rendered DOM from the active tab (<code>sourceTabId</code>), avoiding an extra cold HTTP fetch on pages you already have open.</p>
+          </article>
+
+          <article class="card">
+            <h3>Generic Heuristic Extractor</h3>
+            <p>Scores link clusters and prose density (using the <em>"Innermost Node Wins"</em> rule), supports <code>&lt;br&gt;</code>-separated paragraphs, and extracts JSON-LD <code>@graph</code>, Open Graph, and volume headings on generic HTML sites.</p>
+          </article>
+
+          <article class="card">
+            <h3>SPA / JavaScript Tab Mode</h3>
+            <p>Detects unhydrated SPA shells and renders chapters in a single reusable background tab (<code>TabRenderPool</code>), waiting for DOM mutations to settle and pausing if an anti-bot challenge appears.</p>
+          </article>
+
+          <article class="card">
+            <h3>Visual Selector Picker (🎯 Pick)</h3>
+            <p>In Advanced Options, click <strong>🎯 Pick</strong> to select the chapter list, chapter body, or excluded elements directly on the page, or run the automatic selector assistant.</p>
+          </article>
+
+          <article class="card">
+            <h3>Per-Domain Selector Isolation</h3>
+            <p>Custom CSS selectors and regex filters stay restricted to the current site session or saved <strong>Domain Rules</strong>, with automatic fallback to the native adapter if a custom list selector matches zero chapters.</p>
+          </article>
+
+          <article class="card">
+            <h3>Sequential "Next Chapter" Crawler</h3>
+            <p>When a site does not have an index page, WebPullBook can start from a chapter URL and follow sequential <em>"Next Chapter"</em> links automatically.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section alt">
+      <div class="container">
+        <div class="section-header">
+          <h2>2. Reader Profiles (Kindle, Kobo &amp; Mobile)</h2>
+          <p>Reader Profiles are fixed presets available in the <strong>Series</strong> tab and in <strong>Advanced Options</strong>. Picking a profile configures EPUB version, pop-up footnotes, cover JPEG conversion, image compression, resolution, and typography at once.</p>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Reader Profile</th>
+                <th>EPUB Standard</th>
+                <th>Pop-up Footnotes</th>
+                <th>Cover JPEG</th>
+                <th>Image Optimization</th>
+                <th>Max Resolution</th>
+                <th>Recommended Target</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Modern Default</strong> (<code>modern</code>)</td>
+                <td>EPUB 3</td>
+                <td>Yes</td>
+                <td>Yes</td>
+                <td>Original (uncompressed)</td>
+                <td>Original</td>
+                <td>Phones, tablets, Apple Books, Thorium, Calibre Viewer</td>
+              </tr>
+              <tr>
+                <td><strong>Kobo &amp; E-Readers</strong> (<code>kobo</code>)</td>
+                <td>EPUB 3</td>
+                <td>Yes</td>
+                <td>Yes</td>
+                <td>Compressed JPEG</td>
+                <td>1080px</td>
+                <td>Kobo (including Clara/Libra Colour), Tolino, PocketBook</td>
+              </tr>
+              <tr>
+                <td><strong>Kindle (Modern)</strong> (<code>kindle-modern</code>)</td>
+                <td>EPUB 3</td>
+                <td>Yes</td>
+                <td>Yes</td>
+                <td>Compressed JPEG</td>
+                <td>1200px</td>
+                <td>Calibre USB transfer (KFX/AZW3), Kindle Colorsoft, modern apps</td>
+              </tr>
+              <tr>
+                <td><strong>Kindle (Legacy)</strong> (<code>kindle</code>)</td>
+                <td>EPUB 2</td>
+                <td>No</td>
+                <td>Yes</td>
+                <td>Compressed JPEG</td>
+                <td>1200px</td>
+                <td>Amazon <em>Send to Kindle</em> (email, web, app) for conversion compatibility</td>
+              </tr>
+              <tr>
+                <td><strong>Text Only</strong> (<code>textonly</code>)</td>
+                <td>EPUB 3</td>
+                <td>Yes</td>
+                <td>Yes</td>
+                <td>Images skipped</td>
+                <td>&mdash;</td>
+                <td>Text-only books without inline illustrations</td>
+              </tr>
+              <tr>
+                <td><strong>Legacy Default</strong> (<code>legacy</code>)</td>
+                <td>EPUB 2</td>
+                <td>No</td>
+                <td>Yes</td>
+                <td>Compressed JPEG</td>
+                <td>1080px</td>
+                <td>Older Sony Reader, early Nook, CoolReader, legacy firmwares</td>
+              </tr>
+              <tr>
+                <td><strong>Custom</strong> (<code>custom</code>)</td>
+                <td>User-defined</td>
+                <td>User-defined</td>
+                <td>User-defined</td>
+                <td>User-defined</td>
+                <td>User-defined</td>
+                <td>Activated automatically whenever any Advanced Option is edited</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <div class="section-header">
+          <h2>3. Book Structure, Curation &amp; Image Pipeline</h2>
+          <p>Options for organizing volumes, reviewing chapter text before packaging, and handling cover and inline images.</p>
+        </div>
+
+        <div class="grid-2">
+          <article class="card">
+            <h3>EPUB Structure &amp; Default Cover</h3>
+            <ul>
+              <li><strong>Cover Page &amp; Default Cover Fallback (<code>cover.xhtml</code>):</strong> Uses the detected book cover, a local uploaded image, or automatically generates a default cover with the WebPullBook logo emblem, title, and author when no cover is found on the page.</li>
+              <li><strong>Information Page (<code>info.xhtml</code>):</strong> Optional front page displaying title, author, language, chapter count, genre tags, source link, and synopsis.</li>
+              <li><strong>Start-of-Book Table of Contents (<code>nav.xhtml</code> / <code>toc.xhtml</code>):</strong> Placed at the beginning of the book when enabled, supporting nested volumes.</li>
+              <li><strong>End-of-Book Page (<code>end.xhtml</code>):</strong> Optional closing page with a custom message, book summary, source link, and generation date.</li>
+              <li><strong>Pop-up Footnotes &amp; Internal Links:</strong> Intra-chapter footnote anchors convert to EPUB 3 pop-up footnotes, and links between chapters in the same book rewrite to internal EPUB file paths.</li>
+            </ul>
+          </article>
+
+          <article class="card">
+            <h3>Chapter Curation &amp; Image Processing</h3>
+            <ul>
+              <li><strong>Preview &amp; Quick Edit:</strong> Preview any chapter and edit its title or paragraph text inline before exporting.</li>
+              <li><strong>Merge Chapters &amp; Merge Open Tabs:</strong> Combine checked chapters into one, or capture open browser tabs into a single anthology or separate volume files.</li>
+              <li><strong>Volume &amp; Range Selection:</strong> Toggle all volumes at once, or select individual items and ranges with <code>Ctrl+Click</code> and <code>Shift+Click</code> on volume chips and chapter rows.</li>
+              <li><strong>Magic-Byte MIME Detection &amp; Deduplication:</strong> Verifies binary image headers (PNG, JPEG, GIF, WebP, AVIF, BMP, SVG), drops HTML error pages returned as image URLs, retries HTTP failures anonymously, preserves animated GIF/APNG/WebP, and deduplicates identical images by content hash.</li>
+            </ul>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section alt">
+      <div class="container">
+        <div class="section-header">
+          <h2>4. Safe Mode, Local Cache &amp; Library</h2>
+          <p>Tools for pacing requests on rate-limited servers, resuming interrupted downloads, and tracking ongoing works.</p>
+        </div>
+
+        <div class="grid-3">
+          <article class="card">
+            <h3>Adaptive Safe Mode &amp; Manual Latency</h3>
+            <p>Toggle <strong>Safe Mode</strong> during an export to use 1x sequential requests, dynamic latency backoff, batch rest pauses, and <code>Retry-After</code> headers—or set a manual delay between chapters (<code>0–30,000 ms</code>) in Advanced Options.</p>
+          </article>
+
+          <article class="card">
+            <h3>7-Day IndexedDB Cache</h3>
+            <p>Downloaded chapters are saved in local <code>IndexedDB</code> (up to 64 MB, configurable TTL from 1 to 14 days) so interrupted downloads can resume without re-fetching completed chapters.</p>
+          </article>
+
+          <article class="card">
+            <h3>Library &amp; Batch Updates</h3>
+            <p>Save series to your local Library (viewed unified or grouped by site), check for newly published chapters, and export unread chapters across tracked works with <strong>Download Updates</strong>.</p>
+          </article>
+        </div>
+
+        <div class="screenshot-grid" style="margin-block-start: 2rem;">
+          <figure class="screenshot-card">
+            <img src="assets/screenshots/workspace-preview-edit.png" alt="WebPullBook chapter preview and inline editing modal" width="1280" height="800" loading="lazy">
+            <figcaption><strong>Chapter Preview &amp; Inline Edit:</strong> review sanitized XHTML and adjust titles or paragraphs before packing.</figcaption>
+          </figure>
+
+          <figure class="screenshot-card">
+            <img src="assets/screenshots/workspace-library.png" alt="WebPullBook Library and IndexedDB cache sessions view" width="1280" height="800" loading="lazy">
+            <figcaption><strong>Library &amp; Local Cache:</strong> resume cached sessions and check for new chapters across saved series.</figcaption>
+          </figure>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-col">
+          <a class="brand-link" href="index.html" style="margin-block-end: 0.5rem;">
+            <img class="brand-logo" src="assets/images/icon.svg" alt="" width="28" height="28">
+            <span>WebPullBook</span>
+          </a>
+          <p>Open-source Manifest V3 browser extension for extracting web novels, serialized fiction, articles, and open tabs into EPUB 2/3, HTML, Markdown, and TXT ebooks.</p>
+        </div>
+
+        <div class="footer-col">
+          <h3>Documentation</h3>
+          <ul>
+            <li><a href="features.html" aria-current="page">Features &amp; Profiles</a></li>
+            <li><a href="installation.html">Beta Installation</a></li>
+            <li><a href="compatibility.html">Compatibility Matrix</a></li>
+            <li><a href="faq.html">FAQ</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h3>Project &amp; Community</h3>
+          <ul>
+            <li><a href="contributing.html">Contributing Guide</a></li>
+            <li><a href="privacy.html">Privacy &amp; Permissions</a></li>
+            <li><a href="https://github.com/WiltonGabriel/WebPullBook">GitHub Repository</a></li>
+            <li><a href="https://github.com/WiltonGabriel/WebPullBook/releases">Official Releases (Beta)</a></li>
+            <li><a href="https://github.com/WiltonGabriel/WebPullBook/issues">Issue Tracker</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h3>Languages</h3>
+          <ul>
+            <li><a href="features.html" aria-current="page">🇺🇸 English (Default)</a></li>
+            <li><a href="pt/features.html" hreflang="pt-BR" lang="pt-BR">🇧🇷 Português (Brasil)</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <span>Released under the <a href="https://github.com/WiltonGabriel/WebPullBook/blob/main/LICENSE">MIT License</a> • <span data-wpb-version data-wpb-version-prefix="Version ">Version v1.5.0-beta</span></span>
+        <span>Zero runtime dependencies • Local browser execution</span>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>

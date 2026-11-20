@@ -19,6 +19,7 @@ import {
   isSpaDomainCircuitOpen,
   sanitizePathSegment
 } from '../src/core/parser-engine.js';
+import { applyNavigationHeaderRules, clearNavigationHeaderRules } from '../src/core/dnr-rules.js';
 import {
   ParserRegistry,
   loadSeriesWithParser,
@@ -1364,4 +1365,37 @@ test('BaseParser falls back to native adapter when stale customListSelector retu
   partialDoc._wpbFromSourceTab = true;
   const recovered = await wpLightNovelParser.loadSeries(seriesUrl, {}, undefined, partialDoc);
   assert.equal(recovered.chapters.length, 2, 'Empty sourceTab DOM should recover via direct HTTP fetch');
+});
+
+test('Firefox moz-extension DNR rule ID 1 is preserved when applying and clearing navigation header rules (IDs 100..119)', async () => {
+  let sessionRules = [
+    {
+      id: 1,
+      priority: 1,
+      action: { type: 'modifyHeaders', requestHeaders: [{ header: 'Origin', operation: 'remove' }] }
+    }
+  ];
+  globalThis.chrome = {
+    runtime: {
+      getURL: (p = '') => `moz-extension://8f3b2c1a-4d5e-6f7a-8b9c-0d1e2f3a4b5c/${p}`
+    },
+    declarativeNetRequest: {
+      getSessionRules: async () => [...sessionRules],
+      updateSessionRules: async ({ removeRuleIds = [], addRules = [] }) => {
+        sessionRules = sessionRules.filter((r) => !removeRuleIds.includes(r.id)).concat(addRules);
+      }
+    }
+  };
+
+  const applied = await applyNavigationHeaderRules(['fiction.example.org'], 'https://fiction.example.org/toc');
+  assert.equal(applied, true);
+  assert.ok(sessionRules.some((r) => r.id === 1), 'Firefox Origin-removal rule ID 1 must remain intact');
+  assert.ok(sessionRules.some((r) => r.id === 100), 'Navigation rule ID 100 must be added');
+
+  await clearNavigationHeaderRules();
+  assert.deepEqual(
+    sessionRules.map((r) => r.id),
+    [1],
+    'Clearing navigation rules must remove IDs 100..119 while keeping Firefox rule ID 1'
+  );
 });

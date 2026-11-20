@@ -10,7 +10,7 @@ Fixes #(issue)
 - [ ] New parser adapter (`src/parsers/`)
 - [ ] New exporter or format improvement (`src/exporters/`)
 - [ ] UI / i18n / Library / Accessibility improvement (`src/workspace/`)
-- [ ] Documentation update (`README`, `docs/`, `CONTRIBUTING.md`)
+- [ ] Documentation or website update (`README`, `docs/`, `AGENTS.md`, `CONTRIBUTING.md`, `website/`)
 
 ## Checklist
 

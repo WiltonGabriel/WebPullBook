@@ -6,6 +6,7 @@ import { appendLog, hideBanner, showBanner } from './logger.js';
 import { readOptionsFromUi, saveOptions, syncMetadataToUi } from './options-storage.js';
 import { applyDomainRuleForUrl } from './domain-rules-ui.js';
 import { getVolumeGroups, hydrateChaptersFromCache, populateRangeSelects, renderAllChapterViews } from './chapters-ui.js';
+import { generateDefaultCoverDataUrl } from './cover-ui.js';
 
 export function setLoadingOverlay(visible, detailText = '') {
   const overlay = $('loading-overlay');
@@ -139,8 +140,18 @@ export async function handleLoadSeries(url, { sourceTabId = null } = {}) {
       }
     }
 
+    const resolvedCoverUrl =
+      series.coverUrl ||
+      series.coverThumbUrl ||
+      generateDefaultCoverDataUrl({ title: series.title, author: series.author });
+    if (!series.coverUrl && !series.coverThumbUrl && resolvedCoverUrl) {
+      appendLog('[IMG] Capa original não detectada na página — capa padrão aplicada automaticamente.', 'debug');
+    }
+
     state.metadata = {
       ...series,
+      coverUrl: resolvedCoverUrl,
+      coverThumbUrl: series.coverThumbUrl || resolvedCoverUrl,
       filename: sanitizeFilename(series.title, true)
     };
     state.chapters = await hydrateChaptersFromCache(series.chapters);

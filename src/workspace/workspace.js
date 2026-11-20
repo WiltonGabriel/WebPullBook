@@ -38,7 +38,11 @@ import {
   renderVolumeChips,
   toggleAllVolumesSelection
 } from './chapters-ui.js';
-import { handleGenerateCover, handleUploadCoverFile } from './cover-ui.js';
+import {
+  generateDefaultCoverDataUrl,
+  handleGenerateCover,
+  handleUploadCoverFile
+} from './cover-ui.js';
 import {
   applyMergeSelectedChapters,
   handleSavePreviewEdit,
@@ -263,6 +267,21 @@ function wireEvents() {
 
   $('meta-cover-url').addEventListener('input', updateCoverPreview);
   $('meta-cover-url').addEventListener('change', updateCoverPreview);
+  $('cover-preview').addEventListener('error', () => {
+    const failedUrl = $('meta-cover-url').value.trim();
+    if (!failedUrl || /^data:/i.test(failedUrl)) return;
+    const fallbackCover = generateDefaultCoverDataUrl({
+      title: state.metadata.title || $('meta-title').value.trim(),
+      author: state.metadata.author || $('meta-author').value.trim()
+    });
+    if (fallbackCover) {
+      $('meta-cover-url').value = fallbackCover;
+      state.metadata.coverUrl = fallbackCover;
+      state.metadata.coverThumbUrl = fallbackCover;
+      updateCoverPreview();
+      appendLog(`[IMG] Falha ao carregar capa remota (${failedUrl}) — capa padrão aplicada automaticamente.`, 'debug');
+    }
+  });
   $('btn-upload-cover').addEventListener('click', () => $('input-upload-cover').click());
   $('input-upload-cover').addEventListener('change', async (e) => {
     const file = e.target.files?.[0];

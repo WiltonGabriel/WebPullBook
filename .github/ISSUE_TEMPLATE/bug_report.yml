@@ -18,7 +18,7 @@ body:
     id: browser
     attributes:
       label: Navegador e Versão / Browser & Version
-      placeholder: "Ex.: Google Chrome 130 / Edge / Brave"
+      placeholder: "Ex.: Google Chrome 130 / Edge / Brave / Firefox 128+"
     validations:
       required: true
   - type: dropdown

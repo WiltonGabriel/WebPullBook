@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <title>Contributing to WebPullBook — Open Source Developer &amp; Community Guide</title>
+  <meta name="description" content="How to contribute to WebPullBook: test website compatibility, report bugs with diagnostic logs, build structural parser adapters, run the zero-dependency test suite, and use AGENTS.md.">
+  <link rel="canonical" href="https://wiltongabriel.github.io/WebPullBook/contributing.html">
+  <link rel="alternate" hreflang="en" href="https://wiltongabriel.github.io/WebPullBook/contributing.html">
+  <link rel="alternate" hreflang="pt-BR" href="https://wiltongabriel.github.io/WebPullBook/pt/contributing.html">
+  <link rel="alternate" hreflang="x-default" href="https://wiltongabriel.github.io/WebPullBook/contributing.html">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="WebPullBook">
+  <meta property="og:title" content="Contributing to WebPullBook — Open Source Guide">
+  <meta property="og:description" content="Contribute compatibility tests, bug reports, parser adapters, translations, and automated tests to WebPullBook.">
+  <meta property="og:url" content="https://wiltongabriel.github.io/WebPullBook/contributing.html">
+  <meta property="og:image" content="https://wiltongabriel.github.io/WebPullBook/assets/images/social-preview.png">
+  <meta property="og:image:width" content="1280">
+  <meta property="og:image:height" content="640">
+  <meta property="og:image:alt" content="Contributing to WebPullBook">
+  <meta property="og:locale" content="en_US">
+  <meta property="og:locale:alternate" content="pt_BR">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Contributing to WebPullBook — Open Source Guide">
+  <meta name="twitter:description" content="How to contribute code, site compatibility reports, tests, and documentation to WebPullBook.">
+  <meta name="twitter:image" content="https://wiltongabriel.github.io/WebPullBook/assets/images/social-preview.png">
+  <meta name="twitter:image:alt" content="Contributing to WebPullBook">
+  <link rel="icon" type="image/svg+xml" href="assets/images/icon.svg">
+  <link rel="icon" type="image/png" sizes="128x128" href="assets/images/icon-128.png">
+  <link rel="stylesheet" href="assets/css/styles.css">
+  <script src="assets/js/site.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+
+  <div class="beta-bar" role="region" aria-label="Release status">
+    <div class="container beta-bar-inner">
+      <span class="badge accent">Open Source • MIT License</span>
+      <span>Contributions to code, tests, and compatibility documentation are welcome.</span>
+      <a href="https://github.com/WiltonGabriel/WebPullBook">GitHub Repository &rarr;</a>
+    </div>
+  </div>
+
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="brand-link" href="index.html">
+        <img class="brand-logo" src="assets/images/icon.svg" alt="" width="32" height="32">
+        <span>WebPullBook</span>
+      </a>
+
+      <nav class="site-nav" aria-label="Primary navigation">
+        <button id="nav-toggle" class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-menu">
+          <span>Menu</span>
+        </button>
+        <ul id="site-menu" class="nav-list">
+          <li><a href="index.html">Home</a></li>
+          <li><a href="features.html">Features</a></li>
+          <li><a href="installation.html">Installation</a></li>
+          <li><a href="compatibility.html">Compatibility</a></li>
+          <li><a href="faq.html">FAQ</a></li>
+          <li><a href="privacy.html">Privacy</a></li>
+          <li><a href="contributing.html" aria-current="page">Contributing</a></li>
+        </ul>
+      </nav>
+
+      <div class="header-actions">
+        <a class="lang-switch" href="pt/contributing.html" hreflang="pt-BR" lang="pt-BR" aria-label="Mudar idioma para Português Brasileiro">🇧🇷 PT-BR</a>
+        <button id="theme-toggle" class="theme-btn" type="button">Theme: Auto</button>
+        <a class="btn primary sm" data-wpb-download href="https://github.com/WiltonGabriel/WebPullBook/releases/download/v1.4.0/WebPullBook-v1.4.0.zip">Download (.zip)</a>
+      </div>
+    </div>
+  </header>
+
+  <main id="main-content">
+    <section class="page-hero">
+      <div class="container">
+        <span class="badge accent">Community &amp; Engineering</span>
+        <h1>Contributing to WebPullBook</h1>
+        <p>WebPullBook uses native ES modules with no build step and no runtime dependencies, so you can load the repository folder directly in your browser and run unit checks with standard Node.js.</p>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <div class="section-header">
+          <h2>Ways to Contribute</h2>
+          <p>Both code and non-code contributions help maintain the project.</p>
+        </div>
+
+        <div class="grid-3">
+          <article class="card">
+            <h3>1. Test Websites &amp; Compatibility</h3>
+            <p>Test WebPullBook on web novel platforms, blogs, or documentation sites and open a Pull Request updating <a href="https://github.com/WiltonGabriel/WebPullBook/blob/main/docs/COMPATIBILITY.md">docs/COMPATIBILITY.md</a> (following the 4-tier classification and listing only site names, never URLs).</p>
+          </article>
+
+          <article class="card">
+            <h3>2. Report Bugs with Execution Logs</h3>
+            <p>If an extraction or EPUB export fails, open the <strong>Logs</strong> tab in WebPullBook, click <strong>Download Log</strong>, and attach the file to a <a href="https://github.com/WiltonGabriel/WebPullBook/issues">GitHub Issue</a> using the Bug Report template.</p>
+          </article>
+
+          <article class="card">
+            <h3>3. Request New Site Layout Support</h3>
+            <p>If a recurring CMS or theme cannot be extracted via generic heuristics, open a <em>New Site Layout / Adapter Support</em> issue describing the DOM selectors for the chapter list, chapter body, and volumes.</p>
+          </article>
+
+          <article class="card">
+            <h3>4. Improve the Generic Extractor</h3>
+            <p>Following the <strong>General Compatibility First</strong> approach, improvements to <code>BaseParser</code>, <code>GenericHtmlParser</code>, or <code>HtmlSanitizer</code> are preferred over site-specific rules whenever a pattern is shared across sites.</p>
+          </article>
+
+          <article class="card">
+            <h3>5. Build Structural Parser Adapters</h3>
+            <p>When a platform uses custom paginated JSON APIs or non-standard DOM structures, implement a subclass of <code>BaseParser</code> under <code>src/parsers/</code> with anonymized HTML snapshot fixtures.</p>
+          </article>
+
+          <article class="card">
+            <h3>6. Cross-Browser &amp; E-Reader Testing</h3>
+            <p>Validate generated EPUB 2 and EPUB 3 files on Kindle, Kobo, PocketBook, Tolino, and mobile reading apps, or test the extension on Firefox 128+, Edge, and Brave.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section alt">
+      <div class="container">
+        <div class="section-header">
+          <h2>Local Development &amp; Testing</h2>
+          <p>Linting and unit/snapshot tests run on the Node.js 22+ standard library without requiring <code>npm install</code>. Only the Chromium browser E2E test uses Playwright.</p>
+        </div>
+
+        <figure>
+          <figcaption id="dev-commands-caption">Verification commands:</figcaption>
+          <pre role="region" aria-labelledby="dev-commands-caption" tabindex="0"><code># 1. Static lint, JS syntax, MV3 CSP, Markdown links, i18n parity (410 keys), and website checks
+npm run lint
+
+# 2. Unit, sanitizer, ZIP, cache, exporter, and parser fixture snapshot tests (56 tests)
+npm test
+
+# 3. Run both lint and unit tests together
+npm run check
+
+# 4. Validate generated EPUB 2 &amp; EPUB 3 files with W3C EPUBCheck (requires Java 21+ &amp; EPUBCheck)
+REQUIRE_EPUBCHECK=1 npm run test:epubcheck
+
+# 5. End-to-End Chromium extension test (requires Playwright Chromium)
+npm install
+npx playwright install chromium
+npm run test:e2e</code></pre>
+        </figure>
+
+        <div class="grid-2" style="margin-block-start: 2rem;">
+          <article class="card">
+            <h3>Developer Documentation (<a href="https://github.com/WiltonGabriel/WebPullBook/blob/main/CONTRIBUTING.md">CONTRIBUTING.md</a>)</h3>
+            <p>See the contributor guide in the repository for instructions on creating a <code>BaseParser</code> subclass, adding anonymized HTML fixtures under <code>tests/fixtures/</code>, and running the pre-PR checklist.</p>
+          </article>
+
+          <article class="card">
+            <h3>AI Coding Agent Instructions (<a href="https://github.com/WiltonGabriel/WebPullBook/blob/main/AGENTS.md">AGENTS.md</a>)</h3>
+            <p>The repository includes an <code>AGENTS.md</code> file for AI coding tools (Codex, Cursor, Claude Code, Antigravity, Copilot), documenting module responsibilities, SRP boundaries, MV3 CSP rules, and verification steps.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-col">
+          <a class="brand-link" href="index.html" style="margin-block-end: 0.5rem;">
+            <img class="brand-logo" src="assets/images/icon.svg" alt="" width="28" height="28">
+            <span>WebPullBook</span>
+          </a>
+          <p>Open-source Manifest V3 browser extension for extracting web novels, serialized fiction, articles, and open tabs into EPUB 2/3, HTML, Markdown, and TXT ebooks.</p>
+        </div>
+
+        <div class="footer-col">
+          <h3>Documentation</h3>
+          <ul>
+            <li><a href="features.html">Features &amp; Profiles</a></li>
+            <li><a href="installation.html">Beta Installation</a></li>
+            <li><a href="compatibility.html">Compatibility Matrix</a></li>
+            <li><a href="faq.html">FAQ</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h3>Project &amp; Community</h3>
+          <ul>
+            <li><a href="contributing.html" aria-current="page">Contributing Guide</a></li>
+            <li><a href="privacy.html">Privacy &amp; Permissions</a></li>
+            <li><a href="https://github.com/WiltonGabriel/WebPullBook">GitHub Repository</a></li>
+            <li><a href="https://github.com/WiltonGabriel/WebPullBook/releases">Official Releases (Beta)</a></li>
+            <li><a href="https://github.com/WiltonGabriel/WebPullBook/issues">Issue Tracker</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h3>Languages</h3>
+          <ul>
+            <li><a href="contributing.html" aria-current="page">🇺🇸 English (Default)</a></li>
+            <li><a href="pt/contributing.html" hreflang="pt-BR" lang="pt-BR">🇧🇷 Português (Brasil)</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <span>Released under the <a href="https://github.com/WiltonGabriel/WebPullBook/blob/main/LICENSE">MIT License</a> • <span data-wpb-version data-wpb-version-prefix="Version ">Version v1.5.0-beta</span></span>
+        <span>Zero runtime dependencies • Local browser execution</span>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>

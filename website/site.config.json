@@ -1,0 +1,63 @@
+{
+  "siteName": "WebPullBook",
+  "version": "1.5.0-beta",
+  "baseUrl": "https://wiltongabriel.github.io/WebPullBook",
+  "repositoryUrl": "https://github.com/WiltonGabriel/WebPullBook",
+  "releasesUrl": "https://github.com/WiltonGabriel/WebPullBook/releases",
+  "releasesApiUrl": "https://api.github.com/repos/WiltonGabriel/WebPullBook/releases?per_page=1",
+  "issuesUrl": "https://github.com/WiltonGabriel/WebPullBook/issues",
+  "socialPreviewImage": "https://wiltongabriel.github.io/WebPullBook/assets/images/social-preview.png",
+  "defaultLocale": "en",
+  "locales": ["en", "pt-BR"],
+  "pages": [
+    {
+      "id": "home",
+      "en": "/",
+      "pt": "/pt/",
+      "enFile": "index.html",
+      "ptFile": "pt/index.html"
+    },
+    {
+      "id": "features",
+      "en": "/features.html",
+      "pt": "/pt/features.html",
+      "enFile": "features.html",
+      "ptFile": "pt/features.html"
+    },
+    {
+      "id": "installation",
+      "en": "/installation.html",
+      "pt": "/pt/installation.html",
+      "enFile": "installation.html",
+      "ptFile": "pt/installation.html"
+    },
+    {
+      "id": "compatibility",
+      "en": "/compatibility.html",
+      "pt": "/pt/compatibility.html",
+      "enFile": "compatibility.html",
+      "ptFile": "pt/compatibility.html"
+    },
+    {
+      "id": "faq",
+      "en": "/faq.html",
+      "pt": "/pt/faq.html",
+      "enFile": "faq.html",
+      "ptFile": "pt/faq.html"
+    },
+    {
+      "id": "privacy",
+      "en": "/privacy.html",
+      "pt": "/pt/privacy.html",
+      "enFile": "privacy.html",
+      "ptFile": "pt/privacy.html"
+    },
+    {
+      "id": "contributing",
+      "en": "/contributing.html",
+      "pt": "/pt/contributing.html",
+      "enFile": "contributing.html",
+      "ptFile": "pt/contributing.html"
+    }
+  ]
+}

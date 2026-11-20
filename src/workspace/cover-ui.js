@@ -21,7 +21,7 @@ export async function handleUploadCoverFile(file) {
   showBanner(t('msgCoverUploaded'), 'success');
 }
 
-function wrapCanvasText(ctx, text, maxWidth) {
+function wrapCanvasText(ctx, text, maxWidth, maxLines = 5) {
   const words = normalizeSpaces(text).split(' ').filter(Boolean);
   const lines = [];
   let line = '';
@@ -35,7 +35,167 @@ function wrapCanvasText(ctx, text, maxWidth) {
     }
   }
   if (line) lines.push(line);
-  return lines.slice(0, 7);
+  return lines.slice(0, maxLines);
+}
+
+function drawRoundedRectPath(ctx, x, y, width, height, radius) {
+  const r = Math.min(radius, width / 2, height / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + width - r, y);
+  ctx.quadraticCurveTo(x + width, y, x + width, y + r);
+  ctx.lineTo(x + width, y + height - r);
+  ctx.quadraticCurveTo(x + width, y + height, x + width - r, y + height);
+  ctx.lineTo(x + r, y + height);
+  ctx.quadraticCurveTo(x, y + height, x, y + height - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+function drawWebPullBookEmblem(ctx, cx, cy) {
+  ctx.save();
+
+  // Outer subtle ring
+  ctx.beginPath();
+  ctx.arc(cx, cy, 134, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(56, 189, 248, 0.36)';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+
+  // Inner circle
+  ctx.beginPath();
+  ctx.arc(cx, cy, 98, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(2, 132, 199, 0.24)';
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(129, 140, 248, 0.75)';
+  ctx.lineWidth = 2.5;
+  ctx.stroke();
+
+  // Book right cover body
+  const bx = cx - 48;
+  const by = cy - 64;
+  const bw = 112;
+  const bh = 128;
+  drawRoundedRectPath(ctx, bx + 18, by, bw - 18, bh, 16);
+  ctx.fillStyle = '#1e293b';
+  ctx.fill();
+  ctx.strokeStyle = '#38bdf8';
+  ctx.lineWidth = 3.2;
+  ctx.stroke();
+
+  // Book left spine band
+  drawRoundedRectPath(ctx, bx, by, 26, bh, 10);
+  ctx.fillStyle = '#0284c7';
+  ctx.fill();
+
+  // Spine crease highlight
+  ctx.fillStyle = 'rgba(96, 165, 250, 0.55)';
+  ctx.fillRect(bx + 23, by + 2, 4, bh - 4);
+
+  // Download arrow inside book cover
+  const ax = cx + 10;
+  ctx.strokeStyle = '#38bdf8';
+  ctx.lineWidth = 9;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+  ctx.beginPath();
+  ctx.moveTo(ax, cy - 36);
+  ctx.lineTo(ax, cy + 12);
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(ax - 22, cy - 6);
+  ctx.lineTo(ax, cy + 16);
+  ctx.lineTo(ax + 22, cy - 6);
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(ax - 28, cy + 36);
+  ctx.lineTo(ax + 28, cy + 36);
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+/**
+ * Generates the default WebPullBook cover image (data:image/jpeg;base64,...) featuring
+ * the official book-and-arrow logo emblem, book title, and author.
+ * Used both automatically when a series has no detected cover and manually via "Generate Cover".
+ */
+export function generateDefaultCoverDataUrl({ title = '', author = '' } = {}) {
+  if (typeof document === 'undefined') return '';
+  const cleanTitle = normalizeSpaces(title) || 'WebPullBook';
+  const rawAuthor = normalizeSpaces(author);
+  const cleanAuthor =
+    rawAuthor && rawAuthor !== '<unknown>' ? rawAuthor : 'WebPullBook';
+
+  const w = 800;
+  const h = 1200;
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = typeof canvas.getContext === 'function' ? canvas.getContext('2d') : null;
+  if (!ctx) return '';
+
+  // Background gradient
+  const bgGrad = ctx.createLinearGradient(0, 0, w, h);
+  bgGrad.addColorStop(0, '#0f172a');
+  bgGrad.addColorStop(0.5, '#1e1b4b');
+  bgGrad.addColorStop(1, '#0369a1');
+  ctx.fillStyle = bgGrad;
+  ctx.fillRect(0, 0, w, h);
+
+  // Accent gradient for frame and divider
+  const accentGrad = ctx.createLinearGradient(48, 0, w - 48, 0);
+  accentGrad.addColorStop(0, '#38bdf8');
+  accentGrad.addColorStop(1, '#818cf8');
+
+  // Outer rounded frame
+  ctx.save();
+  drawRoundedRectPath(ctx, 48, 48, w - 96, h - 96, 20);
+  ctx.strokeStyle = accentGrad;
+  ctx.globalAlpha = 0.55;
+  ctx.lineWidth = 3.5;
+  ctx.stroke();
+  ctx.restore();
+
+  // Official WebPullBook emblem
+  drawWebPullBookEmblem(ctx, w / 2, 340);
+
+  // Centered Book Title
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  const fontSize = cleanTitle.length > 55 ? 44 : cleanTitle.length > 32 ? 50 : 56;
+  const lineHeight = Math.round(fontSize * 1.26);
+  ctx.font = `bold ${fontSize}px Georgia, "Times New Roman", serif`;
+  const titleLines = wrapCanvasText(ctx, cleanTitle, w - 180, 4);
+
+  let y = 590;
+  for (let i = 0; i < titleLines.length; i++) {
+    ctx.fillStyle = i === titleLines.length - 1 && titleLines.length > 1 ? '#38bdf8' : '#f8fafc';
+    ctx.fillText(titleLines[i], w / 2, y);
+    y += lineHeight;
+  }
+
+  // Horizontal accent divider
+  const dividerY = Math.min(920, y + 22);
+  ctx.fillStyle = accentGrad;
+  drawRoundedRectPath(ctx, w / 2 - 115, dividerY, 230, 4, 2);
+  ctx.fill();
+
+  // Author
+  ctx.fillStyle = '#cbd5e1';
+  ctx.font = '500 30px system-ui, -apple-system, sans-serif';
+  ctx.fillText(cleanAuthor.slice(0, 46), w / 2, h - 175);
+
+  // Footer signature
+  ctx.fillStyle = 'rgba(148, 163, 184, 0.78)';
+  ctx.font = '600 19px system-ui, -apple-system, sans-serif';
+  ctx.fillText('WEBPULLBOOK', w / 2, h - 108);
+
+  return typeof canvas.toDataURL === 'function' ? canvas.toDataURL('image/jpeg', 0.92) : '';
 }
 
 export function handleGenerateCover() {
@@ -44,52 +204,10 @@ export function handleGenerateCover() {
   const author =
     (state.metadata.author && state.metadata.author !== '<unknown>' ? state.metadata.author : '') ||
     $('meta-author').value.trim() ||
-    'WebPullBook Edition';
+    'WebPullBook';
 
-  const w = 800;
-  const h = 1200;
-  const canvas = document.createElement('canvas');
-  canvas.width = w;
-  canvas.height = h;
-  const ctx = canvas.getContext('2d');
-
-  const grad = ctx.createLinearGradient(0, 0, w, h);
-  grad.addColorStop(0, '#162032');
-  grad.addColorStop(1, '#263447');
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, w, h);
-
-  ctx.fillStyle = '#0284c7';
-  ctx.fillRect(0, 0, 56, h);
-  ctx.fillStyle = 'rgba(96, 165, 250, 0.45)';
-  ctx.fillRect(56, 0, 8, h);
-
-  ctx.strokeStyle = 'rgba(56, 189, 248, 0.35)';
-  ctx.lineWidth = 3;
-  ctx.strokeRect(102, 72, w - 150, h - 144);
-
-  ctx.fillStyle = '#f8fafc';
-  ctx.font = 'bold 58px Georgia, serif';
-  ctx.textBaseline = 'top';
-  const titleLines = wrapCanvasText(ctx, title, w - 230);
-  let y = 210;
-  for (const line of titleLines) {
-    ctx.fillText(line, 148, y);
-    y += 76;
-  }
-
-  ctx.fillStyle = '#38bdf8';
-  ctx.fillRect(148, Math.min(820, y + 32), 140, 6);
-
-  ctx.fillStyle = '#cbd5e1';
-  ctx.font = '34px system-ui, -apple-system, sans-serif';
-  ctx.fillText(author.slice(0, 48), 148, h - 220);
-
-  ctx.fillStyle = 'rgba(148, 163, 184, 0.8)';
-  ctx.font = '600 22px system-ui, -apple-system, sans-serif';
-  ctx.fillText('WEBPULLBOOK', 148, h - 135);
-
-  const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+  const dataUrl = generateDefaultCoverDataUrl({ title, author });
+  if (!dataUrl) return;
   $('meta-cover-url').value = dataUrl;
   readMetadataFromUi();
   updateCoverPreview();

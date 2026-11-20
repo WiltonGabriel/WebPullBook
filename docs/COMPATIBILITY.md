@@ -29,7 +29,7 @@ Adapters or structural layouts already implemented (with unit fixtures), awaitin
 
 ## Potentially Compatible (Potencialmente Compatíveis)
 
-Sites without a dedicated adapter that should work via WebPullBook's universal extractor and fallback tools:
+Sites without a dedicated adapter that work via WebPullBook's generic HTML extractor and fallback tools:
 
 | Pattern / Layout | Adapter / Mode | Notes |
 | :--- | :--- | :--- |

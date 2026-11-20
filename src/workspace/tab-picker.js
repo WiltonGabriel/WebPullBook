@@ -5,6 +5,7 @@ import { appendLog, hideBanner, showBanner } from './logger.js';
 import { readOptionsFromUi, saveOptions, syncMetadataToUi } from './options-storage.js';
 import { populateRangeSelects, renderAllChapterViews } from './chapters-ui.js';
 import { openChapterPreviewForTarget } from './chapter-modals.js';
+import { generateDefaultCoverDataUrl } from './cover-ui.js';
 
 let mergeCandidates = [];
 
@@ -189,6 +190,7 @@ export function applyMergedTabsSelection() {
       : `Coletânea de Abas (${chosen.length})`;
   const defaultTitle = rawBookTitle || fallbackTitle;
 
+  const defaultCover = generateDefaultCoverDataUrl({ title: defaultTitle, author: 'WebPullBook' });
   state.activeParser = genericHtmlParser;
   state.seriesRequiresTab = false;
   state.metadata = {
@@ -197,8 +199,8 @@ export function applyMergedTabsSelection() {
     author: 'WebPullBook',
     language: state.options.uiLang === 'en' ? 'en' : 'pt',
     filename: sanitizeFilename(defaultTitle, true),
-    coverUrl: '',
-    coverThumbUrl: '',
+    coverUrl: defaultCover,
+    coverThumbUrl: defaultCover,
     genres: [],
     synopsis: chosen.map((tab, i) => `${i + 1}. ${normalizeSpaces(tab.title) || tab.url}`).join('\n'),
     status: `${chosen.length} tabs`,
