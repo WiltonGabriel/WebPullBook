@@ -156,14 +156,6 @@
               </span>
             </label>
 
-            <div class="quick-delay-card">
-              <div class="quick-delay-head">
-                <label for="opt-delay-quick" data-i18n="labelQuickDelay">Latência entre capítulos (ms)</label>
-                <input id="opt-delay-quick" type="number" min="0" max="30000" step="100" value="350">
-              </div>
-              <small data-i18n="quickDelayHint">Funciona mesmo sem Modo Seguro (0 = sem espera, 1000 = 1s). Pode ajustar ao vivo.</small>
-            </div>
-
             <div class="pack-actions">
               <button type="button" id="btn-pack-epub" class="btn primary lg" disabled data-i18n="btnPackEpub">Empacotar EPUB</button>
               <button type="button" id="btn-retry-failed" class="btn secondary hidden">Tentar Falhos (0)</button>
@@ -246,9 +238,10 @@
             <div class="volumes-header">
               <div>
                 <h3><span data-i18n="volumesHeading">Volumes</span> <span id="volume-summary" class="muted sm"></span></h3>
-                <p class="muted sm" data-i18n="volumesHint">Clique em um volume para marcar/desmarcar todos os seus capítulos.</p>
+                <p class="muted sm" data-i18n="volumesHint">Clique para marcar/desmarcar volumes (use Ctrl+Clique para avulsos ou Shift+Clique para intervalo).</p>
               </div>
               <div class="volumes-actions">
+                <button type="button" id="btn-toggle-all-volumes" class="btn secondary sm" data-i18n="btnSelectAll">Selecionar Todos</button>
                 <button type="button" id="btn-filter-clear-vol" class="btn ghost sm hidden" data-i18n="btnShowAllVolumes">Mostrar todos volumes</button>
                 <button type="button" id="btn-redetect-volumes" class="btn secondary sm" data-i18n="btnRedetectVolumes">Tentar Encontrar Volumes</button>
                 <button type="button" id="btn-open-volume-modal" class="btn secondary sm" data-i18n="btnManualVolumes">Definir Volumes Manualmente</button>
@@ -296,7 +289,7 @@
               <input type="checkbox" id="toggle-show-urls">
               <span data-i18n="toggleShowUrls">Mostrar URLs</span>
             </label>
-            <span class="muted sm tip-shift" data-i18n="tipShiftClick">Dica: use Shift+Clique para marcar intervalos</span>
+            <span class="muted sm tip-shift" data-i18n="tipShiftClick">Dica: use Ctrl+Clique ou Shift+Clique nas linhas para marcar intervalos</span>
           </div>
         </div>
 
@@ -493,7 +486,11 @@
             </label>
             <label class="checkbox-row">
               <input type="checkbox" id="opt-include-toc" checked>
-              <span data-i18n="optIncludeToc">Incluir página de Índice / Sumário no livro</span>
+              <span data-i18n="optIncludeToc">Incluir página de Índice / Sumário no início do livro</span>
+            </label>
+            <label class="checkbox-row">
+              <input type="checkbox" id="opt-add-end-page" checked>
+              <span data-i18n="optAddEndPage">Adicionar página Final do Livro (Encerramento / Colofão)</span>
             </label>
             <label class="checkbox-row">
               <input type="checkbox" id="opt-remove-nav" checked>
@@ -502,16 +499,9 @@
           </div>
 
           <details class="more-meta mt-sm">
-            <summary data-i18n="summaryFrontMatter">Personalizar Índice e Página de Informações</summary>
+            <summary data-i18n="summaryFrontMatter">Personalizar Índice, Página de Informações e Página Final</summary>
             <div class="form-grid mt-sm">
-              <div class="field">
-                <label for="opt-toc-position" data-i18n="labelTocPosition">Posição do Índice no livro</label>
-                <select id="opt-toc-position">
-                  <option value="start" data-i18n="tocPosStart">Início do livro (antes do Cap. 1)</option>
-                  <option value="end" data-i18n="tocPosEnd">Final do livro (após os capítulos)</option>
-                </select>
-              </div>
-              <div class="field">
+              <div class="field span-2">
                 <label for="opt-toc-title" data-i18n="labelTocTitle">Título do Índice / Sumário</label>
                 <input id="opt-toc-title" type="text" data-i18n-placeholder="placeholderTocTitle" placeholder="Padrão: Sumário / Table of Contents">
               </div>
@@ -540,6 +530,32 @@
               <label class="checkbox-row">
                 <input type="checkbox" id="opt-info-show-synopsis" checked>
                 <span data-i18n="optInfoShowSynopsis">Exibir sinopse</span>
+              </label>
+            </div>
+
+            <hr class="sub-divider">
+            <div class="form-grid mt-sm">
+              <div class="field span-2">
+                <label for="opt-end-title" data-i18n="labelEndTitle">Título da Página Final</label>
+                <input id="opt-end-title" type="text" data-i18n-placeholder="placeholderEndTitle" placeholder="Padrão: Fim do Livro / End of Book">
+              </div>
+              <div class="field span-2">
+                <label for="opt-end-message" data-i18n="labelEndMessage">Mensagem de encerramento (opcional)</label>
+                <textarea id="opt-end-message" rows="2" data-i18n-placeholder="placeholderEndMessage" placeholder="Padrão: Obrigado por ler! (suporta múltiplas linhas)"></textarea>
+              </div>
+            </div>
+            <div class="checks-col mt-sm">
+              <label class="checkbox-row">
+                <input type="checkbox" id="opt-end-show-summary" checked>
+                <span data-i18n="optEndShowSummary">Exibir resumo da obra (título, autor e total de capítulos)</span>
+              </label>
+              <label class="checkbox-row">
+                <input type="checkbox" id="opt-end-show-source" checked>
+                <span data-i18n="optEndShowSource">Exibir link da fonte original no final</span>
+              </label>
+              <label class="checkbox-row">
+                <input type="checkbox" id="opt-end-show-generator" checked>
+                <span data-i18n="optEndShowGenerator">Exibir créditos e data de geração (WebPullBook)</span>
               </label>
             </div>
           </details>
@@ -610,8 +626,9 @@
           </div>
           <div class="form-grid mt-sm">
             <div class="field">
-              <label for="opt-delay" data-i18n="labelDelay">Delay entre capítulos (ms)</label>
+              <label for="opt-delay" data-i18n="labelDelay">Latência manual entre capítulos (ms)</label>
               <input id="opt-delay" type="number" min="0" max="30000" step="50" value="350">
+              <small class="muted" data-i18n="delayManualHint">Funciona mesmo sem Modo Seguro (0–30000 ms). Ajustável ao vivo.</small>
             </div>
             <div class="field">
               <label for="opt-retries" data-i18n="labelMaxRetries">Retentativas automáticas (HTTP 5xx/rede)</label>

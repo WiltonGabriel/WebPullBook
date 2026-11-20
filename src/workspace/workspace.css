@@ -654,6 +654,17 @@ input:focus, select:focus, textarea:focus {
   font-size: 0.82rem;
   font-weight: 600;
   cursor: pointer;
+  user-select: none;
+  transition: border-color 0.14s ease, background 0.14s ease;
+}
+
+.vol-chip:hover {
+  border-color: var(--accent);
+}
+
+.vol-chip-all {
+  background: var(--surface);
+  border-width: 1.5px;
 }
 
 .vol-chip.selected {
@@ -665,13 +676,33 @@ input:focus, select:focus, textarea:focus {
   border-color: var(--accent);
 }
 
+.vol-chip-label {
+  cursor: pointer;
+}
+
 .vol-chip .vol-filter-btn {
   border: none;
   background: transparent;
   color: var(--muted);
   cursor: pointer;
   font-size: 0.78rem;
-  padding: 0 0.15rem;
+  padding: 0 0.2rem;
+  border-radius: 4px;
+}
+
+.vol-chip .vol-filter-btn.active,
+.vol-chip .vol-filter-btn:hover {
+  color: var(--accent);
+  background: var(--surface);
+}
+
+.chap-row {
+  cursor: pointer;
+  user-select: none;
+}
+
+.chap-row.selected-row {
+  background: color-mix(in srgb, var(--accent) 7%, transparent);
 }
 
 /* Chapters */
@@ -1287,40 +1318,10 @@ dialog::backdrop {
   line-height: 1.35;
 }
 
-.quick-delay-card {
-  padding: 0.55rem 0.65rem;
-  margin-bottom: 0.85rem;
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  background: var(--surface-2);
-}
-
-.quick-delay-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.6rem;
-  margin-bottom: 0.2rem;
-}
-
-.quick-delay-head label {
-  font-size: 0.84rem;
-  font-weight: 600;
-  margin: 0;
-}
-
-.quick-delay-head input {
-  width: 96px;
-  padding: 0.25rem 0.45rem;
-  font-size: 0.85rem;
-  text-align: right;
-}
-
-.quick-delay-card small {
-  display: block;
-  font-size: 0.75rem;
-  color: var(--muted);
-  line-height: 1.35;
+.sub-divider {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 0.9rem 0 0.5rem;
 }
 
 .chap-status-wrap {

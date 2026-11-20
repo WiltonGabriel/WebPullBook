@@ -31,12 +31,22 @@ export async function handleLoadSeries(url, { sourceTabId = null } = {}) {
   setLoadingOverlay(true, url);
   const loadStartedAt = Date.now();
   const currentDomain = normalizeRuleDomain(url);
-  if (state.autoFilledSelectors && state.autoFilledSelectors.domain !== currentDomain) {
+  if (state.lastLoadedDomain && currentDomain && state.lastLoadedDomain !== currentDomain) {
+    $('opt-list-selector').value = '';
+    $('opt-content-selector').value = '';
+    $('opt-exclude-selector').value = '';
+    $('opt-strip-regex').value = '';
+    state.autoFilledSelectors = null;
+    state.appliedRuleDomain = '';
+  } else if (state.autoFilledSelectors && state.autoFilledSelectors.domain !== currentDomain) {
     const prevAuto = state.autoFilledSelectors;
     if ($('opt-list-selector').value === prevAuto.listSelector) $('opt-list-selector').value = '';
     if ($('opt-content-selector').value === prevAuto.contentSelector) $('opt-content-selector').value = '';
     if ($('opt-exclude-selector').value === prevAuto.excludeSelector) $('opt-exclude-selector').value = '';
     state.autoFilledSelectors = null;
+  }
+  if (currentDomain) {
+    state.lastLoadedDomain = currentDomain;
   }
 
   applyDomainRuleForUrl(url);
@@ -45,8 +55,9 @@ export async function handleLoadSeries(url, { sourceTabId = null } = {}) {
   btn.disabled = true;
   btn.textContent = t('btnLoadingSeries');
   const extVer = typeof chrome !== 'undefined' && chrome.runtime?.getManifest ? chrome.runtime.getManifest().version : '';
+  const customSelNote = state.options.customListSelector ? `, listSelector="${state.options.customListSelector}"` : '';
   appendLog(
-    `[LOAD] Carregando URL: ${url} | WebPullBook v${extVer || 'dev'} | parser=${state.options.parserId}, spa=${state.options.renderWithTab}`,
+    `[LOAD] Carregando URL: ${url} | WebPullBook v${extVer || 'dev'} | parser=${state.options.parserId}, spa=${state.options.renderWithTab}${customSelNote}`,
     'info'
   );
 
@@ -135,6 +146,9 @@ export async function handleLoadSeries(url, { sourceTabId = null } = {}) {
     state.chapters = await hydrateChaptersFromCache(series.chapters);
     state.volumeFilter = null;
     state.lastClickedIdx = -1;
+    state.lastClickedChapState = null;
+    state.lastClickedVolIdx = -1;
+    state.lastClickedVolState = null;
 
     const vols = getVolumeGroups().length;
     const modeRadio = document.querySelector(`input[name="pack-mode"][value="${vols > 1 ? 'by-volume' : 'single'}"]`);

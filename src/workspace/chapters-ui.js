@@ -140,11 +140,29 @@ export async function handleRedetectVolumes() {
   }
 }
 
+export function toggleAllVolumesSelection() {
+  if (state.chapters.length === 0) return;
+  const allSelected = state.chapters.every((c) => c.included);
+  const nextVal = !allSelected;
+  for (const ch of state.chapters) {
+    ch.included = nextVal;
+  }
+  state.lastClickedVolIdx = -1;
+  state.lastClickedVolState = nextVal;
+  renderAllChapterViews();
+}
+
 export function renderVolumeChips() {
   const container = $('volume-chips');
   const groups = getVolumeGroups();
   $('volume-summary').textContent = groups.length ? t('volumesDetected', { count: groups.length }) : '';
   $('btn-filter-clear-vol').classList.toggle('hidden', !state.volumeFilter);
+
+  const toggleAllBtn = $('btn-toggle-all-volumes');
+  if (toggleAllBtn) {
+    toggleAllBtn.disabled = groups.length === 0;
+    toggleAllBtn.textContent = t('btnSelectAll');
+  }
 
   if (groups.length === 0) {
     const empty = document.createElement('span');
@@ -155,37 +173,90 @@ export function renderVolumeChips() {
   }
 
   const fragment = document.createDocumentFragment();
-  for (const grp of groups) {
+
+  groups.forEach((grp, volIdx) => {
     const selectedCount = grp.chapters.filter((c) => c.included).length;
     const allSel = selectedCount === grp.chapters.length;
     const partialSel = selectedCount > 0 && selectedCount < grp.chapters.length;
 
     const chip = document.createElement('div');
     chip.className = `vol-chip${allSel ? ' selected' : partialSel ? ' partial' : ''}`;
+    chip.dataset.volIdx = String(volIdx);
 
     const cb = document.createElement('input');
     cb.type = 'checkbox';
     cb.checked = allSel;
     cb.indeterminate = partialSel;
     cb.title = grp.volume;
-    cb.addEventListener('change', () => {
-      const target = cb.checked;
-      for (const ch of grp.chapters) ch.included = target;
-      renderAllChapterViews();
+
+    const applyVolumeClick = (e, fromCheckbox = false) => {
+      if (e.shiftKey) {
+        window.getSelection?.()?.removeAllRanges?.();
+        const anchorIdx =
+          state.lastClickedVolIdx !== -1 && state.lastClickedVolIdx < groups.length
+            ? state.lastClickedVolIdx
+            : 0;
+        const start = Math.min(anchorIdx, volIdx);
+        const end = Math.max(anchorIdx, volIdx);
+        let targetVal = fromCheckbox ? cb.checked : !allSel;
+        if (state.lastClickedVolState !== null && start !== end) {
+          const allMatchAnchor = groups
+            .slice(start, end + 1)
+            .every((g) => g.chapters.every((c) => c.included === state.lastClickedVolState));
+          targetVal = allMatchAnchor ? !state.lastClickedVolState : state.lastClickedVolState;
+        }
+        for (let v = start; v <= end; v++) {
+          for (const ch of groups[v].chapters) {
+            ch.included = targetVal;
+          }
+        }
+        state.lastClickedVolIdx = volIdx;
+        state.lastClickedVolState = targetVal;
+        renderAllChapterViews();
+      } else {
+        const targetVal = fromCheckbox ? cb.checked : !allSel;
+        for (const ch of grp.chapters) {
+          ch.included = targetVal;
+        }
+        state.lastClickedVolIdx = volIdx;
+        state.lastClickedVolState = targetVal;
+        renderAllChapterViews();
+      }
+    };
+
+    cb.addEventListener('click', (e) => {
+      e.stopPropagation();
+      applyVolumeClick(e, true);
     });
 
-    const labelBtn = document.createElement('button');
-    labelBtn.type = 'button';
-    labelBtn.className = 'vol-filter-btn';
-    labelBtn.textContent = `${grp.volume} (${selectedCount}/${grp.chapters.length})`;
-    labelBtn.addEventListener('click', () => {
-      state.volumeFilter = state.volumeFilter === grp.volume ? null : grp.volume;
-      renderAllChapterViews();
+    const labelSpan = document.createElement('span');
+    labelSpan.className = 'vol-chip-label';
+    labelSpan.textContent = `${grp.volume} (${selectedCount}/${grp.chapters.length})`;
+
+    chip.addEventListener('click', (e) => {
+      if (e.target === cb || e.target.closest('.vol-filter-btn')) return;
+      applyVolumeClick(e, false);
     });
 
-    chip.append(cb, labelBtn);
+    chip.append(cb, labelSpan);
+
+    if (groups.length > 1) {
+      const filterBtn = document.createElement('button');
+      filterBtn.type = 'button';
+      filterBtn.className = `vol-filter-btn${state.volumeFilter === grp.volume ? ' active' : ''}`;
+      filterBtn.textContent = '🔍';
+      filterBtn.title = t('volFilterBtnTitle');
+      filterBtn.setAttribute('aria-label', `${t('volFilterBtnTitle')}: ${grp.volume}`);
+      filterBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        state.volumeFilter = state.volumeFilter === grp.volume ? null : grp.volume;
+        renderAllChapterViews();
+      });
+      chip.appendChild(filterBtn);
+    }
+
     fragment.appendChild(chip);
-  }
+  });
 
   container.replaceChildren(fragment);
 }
@@ -315,35 +386,66 @@ export function renderChaptersTable() {
   }
 
   const fragment = document.createDocumentFragment();
-  for (const { ch, idx } of visible) {
+  visible.forEach(({ ch, idx }, visPos) => {
     const tr = document.createElement('tr');
+    tr.className = ch.included ? 'chap-row selected-row' : 'chap-row';
+    tr.dataset.chapIdx = String(idx);
 
     const tdCheck = document.createElement('td');
     tdCheck.className = 'col-check';
     const cb = document.createElement('input');
     cb.type = 'checkbox';
     cb.checked = ch.included;
-    cb.addEventListener('click', (e) => {
-      if (e.shiftKey && state.lastClickedIdx !== -1) {
-        const start = Math.min(state.lastClickedIdx, idx);
-        const end = Math.max(state.lastClickedIdx, idx);
-        const targetVal = cb.checked;
-        for (let k = start; k <= end; k++) {
-          state.chapters[k].included = targetVal;
+
+    const applyChapterClick = (e, fromCheckbox = false) => {
+      if (e.shiftKey) {
+        window.getSelection?.()?.removeAllRanges?.();
+        const anchorIdx =
+          state.lastClickedIdx !== -1 && state.lastClickedIdx < state.chapters.length
+            ? state.lastClickedIdx
+            : (visible[0]?.idx ?? 0);
+        const anchorVisPos = visible.findIndex((item) => item.idx === anchorIdx);
+        const rangeChapters = [];
+        if (anchorVisPos !== -1) {
+          const s = Math.min(anchorVisPos, visPos);
+          const eIdx = Math.max(anchorVisPos, visPos);
+          for (let k = s; k <= eIdx; k++) {
+            rangeChapters.push(visible[k].ch);
+          }
+        } else {
+          const s = Math.min(anchorIdx, idx);
+          const eIdx = Math.max(anchorIdx, idx);
+          for (let k = s; k <= eIdx; k++) {
+            rangeChapters.push(state.chapters[k]);
+          }
         }
+        let targetVal = fromCheckbox ? cb.checked : !ch.included;
+        if (state.lastClickedChapState !== null && rangeChapters.length > 1) {
+          const allMatchAnchor = rangeChapters.every((c) => c.included === state.lastClickedChapState);
+          targetVal = allMatchAnchor ? !state.lastClickedChapState : state.lastClickedChapState;
+        }
+        for (const itemCh of rangeChapters) {
+          itemCh.included = targetVal;
+        }
+        state.lastClickedIdx = idx;
+        state.lastClickedChapState = targetVal;
         renderAllChapterViews();
       } else {
-        ch.included = cb.checked;
+        const targetVal = fromCheckbox ? cb.checked : !ch.included;
+        ch.included = targetVal;
         state.lastClickedIdx = idx;
-        renderVolumeChips();
-        const count = state.chapters.filter((c) => c.included).length;
-        $('chapter-count-badge').textContent = t('chapterCountBadge', {
-          selected: count,
-          total: state.chapters.length,
-          volumes: getVolumeGroups().length
-        });
-        $('btn-pack-epub').disabled = count === 0 || state.running;
+        state.lastClickedChapState = targetVal;
+        renderAllChapterViews();
       }
+    };
+
+    cb.addEventListener('click', (e) => {
+      e.stopPropagation();
+      applyChapterClick(e, true);
+    });
+    tr.addEventListener('click', (e) => {
+      if (e.target.closest('input, button, a, select, textarea')) return;
+      applyChapterClick(e, false);
     });
     tdCheck.appendChild(cb);
 
@@ -428,7 +530,7 @@ export function renderChaptersTable() {
     tdStatus.appendChild(statusWrap);
     tr.append(tdCheck, tdIdx, tdVol, tdTitle, tdStatus);
     fragment.appendChild(tr);
-  }
+  });
 
   tbody.replaceChildren(fragment);
 }

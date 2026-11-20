@@ -35,7 +35,8 @@ import {
   populateRangeSelects,
   renderAllChapterViews,
   renderChaptersTable,
-  renderVolumeChips
+  renderVolumeChips,
+  toggleAllVolumesSelection
 } from './chapters-ui.js';
 import { handleGenerateCover, handleUploadCoverFile } from './cover-ui.js';
 import {
@@ -197,20 +198,12 @@ function wireEvents() {
     await saveOptions();
   });
 
-  $('opt-delay-quick').addEventListener('change', async () => {
-    const val = Math.max(0, Math.min(30000, parseInt($('opt-delay-quick').value, 10) || 0));
-    $('opt-delay-quick').value = val;
-    $('opt-delay').value = val;
-    readOptionsFromUi();
-    if (state.running || state.batchRunning) {
-      appendLog(`[CFG] Latência entre capítulos ajustada ao vivo para ${val} ms.`, 'info');
-    }
-    await saveOptions();
-  });
   $('opt-delay').addEventListener('change', () => {
     const val = Math.max(0, Math.min(30000, parseInt($('opt-delay').value, 10) || 0));
     $('opt-delay').value = val;
-    $('opt-delay-quick').value = val;
+    if (state.running || state.batchRunning) {
+      appendLog(`[CFG] Latência entre capítulos ajustada ao vivo para ${val} ms.`, 'info');
+    }
   });
 
   $('opt-cache-ttl').addEventListener('change', async () => {
@@ -326,6 +319,7 @@ function wireEvents() {
   $('reader-preset').addEventListener('change', () => handleReaderPresetChange($('reader-preset').value));
   $('adv-reader-preset').addEventListener('change', () => handleReaderPresetChange($('adv-reader-preset').value));
 
+  $('btn-toggle-all-volumes').addEventListener('click', toggleAllVolumesSelection);
   $('btn-filter-clear-vol').addEventListener('click', () => {
     state.volumeFilter = null;
     renderAllChapterViews();

@@ -30,6 +30,21 @@ export {
 
 const VALID_THEMES = new Set(['light', 'dark', 'sepia', 'midnight']);
 
+export const SITE_SCOPED_OPTION_KEYS = [
+  'customListSelector',
+  'customContentSelector',
+  'customExcludeSelector',
+  'customStripPatterns'
+];
+
+export function stripSiteScopedOptions(opts) {
+  const clean = { ...(opts || {}) };
+  for (const key of SITE_SCOPED_OPTION_KEYS) {
+    clean[key] = '';
+  }
+  return clean;
+}
+
 function resolveEffectiveTheme(theme) {
   if (VALID_THEMES.has(theme)) return theme;
   return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
@@ -65,7 +80,8 @@ export function applyThemeChoice(theme) {
 
 export async function saveOptions() {
   if (chrome?.storage?.local) {
-    await chrome.storage.local.set({ wpbOptions: state.options });
+    // Per-site CSS selectors/strip filters persist exclusively via wpbDomainRules so one site never poisons another
+    await chrome.storage.local.set({ wpbOptions: stripSiteScopedOptions(state.options) });
   }
 }
 
@@ -73,7 +89,7 @@ export async function loadOptions(onLoadedLanguage) {
   if (chrome?.storage?.local) {
     const res = await chrome.storage.local.get('wpbOptions');
     if (res?.wpbOptions) {
-      const stored = { ...res.wpbOptions };
+      const stored = stripSiteScopedOptions(res.wpbOptions);
       if (stored.folderLayout === undefined && stored.subfolder === false) {
         stored.folderLayout = 'flat';
       }
@@ -245,8 +261,13 @@ export function syncOptionsToUi() {
   $('opt-popup-footnotes').checked = o.popupFootnotes !== false;
   $('opt-add-info').checked = o.addInfoPage !== false;
   $('opt-include-toc').checked = o.includeTocPage !== false;
-  $('opt-toc-position').value = o.tocPosition === 'end' ? 'end' : 'start';
   $('opt-toc-title').value = o.tocTitle || '';
+  $('opt-add-end-page').checked = o.addEndPage !== false;
+  $('opt-end-title').value = o.endPageTitle || '';
+  $('opt-end-message').value = o.endPageMessage || '';
+  $('opt-end-show-summary').checked = o.endShowSummary !== false;
+  $('opt-end-show-source').checked = o.endShowSource !== false;
+  $('opt-end-show-generator').checked = o.endShowGenerator !== false;
   $('opt-info-title').value = o.infoPageTitle || '';
   $('opt-info-show-title').checked = o.infoShowTitle !== false;
   $('opt-info-show-author').checked = o.infoShowAuthor !== false;
@@ -261,7 +282,6 @@ export function syncOptionsToUi() {
   $('opt-strip-regex').value = o.customStripPatterns || '';
   $('opt-crawl-next').checked = o.crawlNextLinks !== false;
   $('opt-delay').value = o.delayMs;
-  if ($('opt-delay-quick')) $('opt-delay-quick').value = o.delayMs;
   $('opt-concurrency').value = o.concurrency ?? 1;
   $('opt-retries').value = o.maxRetries ?? 2;
   $('opt-safe-mode').checked = Boolean(o.safeMode);
@@ -326,8 +346,13 @@ export function readOptionsFromUi({ markCustom = false } = {}) {
     popupFootnotes: $('opt-popup-footnotes').checked,
     addInfoPage: $('opt-add-info').checked,
     includeTocPage: $('opt-include-toc').checked,
-    tocPosition: $('opt-toc-position').value === 'end' ? 'end' : 'start',
     tocTitle: $('opt-toc-title').value.trim(),
+    addEndPage: $('opt-add-end-page').checked,
+    endPageTitle: $('opt-end-title').value.trim(),
+    endPageMessage: $('opt-end-message').value.trim(),
+    endShowSummary: $('opt-end-show-summary').checked,
+    endShowSource: $('opt-end-show-source').checked,
+    endShowGenerator: $('opt-end-show-generator').checked,
     infoPageTitle: $('opt-info-title').value.trim(),
     infoShowTitle: $('opt-info-show-title').checked,
     infoShowAuthor: $('opt-info-show-author').checked,

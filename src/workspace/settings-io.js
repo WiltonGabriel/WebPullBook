@@ -5,6 +5,7 @@ import {
   applyThemeChoice,
   readOptionsFromUi,
   saveOptions,
+  stripSiteScopedOptions,
   syncOptionsToUi,
   updatePackButtonLabel,
   updateTypographyPreview
@@ -107,8 +108,13 @@ export function wireSettingsIoEvents({ applyLanguageChoice }) {
         'infoShowSource',
         'infoShowSynopsis',
         'includeTocPage',
-        'tocPosition',
         'tocTitle',
+        'addEndPage',
+        'endPageTitle',
+        'endPageMessage',
+        'endShowSummary',
+        'endShowSource',
+        'endShowGenerator',
         'removeNavLinks'
       ],
       async () => {
@@ -179,7 +185,7 @@ export function wireSettingsIoEvents({ applyLanguageChoice }) {
   $('btn-export-opts').addEventListener('click', () => {
     readOptionsFromUi();
     const bundle = {
-      options: state.options,
+      options: stripSiteScopedOptions(state.options),
       domainRules: state.domainRules
     };
     const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: 'application/json' });
@@ -192,7 +198,11 @@ export function wireSettingsIoEvents({ applyLanguageChoice }) {
     try {
       const parsed = JSON.parse(await file.text());
       const importedOpts = parsed?.options && typeof parsed.options === 'object' ? parsed.options : parsed;
-      state.options = { ...DEFAULT_OPTIONS, ...importedOpts, grayscaleImages: false };
+      state.options = {
+        ...DEFAULT_OPTIONS,
+        ...stripSiteScopedOptions(importedOpts),
+        grayscaleImages: false
+      };
       if (parsed?.domainRules && typeof parsed.domainRules === 'object') {
         state.domainRules = { ...state.domainRules, ...parsed.domainRules };
         await saveDomainRules();
