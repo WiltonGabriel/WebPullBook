@@ -617,7 +617,11 @@ export async function readOpenTabDocument(url, { tabId = null, preferOpenTab = t
   if (targetId !== null && chrome.tabs.get) {
     try {
       const tb = await chrome.tabs.get(targetId);
-      if (!tb?.url || normalizeUrl(tb.url) !== normTarget) {
+      if (
+        !tb?.url ||
+        (tb.status && tb.status !== 'complete') ||
+        normalizeUrl(tb.url) !== normTarget
+      ) {
         targetId = null;
       }
     } catch {

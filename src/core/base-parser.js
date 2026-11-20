@@ -244,7 +244,12 @@ export class BaseParser {
    * Shared custom CSS list-selector extraction so manual overrides work across every adapter.
    */
   collectChaptersByCustomSelector(doc, targetUrl, selector) {
-    const links = Array.from(doc.querySelectorAll(selector));
+    let links = [];
+    try {
+      links = Array.from(doc.querySelectorAll(selector));
+    } catch {
+      return [];
+    }
     const seen = new Set();
     const out = [];
     for (const el of links) {
@@ -289,7 +294,8 @@ export class BaseParser {
   }
 
   async collectAllChapters(indexDoc, targetUrl, options = {}, signal) {
-    const customListSelector = (options.customListSelector || '').trim();
+    let activeListSelector = (options.customListSelector || '').trim();
+    const onLog = typeof options.onLog === 'function' ? options.onLog : null;
     const allChapters = [];
     const seenUrls = new Set();
     const visitedPages = new Set([normalizeUrl(targetUrl)]);
@@ -300,9 +306,29 @@ export class BaseParser {
     const knownPrefixes = new Set();
 
     for (let pageCount = 0; pageCount < maxPages; pageCount++) {
-      const pageItems = customListSelector
-        ? this.collectChaptersByCustomSelector(pageDoc, pageUrl, customListSelector)
-        : this.collectChapterNodes(pageDoc, pageUrl, options, { pageIndex: pageCount, knownPrefixes });
+      let pageItems = [];
+      if (activeListSelector) {
+        if (pageCount === 0) {
+          onLog?.(`[PARSER] Usando seletor CSS customizado de lista: "${activeListSelector}"`, 'debug');
+        }
+        pageItems = this.collectChaptersByCustomSelector(pageDoc, pageUrl, activeListSelector);
+        if (pageItems.length === 0 && pageCount === 0) {
+          const nativeItems = this.collectChapterNodes(pageDoc, pageUrl, options, {
+            pageIndex: pageCount,
+            knownPrefixes
+          });
+          if (nativeItems.length > 0) {
+            onLog?.(
+              `[PARSER] Seletor customizado "${activeListSelector}" retornou 0 capítulos — usando extração automática do adaptador (${nativeItems.length} encontrados).`,
+              'warn'
+            );
+            pageItems = nativeItems;
+            activeListSelector = '';
+          }
+        }
+      } else {
+        pageItems = this.collectChapterNodes(pageDoc, pageUrl, options, { pageIndex: pageCount, knownPrefixes });
+      }
 
       let addedThisPage = 0;
       for (const ch of pageItems) {
@@ -346,6 +372,29 @@ export class BaseParser {
     let attemptedTabFallback = usedTabFallback;
 
     let allChapters = await this.collectAllChapters(indexDoc, targetUrl, options, signal);
+
+    // If live DOM captured from the source tab yielded 0 chapters (e.g. still hydrating or mutated),
+    // try a clean static HTTP fetch before falling back to SPA tab rendering.
+    if (allChapters.length === 0 && indexDoc?._wpbFromSourceTab && !options.renderWithTab) {
+      try {
+        options.onLog?.(
+          `[TAB] 0 capítulos no DOM da aba de origem -> tentando busca HTTP direta em ${targetUrl}`,
+          'debug'
+        );
+        const fetchedDoc = await fetchWithRetry(targetUrl, {
+          retries: options.maxRetries ?? 2,
+          signal,
+          onLog: options.onLog
+        });
+        const fetchedChapters = await this.collectAllChapters(fetchedDoc, targetUrl, options, signal);
+        if (fetchedChapters.length > 0) {
+          indexDoc = fetchedDoc;
+          allChapters = fetchedChapters;
+        }
+      } catch (err) {
+        if (err?.name === 'AbortError') throw err;
+      }
+    }
 
     // Automatic SPA / dynamic DOM fallback if static HTML yielded 0 chapters (at most once)
     if (

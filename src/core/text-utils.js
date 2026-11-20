@@ -197,7 +197,14 @@ export function extractVolumeLabel(rawLabel, numText = '', href = '') {
     }
   }
   if (rawLabel && normalizeSpaces(rawLabel)) {
-    return normalizeSpaces(rawLabel);
+    const clean = normalizeSpaces(rawLabel);
+    if (
+      !/^(?:(?:todos\s+os\s+|lista\s+de\s+)?cap[íi]tulos?|(?:all\s+|list\s+of\s+)?chapters?|sum[áa]rio|[íi]ndice|table\s+of\s+contents|toc|epis[óo]dios?|episodes?)$/i.test(
+        clean
+      )
+    ) {
+      return clean;
+    }
   }
   return 'Volume 01';
 }
