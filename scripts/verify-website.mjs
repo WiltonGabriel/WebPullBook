@@ -185,6 +185,7 @@ for (const page of siteConfig.pages) {
     if (/class="beta-bar"/i.test(html)) fail(`${v.relFile}: must not include top .beta-bar banner`);
     if (!/<select\b[^>]*\bid="lang-select"/i.test(html)) fail(`${v.relFile}: missing #lang-select dropdown`);
     if (!/<select\b[^>]*\bid="theme-select"/i.test(html)) fail(`${v.relFile}: missing #theme-select dropdown`);
+    if (!/class="nav-github-link"/i.test(html)) fail(`${v.relFile}: missing .nav-github-link in header navigation`);
     for (const themeOpt of ['system', 'light', 'dark', 'sepia', 'midnight']) {
       if (!new RegExp(`<option\\s+value="${themeOpt}"`, 'i').test(html)) {
         fail(`${v.relFile}: #theme-select missing option value="${themeOpt}"`);

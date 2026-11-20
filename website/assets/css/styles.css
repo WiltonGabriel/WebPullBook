@@ -350,6 +350,14 @@ a:hover {
   border-block-end-color: var(--accent-2);
 }
 
+.nav-list a.nav-github-link {
+  padding: 0.42rem 0.55rem;
+}
+
+.nav-list a.nav-github-link svg {
+  display: block;
+}
+
 .header-actions {
   display: flex;
   align-items: center;
