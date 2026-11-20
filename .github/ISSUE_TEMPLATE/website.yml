@@ -1,16 +1,16 @@
-name: Website & Documentation
-description: Report an issue or suggest improvements for the project website or docs
+name: Website
+description: Report a bug or suggest improvements for the project website
 labels: ["website"]
 body:
   - type: input
     id: page_url
     attributes:
-      label: Page URL or File Path
+      label: Page URL
       placeholder: https://wiltongabriel.github.io/WebPullBook/
   - type: textarea
     id: details
     attributes:
       label: Details
-      description: Describe the layout bug, broken link, or documentation improvement.
+      description: Describe the layout issue, broken link, or improvement.
     validations:
       required: true

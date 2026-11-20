@@ -1,5 +1,5 @@
-name: Parser / Adapter Support
-description: Request a new site parser or report a broken adapter
+name: Parser Support
+description: Request a new site parser or report a broken parser
 labels: ["parser"]
 body:
   - type: input

@@ -1,0 +1,16 @@
+name: Documentation
+description: Report an error or suggest improvements to the project documentation
+labels: ["documentation"]
+body:
+  - type: input
+    id: doc_path
+    attributes:
+      label: Document / File Path
+      placeholder: e.g. README.md, docs/COMPATIBILITY.md
+  - type: textarea
+    id: details
+    attributes:
+      label: Details
+      description: Describe what is missing, outdated, or unclear.
+    validations:
+      required: true

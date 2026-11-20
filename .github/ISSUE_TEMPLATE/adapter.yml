@@ -1,0 +1,25 @@
+name: Adapter Support
+description: Request a new layout/theme adapter or report an adapter issue
+labels: ["adapter"]
+body:
+  - type: input
+    id: adapter_name
+    attributes:
+      label: Adapter / Theme / Platform Name
+      placeholder: e.g. Madara Theme, WP LightNovel
+    validations:
+      required: true
+  - type: input
+    id: example_url
+    attributes:
+      label: Example URL
+      placeholder: https://example.com/
+    validations:
+      required: true
+  - type: textarea
+    id: details
+    attributes:
+      label: Details
+      description: Describe the structural issue or adapter requirements.
+    validations:
+      required: true
