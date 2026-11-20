@@ -2,6 +2,14 @@
 
 Todas as mudanças notáveis do **WebPullBook** serão documentadas neste arquivo.
 
+## [Não lançado / Unreleased]
+
+### Novidades & Correções / New Features & Fixes
+- **Página Final do Livro (`OEBPS/text/end.xhtml` — Encerramento / Colofão):** nova página final configurável em **Opções Avançadas → Arquivos & Padrão EPUB** (com título, mensagem de encerramento em múltiplas linhas, resumo da obra, link da fonte original e créditos/data de geração) para o livro não terminar abruptamente após o último capítulo; o Sumário (`nav.xhtml` / `text/toc.xhtml`) agora fica sempre no início do livro quando ativado.
+- **Seleção de Volumes e Capítulos com `Ctrl+Clique` e `Shift+Clique`:** botão **Selecionar Todos** em Volumes com alternância (marca todos os volumes ou desmarca todos ao clicar novamente), suporte a `Ctrl+Clique` (itens avulsos) e `Shift+Clique` (intervalo contínuo) diretamente nos chips de volumes e nas linhas da tabela de capítulos, além de normalização de cabeçalhos genéricos (`"Capítulos"`, `"Chapters"`, `"Sumário"`) para **`Volume 01`**.
+- **Isolamento de Seletores CSS por Domínio:** seletores CSS e filtros regex (`customListSelector`, `customContentSelector`, `customExcludeSelector`, `customStripPatterns`) nunca mais são persistidos globalmente em `wpbOptions` (ficando restritos à sessão atual do site ou às **Regras por Domínio** salvas), com fallback automático no `BaseParser` para a extração nativa do adaptador caso um seletor customizado retorne `0` capítulos.
+- **Latência Manual centralizada em Opções Avançadas:** controle de latência manual entre capítulos (`0–30000 ms`, ajustável ao vivo e independente do Modo Seguro) mantido exclusivamente em **Opções Avançadas → Rede, SPA & Resiliência**.
+
 ## [1.4.0] - 2026-11-20 (Beta)
 
 ### Novidades / New Features
