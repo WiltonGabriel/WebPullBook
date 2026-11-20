@@ -52,14 +52,6 @@
 <body>
   <a class="skip-link" href="#main-content">Pular para o conteúdo principal</a>
 
-  <div class="beta-bar" role="region" aria-label="Status da versão">
-    <div class="container beta-bar-inner">
-      <span class="badge accent" data-wpb-version data-wpb-version-prefix="Beta ">Beta v1.5.0-beta</span>
-      <span>O WebPullBook está em Beta e é instalado manualmente pelas Releases no GitHub (ainda não publicado na Chrome Web Store ou no Firefox Add-ons).</span>
-      <a href="installation.html">Guia de Instalação &rarr;</a>
-    </div>
-  </div>
-
   <header class="site-header">
     <div class="container header-inner">
       <a class="brand-link" href="index.html">
@@ -83,9 +75,17 @@
       </nav>
 
       <div class="header-actions">
-        <a class="lang-switch" href="../index.html" hreflang="en" lang="en" aria-label="Switch language to English">🇺🇸 EN</a>
-        <button id="theme-toggle" class="theme-btn" type="button">Tema: Auto</button>
-        <a class="btn primary sm" data-wpb-download href="https://github.com/WiltonGabriel/WebPullBook/releases/download/v1.4.0/WebPullBook-v1.4.0.zip">Baixar (.zip)</a>
+        <select id="lang-select" class="header-select" aria-label="Idioma">
+          <option value="pt-BR" data-href="index.html" selected>Português (BR)</option>
+          <option value="en" data-href="../index.html">English</option>
+        </select>
+        <select id="theme-select" class="header-select" aria-label="Tema">
+          <option value="system">Auto</option>
+          <option value="light">Claro</option>
+          <option value="dark">Escuro</option>
+          <option value="sepia">Sépia</option>
+          <option value="midnight">Meia-noite</option>
+        </select>
       </div>
     </div>
   </header>
@@ -94,24 +94,15 @@
     <section class="hero">
       <div class="container hero-grid">
         <div>
-          <div class="hero-badges">
-            <span class="badge accent" data-wpb-version>v1.5.0-beta</span>
-            <span class="badge">Manifest V3</span>
-            <span class="badge">Chrome • Edge • Brave • Firefox 128+</span>
-            <span class="badge">Licença MIT</span>
-          </div>
           <h1>Extraia conteúdos web com múltiplos capítulos para leitura offline</h1>
           <p class="hero-lead">
             <strong>WebPullBook</strong> é uma extensão de navegador open source (<strong>Web-to-EPUB</strong>) escrita em JavaScript nativo e sem dependências de execução. Permite extrair web novels, light novels, fanfics, artigos, documentações e abas abertas em arquivos <strong>EPUB 2</strong>, <strong>EPUB 3</strong>, <strong>HTML</strong>, <strong>Markdown</strong> e <strong>TXT</strong> organizados por volume para <strong>Kindle</strong>, <strong>Kobo</strong>, <strong>Calibre</strong> e leitura local.
           </p>
           <div class="cta-row">
-            <a class="btn primary" data-wpb-download href="https://github.com/WiltonGabriel/WebPullBook/releases/download/v1.4.0/WebPullBook-v1.4.0.zip">Baixar Versão Atual (.zip)</a>
-            <a class="btn secondary" href="https://github.com/WiltonGabriel/WebPullBook/releases">Notas da Versão</a>
+            <a class="btn primary" href="installation.html">Como Instalar</a>
+            <a class="btn secondary" href="https://github.com/WiltonGabriel/WebPullBook/releases">Releases no GitHub</a>
             <a class="btn secondary" href="https://github.com/WiltonGabriel/WebPullBook">Repositório no GitHub</a>
           </div>
-          <p class="beta-note">
-            O botão de download baixa diretamente o pacote <code>.zip</code> da versão mais recente publicada no GitHub Releases. Durante a fase Beta, a instalação é manual (<a href="#como-comecar">veja os passos abaixo</a>).
-          </p>
         </div>
 
         <div class="showcase-card">
@@ -170,8 +161,8 @@
 
         <div class="grid-3">
           <article class="card">
-            <h3>1. Baixe o Pacote ZIP</h3>
-            <p>Clique em <a data-wpb-download href="https://github.com/WiltonGabriel/WebPullBook/releases/download/v1.4.0/WebPullBook-v1.4.0.zip">Baixar Versão Atual (.zip)</a> para obter o arquivo mais recente diretamente do GitHub Releases e extraia a pasta no seu computador.</p>
+            <h3>1. Baixe a Release</h3>
+            <p>Baixe o pacote da versão mais recente em <a href="https://github.com/WiltonGabriel/WebPullBook/releases/latest">GitHub Releases</a> e extraia a pasta no seu computador.</p>
           </article>
 
           <article class="card">
@@ -309,7 +300,7 @@
           <details>
             <summary>Quais são as limitações conhecidas?</summary>
             <div class="details-body">
-              <p>O WebPullBook extrai apenas texto em DOM HTML padrão acessível na sessão do seu navegador. Não funciona em plataformas com DRM proprietário, capítulos renderizados como <code>&lt;canvas&gt;</code> ou imagens embaralhadas, paywalls bloqueados sem acesso na sessão, nem contorna desafios CAPTCHA automaticamente. Consulte a <a href="compatibility.html">Matriz de Compatibilidade</a> para a classificação completa em 4 níveis.</p>
+              <p data-sync-compat-summary>O WebPullBook extrai texto em DOM HTML padrão acessível na sessão do navegador (Central Novel, Royal Road, Novel Mania, Scribble Hub verificados de ponta a ponta, além de suporte heurístico genérico e modo SPA). Limitações mapeadas em <a href="compatibility.html">docs/COMPATIBILITY.md</a>: Plataformas com DRM proprietário, Capítulos em <code>&lt;canvas&gt;</code> ou imagens embaralhadas, Paywalls fechados sem acesso na sessão, Barreiras anti-bot / CAPTCHA estritas.</p>
             </div>
           </details>
         </div>
@@ -352,8 +343,8 @@
         <div class="footer-col">
           <h3>Idiomas</h3>
           <ul>
-            <li><a href="../index.html" hreflang="en" lang="en">🇺🇸 English (Default)</a></li>
-            <li><a href="index.html" aria-current="page">🇧🇷 Português (Brasil)</a></li>
+            <li><a href="../index.html" hreflang="en" lang="en">English</a></li>
+            <li><a href="index.html" aria-current="page">Português (Brasil)</a></li>
           </ul>
         </div>
       </div>

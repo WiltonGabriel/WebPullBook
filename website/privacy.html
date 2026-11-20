@@ -34,14 +34,6 @@
 <body>
   <a class="skip-link" href="#main-content">Skip to main content</a>
 
-  <div class="beta-bar" role="region" aria-label="Release status">
-    <div class="container beta-bar-inner">
-      <span class="badge success">No Telemetry • Local Processing</span>
-      <span>The source code of WebPullBook is open and auditable on GitHub.</span>
-      <a href="https://github.com/WiltonGabriel/WebPullBook">View Source Code &rarr;</a>
-    </div>
-  </div>
-
   <header class="site-header">
     <div class="container header-inner">
       <a class="brand-link" href="index.html">
@@ -65,9 +57,17 @@
       </nav>
 
       <div class="header-actions">
-        <a class="lang-switch" href="pt/privacy.html" hreflang="pt-BR" lang="pt-BR" aria-label="Mudar idioma para Português Brasileiro">🇧🇷 PT-BR</a>
-        <button id="theme-toggle" class="theme-btn" type="button">Theme: Auto</button>
-        <a class="btn primary sm" data-wpb-download href="https://github.com/WiltonGabriel/WebPullBook/releases/download/v1.4.0/WebPullBook-v1.4.0.zip">Download (.zip)</a>
+        <select id="lang-select" class="header-select" aria-label="Language">
+          <option value="en" data-href="privacy.html" selected>English</option>
+          <option value="pt-BR" data-href="pt/privacy.html">Português (BR)</option>
+        </select>
+        <select id="theme-select" class="header-select" aria-label="Theme">
+          <option value="system">Auto</option>
+          <option value="light">Light</option>
+          <option value="dark">Dark</option>
+          <option value="sepia">Sepia</option>
+          <option value="midnight">Midnight</option>
+        </select>
       </div>
     </div>
   </header>
@@ -75,7 +75,6 @@
   <main id="main-content">
     <section class="page-hero">
       <div class="container">
-        <span class="badge success">Last Updated: November 20, 2026</span>
         <h1>Privacy Policy &amp; Permissions Disclosure</h1>
         <p>This document explains what runs locally in your browser, how network requests to target websites work, what data is stored on your device, and why each Manifest V3 permission is declared.</p>
       </div>
@@ -266,8 +265,8 @@
         <div class="footer-col">
           <h3>Languages</h3>
           <ul>
-            <li><a href="privacy.html" aria-current="page">🇺🇸 English (Default)</a></li>
-            <li><a href="pt/privacy.html" hreflang="pt-BR" lang="pt-BR">🇧🇷 Português (Brasil)</a></li>
+            <li><a href="privacy.html" aria-current="page">English</a></li>
+            <li><a href="pt/privacy.html" hreflang="pt-BR" lang="pt-BR">Português (Brasil)</a></li>
           </ul>
         </div>
       </div>

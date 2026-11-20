@@ -34,14 +34,6 @@
 <body>
   <a class="skip-link" href="#main-content">Pular para o conteúdo principal</a>
 
-  <div class="beta-bar" role="region" aria-label="Status da versão">
-    <div class="container beta-bar-inner">
-      <span class="badge accent" data-wpb-version data-wpb-version-prefix="Beta ">Beta v1.5.0-beta</span>
-      <span>Relatos de compatibilidade podem ser enviados via Pull Request em docs/COMPATIBILITY.md.</span>
-      <a href="contributing.html">Guia de Contribuição &rarr;</a>
-    </div>
-  </div>
-
   <header class="site-header">
     <div class="container header-inner">
       <a class="brand-link" href="index.html">
@@ -65,9 +57,17 @@
       </nav>
 
       <div class="header-actions">
-        <a class="lang-switch" href="../compatibility.html" hreflang="en" lang="en" aria-label="Switch language to English">🇺🇸 EN</a>
-        <button id="theme-toggle" class="theme-btn" type="button">Tema: Auto</button>
-        <a class="btn primary sm" data-wpb-download href="https://github.com/WiltonGabriel/WebPullBook/releases/download/v1.4.0/WebPullBook-v1.4.0.zip">Baixar (.zip)</a>
+        <select id="lang-select" class="header-select" aria-label="Idioma">
+          <option value="pt-BR" data-href="compatibility.html" selected>Português (BR)</option>
+          <option value="en" data-href="../compatibility.html">English</option>
+        </select>
+        <select id="theme-select" class="header-select" aria-label="Tema">
+          <option value="system">Auto</option>
+          <option value="light">Claro</option>
+          <option value="dark">Escuro</option>
+          <option value="sepia">Sépia</option>
+          <option value="midnight">Meia-noite</option>
+        </select>
       </div>
     </div>
   </header>
@@ -75,7 +75,6 @@
   <main id="main-content">
     <section class="page-hero">
       <div class="container">
-        <span class="badge accent">Classificação em Quatro Níveis</span>
         <h1>Compatibilidade de Sites e Navegadores</h1>
         <p>O WebPullBook prioriza compatibilidade estrutural de DOM em vez de regras presas a domínios, combinando adaptadores de layout com um extrator heurístico genérico, seletor visual CSS e renderização de abas.</p>
       </div>
@@ -98,7 +97,7 @@
                 <th>Escopo Verificado &amp; Notas</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody data-sync-table="compat-tier-1">
               <tr>
                 <td><strong>Central Novel</strong></td>
                 <td><code>wp-lightnovel</code></td>
@@ -146,7 +145,7 @@
                 <th>Notas</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody data-sync-table="compat-tier-2">
               <tr>
                 <td><strong>Plataformas baseadas em Madara</strong> (<code>.wp-manga-chapter</code>, <code>.reading-content</code>)</td>
                 <td><code>madara-theme</code></td>
@@ -181,21 +180,21 @@
                 <th>Como Funciona</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody data-sync-table="compat-tier-3">
               <tr>
-                <td><strong>Índices HTML estáticos, blogs e listas paginadas (<code>rel="next"</code>)</strong></td>
+                <td><strong>Índices HTML estáticos, blogs e listas paginadas</strong> (<code>rel=&quot;next&quot;</code>)</td>
                 <td><code>generic-html</code></td>
-                <td>Usa pontuação de clusters de links, extração por densidade de prosa (<em>Innermost Node Wins</em>), assistente heurístico de seletores e ferramenta visual <strong>🎯 Apontar</strong>.</td>
+                <td>Usa pontuação de clusters de links, extração por densidade de prosa, assistente heurístico de seletores e seletor visual 🎯 Apontar.</td>
               </tr>
               <tr>
                 <td><strong>Capítulos sequenciais sem página de sumário</strong></td>
-                <td><code>generic-html</code> (rastreamento "Próximo Capítulo")</td>
-                <td>Segue links sequenciais de <em>"Próximo Capítulo"</em> / <em>"Next Chapter"</em> ao iniciar diretamente em um capítulo.</td>
+                <td><code>generic-html</code> (rastreamento &quot;Próximo Capítulo&quot;)</td>
+                <td>Rastreia automaticamente links sequenciais de <em>&quot;Próximo Capítulo&quot;</em> / <em>&quot;Next Chapter&quot;</em> ao iniciar em um capítulo.</td>
               </tr>
               <tr>
-                <td><strong>Páginas JavaScript / SPA (React, Vue, Next.js)</strong></td>
+                <td><strong>Páginas JavaScript / SPA</strong> (React, Vue, Next.js)</td>
                 <td>Renderização via aba (<code>renderWithTab</code>)</td>
-                <td>Extrai o DOM hidratado a partir de uma aba aberta ou de uma aba auxiliar gerenciada quando o HTML estático é uma casca vazia.</td>
+                <td>Extrai o DOM hidratado via aba aberta ou aba auxiliar em segundo plano quando o HTML estático é uma casca vazia.</td>
               </tr>
               <tr>
                 <td><strong>Abas abertas do navegador</strong></td>
@@ -223,22 +222,22 @@
                 <th>Motivo Técnico</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody data-sync-table="compat-tier-4">
               <tr>
                 <td><strong>Plataformas com DRM proprietário</strong></td>
-                <td>O conteúdo é criptografado e inacessível como nós de texto DOM padrão. O WebPullBook não contorna DRM.</td>
+                <td>O conteúdo é criptografado e inacessível como texto DOM padrão.</td>
               </tr>
               <tr>
-                <td><strong>Capítulos renderizados em <code>&lt;canvas&gt;</code> ou imagens embaralhadas</strong></td>
-                <td>O texto é desenhado como pixels de imagem sem elementos HTML de texto.</td>
+                <td><strong>Capítulos em <code>&lt;canvas&gt;</code> ou imagens embaralhadas</strong></td>
+                <td>O texto é renderizado apenas como pixels de imagem sem nós de texto HTML.</td>
               </tr>
               <tr>
-                <td><strong>Paywalls bloqueados sem acesso na sessão</strong></td>
-                <td>Se a sessão do seu navegador não tem permissão para visualizar o capítulo, o WebPullBook também não terá acesso.</td>
+                <td><strong>Paywalls fechados sem acesso na sessão</strong></td>
+                <td>A sessão do navegador não tem acesso a capítulos bloqueados por paywall.</td>
               </tr>
               <tr>
                 <td><strong>Barreiras anti-bot / CAPTCHA estritas</strong></td>
-                <td>Requisições automatizadas são pausadas quando um desafio é detectado até que o usuário conclua a verificação manualmente em uma aba normal.</td>
+                <td>Requisições automatizadas ficam bloqueadas até que o usuário conclua a verificação manualmente em uma aba normal.</td>
               </tr>
             </tbody>
           </table>
@@ -324,8 +323,8 @@
         <div class="footer-col">
           <h3>Idiomas</h3>
           <ul>
-            <li><a href="../compatibility.html" hreflang="en" lang="en">🇺🇸 English (Default)</a></li>
-            <li><a href="compatibility.html" aria-current="page">🇧🇷 Português (Brasil)</a></li>
+            <li><a href="../compatibility.html" hreflang="en" lang="en">English</a></li>
+            <li><a href="compatibility.html" aria-current="page">Português (Brasil)</a></li>
           </ul>
         </div>
       </div>

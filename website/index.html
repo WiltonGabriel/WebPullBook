@@ -51,14 +51,6 @@
 <body>
   <a class="skip-link" href="#main-content">Skip to main content</a>
 
-  <div class="beta-bar" role="region" aria-label="Release status">
-    <div class="container beta-bar-inner">
-      <span class="badge accent" data-wpb-version data-wpb-version-prefix="Beta ">Beta v1.5.0-beta</span>
-      <span>WebPullBook is in Beta and installed manually from GitHub Releases (not yet published on Chrome Web Store or Firefox Add-ons).</span>
-      <a href="installation.html">Installation Guide &rarr;</a>
-    </div>
-  </div>
-
   <header class="site-header">
     <div class="container header-inner">
       <a class="brand-link" href="index.html">
@@ -82,9 +74,17 @@
       </nav>
 
       <div class="header-actions">
-        <a class="lang-switch" href="pt/index.html" hreflang="pt-BR" lang="pt-BR" aria-label="Mudar idioma para Português Brasileiro">🇧🇷 PT-BR</a>
-        <button id="theme-toggle" class="theme-btn" type="button">Theme: Auto</button>
-        <a class="btn primary sm" data-wpb-download href="https://github.com/WiltonGabriel/WebPullBook/releases/download/v1.4.0/WebPullBook-v1.4.0.zip">Download (.zip)</a>
+        <select id="lang-select" class="header-select" aria-label="Language">
+          <option value="en" data-href="index.html" selected>English</option>
+          <option value="pt-BR" data-href="pt/index.html">Português (BR)</option>
+        </select>
+        <select id="theme-select" class="header-select" aria-label="Theme">
+          <option value="system">Auto</option>
+          <option value="light">Light</option>
+          <option value="dark">Dark</option>
+          <option value="sepia">Sepia</option>
+          <option value="midnight">Midnight</option>
+        </select>
       </div>
     </div>
   </header>
@@ -93,24 +93,15 @@
     <section class="hero">
       <div class="container hero-grid">
         <div>
-          <div class="hero-badges">
-            <span class="badge accent" data-wpb-version>v1.5.0-beta</span>
-            <span class="badge">Manifest V3</span>
-            <span class="badge">Chrome • Edge • Brave • Firefox 128+</span>
-            <span class="badge">MIT License</span>
-          </div>
           <h1>Extract multi-chapter web content into offline ebooks</h1>
           <p class="hero-lead">
             <strong>WebPullBook</strong> is an open-source browser extension (<strong>Web-to-EPUB</strong>) written in native JavaScript with zero runtime dependencies. It extracts web novels, light novels, fanfiction, articles, documentation, and open tabs into volume-organized <strong>EPUB 2</strong>, <strong>EPUB 3</strong>, <strong>HTML</strong>, <strong>Markdown</strong>, and <strong>TXT</strong> files for <strong>Kindle</strong>, <strong>Kobo</strong>, <strong>Calibre</strong>, and local reading.
           </p>
           <div class="cta-row">
-            <a class="btn primary" data-wpb-download href="https://github.com/WiltonGabriel/WebPullBook/releases/download/v1.4.0/WebPullBook-v1.4.0.zip">Download Latest (.zip)</a>
-            <a class="btn secondary" href="https://github.com/WiltonGabriel/WebPullBook/releases">Release Notes</a>
+            <a class="btn primary" href="installation.html">How to Install</a>
+            <a class="btn secondary" href="https://github.com/WiltonGabriel/WebPullBook/releases">GitHub Releases</a>
             <a class="btn secondary" href="https://github.com/WiltonGabriel/WebPullBook">GitHub Repository</a>
           </div>
-          <p class="beta-note">
-            Direct download fetches the latest release <code>.zip</code> asset from GitHub Releases. Because the project is in Beta, installation is manual (<a href="#quick-start">see steps below</a>).
-          </p>
         </div>
 
         <div class="showcase-card">
@@ -169,8 +160,8 @@
 
         <div class="grid-3">
           <article class="card">
-            <h3>1. Download the Release ZIP</h3>
-            <p>Click <a data-wpb-download href="https://github.com/WiltonGabriel/WebPullBook/releases/download/v1.4.0/WebPullBook-v1.4.0.zip">Download Latest (.zip)</a> to download the current package directly from GitHub Releases, then extract the folder on your computer.</p>
+            <h3>1. Download the Release</h3>
+            <p>Download the latest release package from <a href="https://github.com/WiltonGabriel/WebPullBook/releases/latest">GitHub Releases</a> and extract the folder on your computer.</p>
           </article>
 
           <article class="card">
@@ -308,7 +299,7 @@
           <details>
             <summary>What are the known limitations?</summary>
             <div class="details-body">
-              <p>WebPullBook only extracts standard DOM text accessible in your browser session. It does not support DRM-encrypted platforms, chapters rendered as <code>&lt;canvas&gt;</code> or scrambled images, locked paywalls without session access, or automated bypassing of CAPTCHA challenges. See the <a href="compatibility.html">Compatibility Matrix</a> for the full 4-tier classification.</p>
+              <p data-sync-compat-summary>WebPullBook extracts standard DOM HTML text accessible in your browser session (Central Novel, Royal Road, Novel Mania, Scribble Hub verified end-to-end, plus generic heuristic and SPA tab modes). Known limitations tracked in <a href="compatibility.html">docs/COMPATIBILITY.md</a>: Proprietary DRM platforms, <code>&lt;canvas&gt;</code> or scrambled-image chapters, Locked paywalls without session access, Hard non-bypassable anti-bot / CAPTCHA gates.</p>
             </div>
           </details>
         </div>
@@ -351,8 +342,8 @@
         <div class="footer-col">
           <h3>Languages</h3>
           <ul>
-            <li><a href="index.html" aria-current="page">🇺🇸 English (Default)</a></li>
-            <li><a href="pt/index.html" hreflang="pt-BR" lang="pt-BR">🇧🇷 Português (Brasil)</a></li>
+            <li><a href="index.html" aria-current="page">English</a></li>
+            <li><a href="pt/index.html" hreflang="pt-BR" lang="pt-BR">Português (Brasil)</a></li>
           </ul>
         </div>
       </div>

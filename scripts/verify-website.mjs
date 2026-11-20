@@ -182,6 +182,18 @@ for (const page of siteConfig.pages) {
     if (!/<main\b/i.test(html)) fail(`${v.relFile}: missing <main>`);
     if (!/<footer\b/i.test(html)) fail(`${v.relFile}: missing <footer>`);
     if (!/aria-current="page"/i.test(html)) fail(`${v.relFile}: missing aria-current="page" in navigation`);
+    if (/class="beta-bar"/i.test(html)) fail(`${v.relFile}: must not include top .beta-bar banner`);
+    if (!/<select\b[^>]*\bid="lang-select"/i.test(html)) fail(`${v.relFile}: missing #lang-select dropdown`);
+    if (!/<select\b[^>]*\bid="theme-select"/i.test(html)) fail(`${v.relFile}: missing #theme-select dropdown`);
+    for (const themeOpt of ['system', 'light', 'dark', 'sepia', 'midnight']) {
+      if (!new RegExp(`<option\\s+value="${themeOpt}"`, 'i').test(html)) {
+        fail(`${v.relFile}: #theme-select missing option value="${themeOpt}"`);
+      }
+    }
+    if (/🇺🇸|🇧🇷/.test(html)) fail(`${v.relFile}: must not contain country flag emojis`);
+    if (/Download\s*\(\.zip\)|Baixar\s*\(\.zip\)/i.test(html)) {
+      fail(`${v.relFile}: must not contain Download (.zip) / Baixar (.zip) button`);
+    }
 
     const headings = [...html.matchAll(/<h([1-6])\b[^>]*>/gi)].map((m) => Number(m[1]));
     const h1Count = headings.filter((lvl) => lvl === 1).length;

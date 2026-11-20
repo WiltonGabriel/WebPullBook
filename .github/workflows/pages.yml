@@ -6,8 +6,11 @@ on:
       - main
     paths:
       - "website/**"
+      - "docs/**"
       - "manifest.json"
-      - "scripts/verify-website.mjs"
+      - "package.json"
+      - "CHANGELOG.md"
+      - "scripts/**"
       - ".github/workflows/pages.yml"
   release:
     types: [published, edited]
@@ -33,6 +36,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "22"
+
+      - name: Synchronize website tables and metadata from docs and manifest
+        run: node scripts/sync-website.mjs
 
       - name: Validate static website HTML, SEO metadata, links, and sitemap
         run: node scripts/verify-website.mjs

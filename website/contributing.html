@@ -34,14 +34,6 @@
 <body>
   <a class="skip-link" href="#main-content">Skip to main content</a>
 
-  <div class="beta-bar" role="region" aria-label="Release status">
-    <div class="container beta-bar-inner">
-      <span class="badge accent">Open Source • MIT License</span>
-      <span>Contributions to code, tests, and compatibility documentation are welcome.</span>
-      <a href="https://github.com/WiltonGabriel/WebPullBook">GitHub Repository &rarr;</a>
-    </div>
-  </div>
-
   <header class="site-header">
     <div class="container header-inner">
       <a class="brand-link" href="index.html">
@@ -65,9 +57,17 @@
       </nav>
 
       <div class="header-actions">
-        <a class="lang-switch" href="pt/contributing.html" hreflang="pt-BR" lang="pt-BR" aria-label="Mudar idioma para Português Brasileiro">🇧🇷 PT-BR</a>
-        <button id="theme-toggle" class="theme-btn" type="button">Theme: Auto</button>
-        <a class="btn primary sm" data-wpb-download href="https://github.com/WiltonGabriel/WebPullBook/releases/download/v1.4.0/WebPullBook-v1.4.0.zip">Download (.zip)</a>
+        <select id="lang-select" class="header-select" aria-label="Language">
+          <option value="en" data-href="contributing.html" selected>English</option>
+          <option value="pt-BR" data-href="pt/contributing.html">Português (BR)</option>
+        </select>
+        <select id="theme-select" class="header-select" aria-label="Theme">
+          <option value="system">Auto</option>
+          <option value="light">Light</option>
+          <option value="dark">Dark</option>
+          <option value="sepia">Sepia</option>
+          <option value="midnight">Midnight</option>
+        </select>
       </div>
     </div>
   </header>
@@ -75,7 +75,6 @@
   <main id="main-content">
     <section class="page-hero">
       <div class="container">
-        <span class="badge accent">Community &amp; Engineering</span>
         <h1>Contributing to WebPullBook</h1>
         <p>WebPullBook uses native ES modules with no build step and no runtime dependencies, so you can load the repository folder directly in your browser and run unit checks with standard Node.js.</p>
       </div>
@@ -199,8 +198,8 @@ npm run test:e2e</code></pre>
         <div class="footer-col">
           <h3>Languages</h3>
           <ul>
-            <li><a href="contributing.html" aria-current="page">🇺🇸 English (Default)</a></li>
-            <li><a href="pt/contributing.html" hreflang="pt-BR" lang="pt-BR">🇧🇷 Português (Brasil)</a></li>
+            <li><a href="contributing.html" aria-current="page">English</a></li>
+            <li><a href="pt/contributing.html" hreflang="pt-BR" lang="pt-BR">Português (Brasil)</a></li>
           </ul>
         </div>
       </div>

@@ -34,14 +34,6 @@
 <body>
   <a class="skip-link" href="#main-content">Pular para o conteúdo principal</a>
 
-  <div class="beta-bar" role="region" aria-label="Status da versão">
-    <div class="container beta-bar-inner">
-      <span class="badge accent" data-wpb-version data-wpb-version-prefix="Beta ">Beta v1.5.0-beta</span>
-      <span>Disponível para instalação manual pelo GitHub Releases durante a fase Beta.</span>
-      <a href="installation.html">Como Instalar &rarr;</a>
-    </div>
-  </div>
-
   <header class="site-header">
     <div class="container header-inner">
       <a class="brand-link" href="index.html">
@@ -65,9 +57,17 @@
       </nav>
 
       <div class="header-actions">
-        <a class="lang-switch" href="../features.html" hreflang="en" lang="en" aria-label="Switch language to English">🇺🇸 EN</a>
-        <button id="theme-toggle" class="theme-btn" type="button">Tema: Auto</button>
-        <a class="btn primary sm" data-wpb-download href="https://github.com/WiltonGabriel/WebPullBook/releases/download/v1.4.0/WebPullBook-v1.4.0.zip">Baixar (.zip)</a>
+        <select id="lang-select" class="header-select" aria-label="Idioma">
+          <option value="pt-BR" data-href="features.html" selected>Português (BR)</option>
+          <option value="en" data-href="../features.html">English</option>
+        </select>
+        <select id="theme-select" class="header-select" aria-label="Tema">
+          <option value="system">Auto</option>
+          <option value="light">Claro</option>
+          <option value="dark">Escuro</option>
+          <option value="sepia">Sépia</option>
+          <option value="midnight">Meia-noite</option>
+        </select>
       </div>
     </div>
   </header>
@@ -75,7 +75,6 @@
   <main id="main-content">
     <section class="page-hero">
       <div class="container">
-        <span class="badge accent">Visão Técnica</span>
         <h1>Funcionalidades &amp; Arquitetura de Extração</h1>
         <p>Descrição objetiva de como o WebPullBook extrai páginas com múltiplos capítulos, lida com sites dinâmicos, estrutura arquivos EPUB 2 e EPUB 3 e gerencia o cache local.</p>
       </div>
@@ -142,7 +141,7 @@
                 <th>Recomendado Para</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody data-sync-table="reader-presets">
               <tr>
                 <td><strong>Padrão Moderno</strong> (<code>modern</code>)</td>
                 <td>EPUB 3</td>
@@ -159,7 +158,7 @@
                 <td>Sim</td>
                 <td>JPEG comprimido</td>
                 <td>1080px</td>
-                <td>Kobo (incluindo Clara/Libra Colour), Tolino, PocketBook</td>
+                <td>Kobo (inclusive Clara/Libra Colour), Tolino, PocketBook</td>
               </tr>
               <tr>
                 <td><strong>Kindle (Moderno)</strong> (<code>kindle-modern</code>)</td>
@@ -168,7 +167,7 @@
                 <td>Sim</td>
                 <td>JPEG comprimido</td>
                 <td>1200px</td>
-                <td>Transferência USB via Calibre (KFX/AZW3), Kindle Colorsoft, apps modernos</td>
+                <td>Conversão via Calibre (KFX/AZW3 por USB), Kindle Colorsoft</td>
               </tr>
               <tr>
                 <td><strong>Kindle (Antigo)</strong> (<code>kindle</code>)</td>
@@ -177,16 +176,16 @@
                 <td>Sim</td>
                 <td>JPEG comprimido</td>
                 <td>1200px</td>
-                <td>Amazon <em>Send to Kindle</em> (e-mail, web, app) para compatibilidade na conversão</td>
+                <td>Envio por <em>Send to Kindle</em> (e-mail/web/app) compatível com conversor Amazon</td>
               </tr>
               <tr>
                 <td><strong>Somente Texto</strong> (<code>textonly</code>)</td>
                 <td>EPUB 3</td>
                 <td>Sim</td>
                 <td>Sim</td>
-                <td>Imagens ignoradas</td>
+                <td>Ignora imagens</td>
                 <td>&mdash;</td>
-                <td>Livros compostos apenas por texto sem ilustrações internas</td>
+                <td>Livros compostos apenas por texto sem imagens internas</td>
               </tr>
               <tr>
                 <td><strong>Padrão Antigo</strong> (<code>legacy</code>)</td>
@@ -195,16 +194,16 @@
                 <td>Sim</td>
                 <td>JPEG comprimido</td>
                 <td>1080px</td>
-                <td>Leitores Sony antigos, Nook de 1ª geração, CoolReader, firmwares legados</td>
+                <td>Aparelhos antigos (Sony Reader, Nook antigo, CoolReader)</td>
               </tr>
               <tr>
                 <td><strong>Personalizado</strong> (<code>custom</code>)</td>
-                <td>Definido pelo usuário</td>
-                <td>Definido pelo usuário</td>
-                <td>Definido pelo usuário</td>
-                <td>Definido pelo usuário</td>
-                <td>Definido pelo usuário</td>
-                <td>Ativado automaticamente ao alterar qualquer opção em Opções Avançadas</td>
+                <td>Manual</td>
+                <td>Manual</td>
+                <td>Manual</td>
+                <td>Manual</td>
+                <td>Manual</td>
+                <td>Ativado automaticamente ao editar qualquer opção avançada</td>
               </tr>
             </tbody>
           </table>
@@ -318,8 +317,8 @@
         <div class="footer-col">
           <h3>Idiomas</h3>
           <ul>
-            <li><a href="../features.html" hreflang="en" lang="en">🇺🇸 English (Default)</a></li>
-            <li><a href="features.html" aria-current="page">🇧🇷 Português (Brasil)</a></li>
+            <li><a href="../features.html" hreflang="en" lang="en">English</a></li>
+            <li><a href="features.html" aria-current="page">Português (Brasil)</a></li>
           </ul>
         </div>
       </div>

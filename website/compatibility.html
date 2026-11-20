@@ -34,14 +34,6 @@
 <body>
   <a class="skip-link" href="#main-content">Skip to main content</a>
 
-  <div class="beta-bar" role="region" aria-label="Release status">
-    <div class="container beta-bar-inner">
-      <span class="badge accent" data-wpb-version data-wpb-version-prefix="Beta ">Beta v1.5.0-beta</span>
-      <span>Compatibility reports can be submitted via Pull Request to docs/COMPATIBILITY.md.</span>
-      <a href="contributing.html">Contributing Guide &rarr;</a>
-    </div>
-  </div>
-
   <header class="site-header">
     <div class="container header-inner">
       <a class="brand-link" href="index.html">
@@ -65,9 +57,17 @@
       </nav>
 
       <div class="header-actions">
-        <a class="lang-switch" href="pt/compatibility.html" hreflang="pt-BR" lang="pt-BR" aria-label="Mudar idioma para Português Brasileiro">🇧🇷 PT-BR</a>
-        <button id="theme-toggle" class="theme-btn" type="button">Theme: Auto</button>
-        <a class="btn primary sm" data-wpb-download href="https://github.com/WiltonGabriel/WebPullBook/releases/download/v1.4.0/WebPullBook-v1.4.0.zip">Download (.zip)</a>
+        <select id="lang-select" class="header-select" aria-label="Language">
+          <option value="en" data-href="compatibility.html" selected>English</option>
+          <option value="pt-BR" data-href="pt/compatibility.html">Português (BR)</option>
+        </select>
+        <select id="theme-select" class="header-select" aria-label="Theme">
+          <option value="system">Auto</option>
+          <option value="light">Light</option>
+          <option value="dark">Dark</option>
+          <option value="sepia">Sepia</option>
+          <option value="midnight">Midnight</option>
+        </select>
       </div>
     </div>
   </header>
@@ -75,7 +75,6 @@
   <main id="main-content">
     <section class="page-hero">
       <div class="container">
-        <span class="badge accent">Four-Tier Classification</span>
         <h1>Website &amp; Browser Compatibility</h1>
         <p>WebPullBook prioritizes structural DOM compatibility over domain-specific rules, combining dedicated layout adapters with a generic heuristic extractor, visual CSS selector picking, and tab rendering.</p>
       </div>
@@ -98,7 +97,7 @@
                 <th>Verified Scope &amp; Notes</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody data-sync-table="compat-tier-1">
               <tr>
                 <td><strong>Central Novel</strong></td>
                 <td><code>wp-lightnovel</code></td>
@@ -146,7 +145,7 @@
                 <th>Notes</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody data-sync-table="compat-tier-2">
               <tr>
                 <td><strong>Madara-based platforms</strong> (<code>.wp-manga-chapter</code>, <code>.reading-content</code>)</td>
                 <td><code>madara-theme</code></td>
@@ -181,26 +180,26 @@
                 <th>How It Works</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody data-sync-table="compat-tier-3">
               <tr>
-                <td><strong>Static HTML chapter indexes, blogs &amp; paginated lists (<code>rel="next"</code>)</strong></td>
+                <td><strong>Static HTML chapter indexes, blogs &amp; paginated lists</strong> (<code>rel=&quot;next&quot;</code>)</td>
                 <td><code>generic-html</code></td>
-                <td>Uses link-cluster scoring, prose density extraction (<em>Innermost Node Wins</em>), heuristic selector assistant, and the visual <strong>🎯 Pick</strong> selector tool.</td>
+                <td>Uses link-cluster scoring, prose density extraction, heuristic selector assistant, and 🎯 visual picker.</td>
               </tr>
               <tr>
                 <td><strong>Sequential chapters without a TOC page</strong></td>
-                <td><code>generic-html</code> ("Next Chapter" crawl)</td>
-                <td>Crawls sequential <em>"Next Chapter"</em> links when starting directly from a prose chapter page.</td>
+                <td><code>generic-html</code> (&quot;Next Chapter&quot; crawl)</td>
+                <td>Automatically crawls sequential <em>&quot;Next Chapter&quot;</em> links when landing on a prose chapter.</td>
               </tr>
               <tr>
-                <td><strong>JavaScript / SPA pages (React, Vue, Next.js)</strong></td>
+                <td><strong>JavaScript / SPA pages</strong> (React, Vue, Next.js)</td>
                 <td>Tab rendering (<code>renderWithTab</code>)</td>
-                <td>Extracts hydrated DOM via an open tab or a managed background worker tab when static HTML is an empty shell.</td>
+                <td>Extracts hydrated DOM via open or background browser tab when static HTML is an empty shell.</td>
               </tr>
               <tr>
                 <td><strong>Open browser tabs</strong></td>
                 <td>Merge Tabs</td>
-                <td>Compiles open HTTP/HTTPS tabs into a single anthology or standalone ebooks.</td>
+                <td>Compiles open HTTP/HTTPS tabs into a single anthology or standalone books.</td>
               </tr>
             </tbody>
           </table>
@@ -223,22 +222,22 @@
                 <th>Technical Reason</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody data-sync-table="compat-tier-4">
               <tr>
                 <td><strong>Proprietary DRM platforms</strong></td>
-                <td>Content is encrypted and inaccessible as standard DOM text nodes. WebPullBook does not circumvent DRM.</td>
+                <td>Content is encrypted and inaccessible as standard DOM text.</td>
               </tr>
               <tr>
                 <td><strong><code>&lt;canvas&gt;</code> or scrambled-image chapters</strong></td>
-                <td>Text is rendered purely as raster pixels without underlying HTML prose elements.</td>
+                <td>Text is rendered purely as pixels without HTML text nodes.</td>
               </tr>
               <tr>
                 <td><strong>Locked paywalls without session access</strong></td>
-                <td>If your browser session cannot access a locked chapter, WebPullBook cannot access it either.</td>
+                <td>Browser session cannot access chapters behind paywalls.</td>
               </tr>
               <tr>
                 <td><strong>Hard non-bypassable anti-bot / CAPTCHA gates</strong></td>
-                <td>Automated requests pause when a challenge is detected until the user manually completes verification in a normal browser tab.</td>
+                <td>Automated requests are blocked until the user manually solves verification in a normal tab.</td>
               </tr>
             </tbody>
           </table>
@@ -324,8 +323,8 @@
         <div class="footer-col">
           <h3>Languages</h3>
           <ul>
-            <li><a href="compatibility.html" aria-current="page">🇺🇸 English (Default)</a></li>
-            <li><a href="pt/compatibility.html" hreflang="pt-BR" lang="pt-BR">🇧🇷 Português (Brasil)</a></li>
+            <li><a href="compatibility.html" aria-current="page">English</a></li>
+            <li><a href="pt/compatibility.html" hreflang="pt-BR" lang="pt-BR">Português (Brasil)</a></li>
           </ul>
         </div>
       </div>

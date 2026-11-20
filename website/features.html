@@ -34,14 +34,6 @@
 <body>
   <a class="skip-link" href="#main-content">Skip to main content</a>
 
-  <div class="beta-bar" role="region" aria-label="Release status">
-    <div class="container beta-bar-inner">
-      <span class="badge accent" data-wpb-version data-wpb-version-prefix="Beta ">Beta v1.5.0-beta</span>
-      <span>Available via manual installation from GitHub Releases during Beta.</span>
-      <a href="installation.html">How to Install &rarr;</a>
-    </div>
-  </div>
-
   <header class="site-header">
     <div class="container header-inner">
       <a class="brand-link" href="index.html">
@@ -65,9 +57,17 @@
       </nav>
 
       <div class="header-actions">
-        <a class="lang-switch" href="pt/features.html" hreflang="pt-BR" lang="pt-BR" aria-label="Mudar idioma para Português Brasileiro">🇧🇷 PT-BR</a>
-        <button id="theme-toggle" class="theme-btn" type="button">Theme: Auto</button>
-        <a class="btn primary sm" data-wpb-download href="https://github.com/WiltonGabriel/WebPullBook/releases/download/v1.4.0/WebPullBook-v1.4.0.zip">Download (.zip)</a>
+        <select id="lang-select" class="header-select" aria-label="Language">
+          <option value="en" data-href="features.html" selected>English</option>
+          <option value="pt-BR" data-href="pt/features.html">Português (BR)</option>
+        </select>
+        <select id="theme-select" class="header-select" aria-label="Theme">
+          <option value="system">Auto</option>
+          <option value="light">Light</option>
+          <option value="dark">Dark</option>
+          <option value="sepia">Sepia</option>
+          <option value="midnight">Midnight</option>
+        </select>
       </div>
     </div>
   </header>
@@ -75,7 +75,6 @@
   <main id="main-content">
     <section class="page-hero">
       <div class="container">
-        <span class="badge accent">Technical Overview</span>
         <h1>Features &amp; Extraction Architecture</h1>
         <p>An overview of how WebPullBook extracts multi-chapter web content, handles dynamic pages, formats EPUB 2 and EPUB 3 archives, and manages local caching.</p>
       </div>
@@ -142,7 +141,7 @@
                 <th>Recommended Target</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody data-sync-table="reader-presets">
               <tr>
                 <td><strong>Modern Default</strong> (<code>modern</code>)</td>
                 <td>EPUB 3</td>
@@ -168,7 +167,7 @@
                 <td>Yes</td>
                 <td>Compressed JPEG</td>
                 <td>1200px</td>
-                <td>Calibre USB transfer (KFX/AZW3), Kindle Colorsoft, modern apps</td>
+                <td>Calibre KFX/AZW3 conversion via USB, Kindle Colorsoft, modern apps</td>
               </tr>
               <tr>
                 <td><strong>Kindle (Legacy)</strong> (<code>kindle</code>)</td>
@@ -177,7 +176,7 @@
                 <td>Yes</td>
                 <td>Compressed JPEG</td>
                 <td>1200px</td>
-                <td>Amazon <em>Send to Kindle</em> (email, web, app) for conversion compatibility</td>
+                <td><em>Send to Kindle</em> email/web/app (compatible with Amazon's cloud converter)</td>
               </tr>
               <tr>
                 <td><strong>Text Only</strong> (<code>textonly</code>)</td>
@@ -186,7 +185,7 @@
                 <td>Yes</td>
                 <td>Images skipped</td>
                 <td>&mdash;</td>
-                <td>Text-only books without inline illustrations</td>
+                <td>Text-only books without inline images</td>
               </tr>
               <tr>
                 <td><strong>Legacy Default</strong> (<code>legacy</code>)</td>
@@ -204,7 +203,7 @@
                 <td>User-defined</td>
                 <td>User-defined</td>
                 <td>User-defined</td>
-                <td>Activated automatically whenever any Advanced Option is edited</td>
+                <td>Activated automatically when any Advanced Option is edited</td>
               </tr>
             </tbody>
           </table>
@@ -318,8 +317,8 @@
         <div class="footer-col">
           <h3>Languages</h3>
           <ul>
-            <li><a href="features.html" aria-current="page">🇺🇸 English (Default)</a></li>
-            <li><a href="pt/features.html" hreflang="pt-BR" lang="pt-BR">🇧🇷 Português (Brasil)</a></li>
+            <li><a href="features.html" aria-current="page">English</a></li>
+            <li><a href="pt/features.html" hreflang="pt-BR" lang="pt-BR">Português (Brasil)</a></li>
           </ul>
         </div>
       </div>

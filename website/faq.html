@@ -66,14 +66,6 @@
 <body>
   <a class="skip-link" href="#main-content">Skip to main content</a>
 
-  <div class="beta-bar" role="region" aria-label="Release status">
-    <div class="container beta-bar-inner">
-      <span class="badge accent" data-wpb-version data-wpb-version-prefix="Beta ">Beta v1.5.0-beta</span>
-      <span>For questions not covered below, check the GitHub Issue Tracker.</span>
-      <a href="https://github.com/WiltonGabriel/WebPullBook/issues">GitHub Issues &rarr;</a>
-    </div>
-  </div>
-
   <header class="site-header">
     <div class="container header-inner">
       <a class="brand-link" href="index.html">
@@ -97,9 +89,17 @@
       </nav>
 
       <div class="header-actions">
-        <a class="lang-switch" href="pt/faq.html" hreflang="pt-BR" lang="pt-BR" aria-label="Mudar idioma para Português Brasileiro">🇧🇷 PT-BR</a>
-        <button id="theme-toggle" class="theme-btn" type="button">Theme: Auto</button>
-        <a class="btn primary sm" data-wpb-download href="https://github.com/WiltonGabriel/WebPullBook/releases/download/v1.4.0/WebPullBook-v1.4.0.zip">Download (.zip)</a>
+        <select id="lang-select" class="header-select" aria-label="Language">
+          <option value="en" data-href="faq.html" selected>English</option>
+          <option value="pt-BR" data-href="pt/faq.html">Português (BR)</option>
+        </select>
+        <select id="theme-select" class="header-select" aria-label="Theme">
+          <option value="system">Auto</option>
+          <option value="light">Light</option>
+          <option value="dark">Dark</option>
+          <option value="sepia">Sepia</option>
+          <option value="midnight">Midnight</option>
+        </select>
       </div>
     </div>
   </header>
@@ -107,7 +107,6 @@
   <main id="main-content">
     <section class="page-hero">
       <div class="container">
-        <span class="badge accent">Support &amp; Troubleshooting</span>
         <h1>Frequently Asked Questions (FAQ)</h1>
         <p>Answers regarding e-reader profiles, website extraction, rate-limit handling, and privacy.</p>
       </div>
@@ -238,8 +237,8 @@
         <div class="footer-col">
           <h3>Languages</h3>
           <ul>
-            <li><a href="faq.html" aria-current="page">🇺🇸 English (Default)</a></li>
-            <li><a href="pt/faq.html" hreflang="pt-BR" lang="pt-BR">🇧🇷 Português (Brasil)</a></li>
+            <li><a href="faq.html" aria-current="page">English</a></li>
+            <li><a href="pt/faq.html" hreflang="pt-BR" lang="pt-BR">Português (Brasil)</a></li>
           </ul>
         </div>
       </div>

@@ -37,6 +37,7 @@
   "scripts": {
     "lint": "node scripts/check.mjs",
     "lint:fix": "node scripts/check.mjs --fix",
+    "sync:website": "node scripts/sync-website.mjs",
     "test": "node --test tests/*.test.js",
     "test:epubcheck": "node --test tests/epub-validation.test.js",
     "test:e2e": "node tests/e2e/extension.e2e.mjs",

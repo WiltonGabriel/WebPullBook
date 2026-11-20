@@ -34,14 +34,6 @@
 <body>
   <a class="skip-link" href="#main-content">Skip to main content</a>
 
-  <div class="beta-bar" role="region" aria-label="Release status">
-    <div class="container beta-bar-inner">
-      <span class="badge accent" data-wpb-version data-wpb-version-prefix="Beta ">Beta v1.5.0-beta</span>
-      <span>Official packages are distributed on GitHub Releases during the Beta phase.</span>
-      <a href="https://github.com/WiltonGabriel/WebPullBook/releases">GitHub Releases &rarr;</a>
-    </div>
-  </div>
-
   <header class="site-header">
     <div class="container header-inner">
       <a class="brand-link" href="index.html">
@@ -65,9 +57,17 @@
       </nav>
 
       <div class="header-actions">
-        <a class="lang-switch" href="pt/installation.html" hreflang="pt-BR" lang="pt-BR" aria-label="Mudar idioma para Português Brasileiro">🇧🇷 PT-BR</a>
-        <button id="theme-toggle" class="theme-btn" type="button">Theme: Auto</button>
-        <a class="btn primary sm" data-wpb-download href="https://github.com/WiltonGabriel/WebPullBook/releases/download/v1.4.0/WebPullBook-v1.4.0.zip">Download (.zip)</a>
+        <select id="lang-select" class="header-select" aria-label="Language">
+          <option value="en" data-href="installation.html" selected>English</option>
+          <option value="pt-BR" data-href="pt/installation.html">Português (BR)</option>
+        </select>
+        <select id="theme-select" class="header-select" aria-label="Theme">
+          <option value="system">Auto</option>
+          <option value="light">Light</option>
+          <option value="dark">Dark</option>
+          <option value="sepia">Sepia</option>
+          <option value="midnight">Midnight</option>
+        </select>
       </div>
     </div>
   </header>
@@ -75,11 +75,10 @@
   <main id="main-content">
     <section class="page-hero">
       <div class="container">
-        <span class="badge warn" data-wpb-version data-wpb-version-prefix="Manual Installation • ">Manual Installation • v1.5.0-beta</span>
         <h1>Installation &amp; Basic Usage</h1>
-        <p>WebPullBook is currently in Beta and is not yet published on the Chrome Web Store or Firefox Add-ons. You can download the packaged ZIP directly below and load it in your browser with no build step.</p>
+        <p>WebPullBook is currently in Beta and is not yet published on the Chrome Web Store or Firefox Add-ons. You can download the release package from GitHub Releases and load it in your browser with no build step.</p>
         <div class="cta-row" style="margin-block-start: 1.25rem; margin-block-end: 0;">
-          <a class="btn primary" data-wpb-download href="https://github.com/WiltonGabriel/WebPullBook/releases/download/v1.4.0/WebPullBook-v1.4.0.zip">Download Latest Package (.zip)</a>
+          <a class="btn primary" href="https://github.com/WiltonGabriel/WebPullBook/releases/latest">GitHub Releases</a>
           <a class="btn secondary" href="https://github.com/WiltonGabriel/WebPullBook/releases">All Releases &amp; Checksums</a>
         </div>
       </div>
@@ -92,7 +91,7 @@
             <span class="badge accent">Chrome • Edge • Brave • Vivaldi • Chromium</span>
             <h2>1. Chrome &amp; Chromium Browsers</h2>
             <ol>
-              <li>Click <a data-wpb-download href="https://github.com/WiltonGabriel/WebPullBook/releases/download/v1.4.0/WebPullBook-v1.4.0.zip">Download Latest Package (.zip)</a> and extract the archive to a permanent folder on your computer.</li>
+              <li>Download the release archive from <a href="https://github.com/WiltonGabriel/WebPullBook/releases/latest">GitHub Releases</a> and extract it to a permanent folder on your computer.</li>
               <li>Open <code>chrome://extensions/</code> (or <code>edge://extensions/</code> / <code>brave://extensions/</code>).</li>
               <li>Enable <strong>Developer mode</strong> in the top-right corner.</li>
               <li>Click <strong>Load unpacked</strong> and select the extracted folder containing <code>manifest.json</code>.</li>
@@ -194,8 +193,8 @@ npm run check</code></pre>
         <div class="footer-col">
           <h3>Languages</h3>
           <ul>
-            <li><a href="installation.html" aria-current="page">🇺🇸 English (Default)</a></li>
-            <li><a href="pt/installation.html" hreflang="pt-BR" lang="pt-BR">🇧🇷 Português (Brasil)</a></li>
+            <li><a href="installation.html" aria-current="page">English</a></li>
+            <li><a href="pt/installation.html" hreflang="pt-BR" lang="pt-BR">Português (Brasil)</a></li>
           </ul>
         </div>
       </div>

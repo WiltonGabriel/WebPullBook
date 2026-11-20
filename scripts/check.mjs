@@ -197,7 +197,17 @@ if (fixedFiles.length > 0) {
   console.log(`Fixed formatting in ${fixedFiles.length} file(s):`, fixedFiles.join(', '));
 }
 
-// 8. Official website & SEO static verification
+// 8. Official website & SEO static synchronization and verification
+if (fs.existsSync(path.join('scripts', 'sync-website.mjs'))) {
+  try {
+    execFileSync(process.execPath, [path.join('scripts', 'sync-website.mjs')], {
+      encoding: 'utf8',
+      stdio: 'pipe'
+    });
+  } catch (err) {
+    fail(err.stderr?.toString().trim() || err.stdout?.toString().trim() || err.message);
+  }
+}
 if (fs.existsSync(path.join('scripts', 'verify-website.mjs'))) {
   try {
     const out = execFileSync(process.execPath, [path.join('scripts', 'verify-website.mjs')], {
