@@ -200,8 +200,8 @@ WebPullBook/
 - **Logs de execução:** Acesse a aba **Logs** dentro da própria extensão e clique em **Baixar Log** para salvar o registro detalhado de rede ou extração.
 - **Matriz de compatibilidade:** Veja [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md) para consultar os sites e padrões estruturais suportados.
 - **Reportar bugs ou sugerir suporte a layouts:** Abra uma issue na aba **Issues** do repositório no GitHub descrevendo a estrutura HTML (seletores da lista de capítulos e do texto) junto com o log correspondente.
-- **Documentação para desenvolvedores & testes:** Consulte [CONTRIBUTING.md](CONTRIBUTING.md) e [AGENTS.md](AGENTS.md) para detalhes da arquitetura, suíte de testes (`node:test`, `EPUBCheck`, Playwright E2E) e instruções para criar novos adaptadores de parser.
-- **Segurança:** Leia [SECURITY.md](.github/SECURITY.md) para reportar vulnerabilidades de forma privada.
+- **Documentação para desenvolvedores & testes:** Consulte [CONTRIBUTING.pt.md](docs/pt/CONTRIBUTING.pt.md) (ou o original em inglês [CONTRIBUTING.md](CONTRIBUTING.md)) e [AGENTS.md](AGENTS.md) para detalhes da arquitetura, suíte de testes (`node:test`, `EPUBCheck`, Playwright E2E) e instruções para criar novos adaptadores de parser.
+- **Histórico de versões e segurança:** Veja [CHANGELOG.pt.md](docs/pt/CHANGELOG.pt.md) (ou [CHANGELOG.md](CHANGELOG.md)) e [SECURITY.pt.md](docs/pt/SECURITY.pt.md). Toda a documentação espelho em português está reunida em [docs/pt/](docs/pt/README.md).
 
 ---
 

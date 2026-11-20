@@ -1,5 +1,7 @@
 # Changelog
 
+**English** | [Português](docs/pt/CHANGELOG.pt.md)
+
 All notable changes to **WebPullBook** are documented in this file.
 
 ## [1.5.0] - 2026-11-20 (Beta)

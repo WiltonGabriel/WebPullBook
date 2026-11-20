@@ -1,5 +1,7 @@
 # Security Policy
 
+**English** | [Português](../docs/pt/SECURITY.pt.md)
+
 ## Supported Versions
 
 Only the latest released version of **WebPullBook** on the `main` branch receives active fixes and security updates.

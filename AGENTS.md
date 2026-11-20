@@ -159,6 +159,9 @@ Always inspect the actual files before making changes. Do not invent or assume u
       4. `Not Compatible (Não Compatíveis)`
     - Never move a site to `Verified & Tested` without real end-to-end verification and regression fixtures.
     - Never include URLs or raw domain names in `docs/COMPATIBILITY.md`, and never list compatible site names or URLs inside `README.md` or `README.pt.md`.
+12. **Repository Language Policy (English Default + Optional Portuguese Mirror):**
+    - **Mandatory:** **English is the default and primary language of the repository.** Always write and maintain all primary documentation (`README.md`, `CHANGELOG.md`, `CONTRIBUTING.md`, `CHROMEWEBSTORE.md`, `AGENTS.md`, `docs/*.md`), release notes (`scripts/extract-release-notes.mjs`), GitHub Issue/PR templates (`.github/`), code comments/docstrings, and commit messages **in English only** (never mix Portuguese into English primary docs or GitHub Releases).
+    - **Recommended (Optional):** Dedicated Portuguese reference mirrors are organized in `README.pt.md`, `docs/READER_PRESETS.pt.md`, `website/pt/`, and `docs/pt/` (`docs/pt/CHANGELOG.pt.md`, `docs/pt/CONTRIBUTING.pt.md`, `docs/pt/SECURITY.pt.md`). When adding or updating primary repository documentation or release changelogs, it is helpful—though optional and not strictly required unless requested—to also add or update the corresponding Portuguese mirror in `docs/pt/` (while UI string changes in `src/workspace/locales/` and official pages in `website/pt/` remain required to preserve PT/EN parity enforced by `npm run lint`).
 
 ---
 
