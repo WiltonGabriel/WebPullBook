@@ -33,12 +33,15 @@ export function hydrateCachedChapter(chapter, record) {
     xmlDoc.documentElement;
 
   const nodes = bodyEl ? Array.from(bodyEl.childNodes) : [];
-  const images = bodyEl
-    ? Array.from(bodyEl.getElementsByTagNameNS(XHTML_NS, 'img')).map((el) => ({
-        originalUrl: el.getAttribute('src') || '',
-        element: el
-      }))
-    : [];
+  const rawImgEls = bodyEl ? Array.from(bodyEl.getElementsByTagNameNS(XHTML_NS, 'img')) : [];
+  const imgEls =
+    rawImgEls.length > 0 ? rawImgEls : bodyEl ? Array.from(bodyEl.getElementsByTagName('img')) : [];
+  const images = imgEls
+    .map((el) => ({
+      originalUrl: (el.getAttribute('src') || '').trim(),
+      element: el
+    }))
+    .filter((entry) => Boolean(entry.originalUrl));
 
   return {
     chapter,

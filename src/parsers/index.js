@@ -76,15 +76,99 @@ export function selectParser(doc, parserId = 'auto', url = '') {
   return parserRegistry.detect(doc, url, parserId);
 }
 
-function looksLikeSpaShell(doc) {
-  if (!doc) return false;
-  if (doc.querySelectorAll('a[href]').length < 2) return true;
-  if (doc.querySelector('#root:empty, #app:empty, #__next:empty, #__nuxt:empty')) return true;
-  const bodyText = normalizeSpaces(doc.body?.textContent || '');
-  if (bodyText.length < 180 && doc.querySelectorAll('script[src], script[type="module"]').length > 0) {
+/**
+ * Resolve the best parser for an individual chapter URL, enabling multi-domain
+ * series (e.g. Merge Tabs or translator aggregator hubs) to match each host cleanly.
+ */
+export function resolveParserForChapterUrl(
+  chapterUrl,
+  fallbackParser = genericHtmlParser,
+  parserId = 'auto',
+  seriesUrl = ''
+) {
+  if (parserId && parserId !== 'auto') {
+    return getParserById(parserId) || fallbackParser || genericHtmlParser;
+  }
+  if (!chapterUrl || !/^https?:\/\//i.test(chapterUrl)) {
+    return fallbackParser || genericHtmlParser;
+  }
+
+  let chHost = '';
+  let seriesHost = '';
+  try {
+    chHost = new URL(chapterUrl).hostname.replace(/^www\./i, '').toLowerCase();
+  } catch {
+    return fallbackParser || genericHtmlParser;
+  }
+  try {
+    seriesHost = seriesUrl ? new URL(seriesUrl).hostname.replace(/^www\./i, '').toLowerCase() : '';
+  } catch {
+    seriesHost = '';
+  }
+
+  if (seriesHost && chHost === seriesHost && fallbackParser) {
+    return fallbackParser;
+  }
+
+  // Probe URL-affinity scores with an empty lightweight document stub
+  const emptyDoc = { querySelector: () => null, querySelectorAll: () => [] };
+  let best = null;
+  let bestScore = 0;
+  for (const parser of parserRegistry.parsers) {
+    if (parser.id === 'generic-html') continue;
+    const score = Number(parser.matchScore(emptyDoc, chapterUrl)) || 0;
+    if (score >= 25 && score > bestScore) {
+      bestScore = score;
+      best = parser;
+    }
+  }
+  if (best) return best;
+  if (seriesHost && chHost !== seriesHost) {
+    return genericHtmlParser;
+  }
+  return fallbackParser || genericHtmlParser;
+}
+
+const KNOWN_SSR_CONTENT_SELECTOR =
+  '.eplister, .epcontent, .ts-chl-collapsible, .wp-manga-chapter, .reading-content, table#chapters, .chapter-inner, ol.toc_ol, #chp_raw, .fic_title, [data-testid="novel-synopsis"], #reader-chapter-title';
+
+function getVisibleBodyText(doc) {
+  const body = doc?.body;
+  if (!body) return '';
+  const clone = body.cloneNode(true);
+  for (const hidden of clone.querySelectorAll('script, style, noscript, template')) {
+    hidden.remove();
+  }
+  return normalizeSpaces(clone.textContent || '');
+}
+
+export function looksLikeSpaShell(doc) {
+  if (!doc || !doc.body) return false;
+  if (doc.querySelector(KNOWN_SSR_CONTENT_SELECTOR)) return false;
+
+  const visibleText = getVisibleBodyText(doc);
+  const linkCount = doc.querySelectorAll('a[href]').length;
+  const paragraphCount = doc.querySelectorAll('p').length;
+
+  // Normal SSR pages with real readable content or navigation are never SPA shells
+  if (visibleText.length >= 300 || paragraphCount >= 3 || linkCount >= 12) {
+    return false;
+  }
+
+  const hasEmptySpaMount = Boolean(doc.querySelector('#root:empty, #app:empty, #__next:empty, #__nuxt:empty'));
+  const hasModuleOrBundleScript = doc.querySelectorAll('script[src], script[type="module"]').length > 0;
+  const noscriptText = Array.from(doc.querySelectorAll('noscript'))
+    .map((n) => normalizeSpaces(n.textContent || ''))
+    .join(' ');
+  const hasJsGateMessage = /enable\s+javascript|javascript\s+is\s+(?:required|disabled)|ative\s+o\s+javascript/i.test(
+    `${visibleText} ${noscriptText}`
+  );
+
+  if (hasEmptySpaMount && visibleText.length < 180) return true;
+  if (visibleText.length < 120 && linkCount < 3 && (hasModuleOrBundleScript || hasJsGateMessage)) {
     return true;
   }
-  if (/enable\s+javascript|javascript\s+is\s+(?:required|disabled)|ative\s+o\s+javascript/i.test(bodyText)) {
+  if (visibleText.length < 180 && hasJsGateMessage && linkCount < 5) {
     return true;
   }
   return false;
@@ -112,6 +196,7 @@ export async function loadSeriesWithParser(inputUrl, options = {}, signal) {
     ) {
       initialDoc = await fetchRenderedTabDocument(initialUrl, {
         waitMs: effectiveOptions.renderWaitMs ?? 1100,
+        preferOpenTab: effectiveOptions.preferOpenTabDom !== false,
         signal
       });
       effectiveOptions = { ...effectiveOptions, renderWithTab: true, _usedTabFallback: true };
@@ -121,15 +206,21 @@ export async function loadSeriesWithParser(inputUrl, options = {}, signal) {
     }
   }
 
+  const initialScores = parserRegistry.scoreAll(initialDoc, initialUrl);
+  const topInitialScore = initialScores[0]?.score || 0;
+
   if (
     !effectiveOptions.renderWithTab &&
     effectiveOptions.autoFallbackTab !== false &&
     canUseTabScripting() &&
+    topInitialScore < 30 &&
     looksLikeSpaShell(initialDoc)
   ) {
+    effectiveOptions.onLog?.(`[SPA] Página parece SPA vazia -> tentando captura via aba em ${initialUrl}`, 'debug');
     try {
       initialDoc = await fetchRenderedTabDocument(initialUrl, {
         waitMs: effectiveOptions.renderWaitMs ?? 1100,
+        preferOpenTab: effectiveOptions.preferOpenTabDom !== false,
         signal
       });
       effectiveOptions = { ...effectiveOptions, renderWithTab: true, _usedTabFallback: true };
@@ -148,10 +239,13 @@ export async function loadSeriesWithParser(inputUrl, options = {}, signal) {
   effectiveOptions.onLog?.(`[PARSER] Selecionado "${parser.name}" (${scoreSummary})`, 'debug');
   let series = await parser.loadSeries(initialUrl, effectiveOptions, signal, initialDoc);
 
-  // Intelligent SPA fallback: if static parse yielded 0 chapters even with nav links, retry via rendered tab once
+  // Intelligent SPA fallback: if static parse yielded 0 chapters and BaseParser did NOT already try tab rendering, retry once
   if (
     (series.chapters || []).length === 0 &&
     !effectiveOptions.renderWithTab &&
+    !effectiveOptions._usedTabFallback &&
+    !series.requiresTabRender &&
+    !series._attemptedTabFallback &&
     effectiveOptions.autoFallbackTab !== false &&
     canUseTabScripting()
   ) {
@@ -159,6 +253,7 @@ export async function loadSeriesWithParser(inputUrl, options = {}, signal) {
     try {
       const renderedDoc = await fetchRenderedTabDocument(initialUrl, {
         waitMs: Math.max(effectiveOptions.renderWaitMs ?? 1100, 1200),
+        preferOpenTab: effectiveOptions.preferOpenTabDom !== false,
         signal
       });
       const renderedOpts = { ...effectiveOptions, renderWithTab: true, _usedTabFallback: true };

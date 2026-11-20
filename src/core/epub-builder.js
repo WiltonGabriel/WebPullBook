@@ -1,410 +1,28 @@
 import { createZipBlob } from './zip.js';
-import { escapeXml } from './sanitizer.js';
-import { extractVolumeNumber, toHighResCoverUrl } from './parser-engine.js';
+import { extractVolumeNumber, normalizeUrl, toHighResCoverUrl } from './text-utils.js';
+import {
+  extFromMime,
+  fetchImageBytes,
+  hashImageBytes,
+  isAnimatedImage,
+  sniffImageMime,
+  tryConvertImage
+} from './image-processor.js';
+import {
+  buildContentOpf,
+  buildCoverXhtml,
+  buildEpub2TocXhtml,
+  buildInfoXhtml,
+  buildNavXhtml,
+  buildTocNcx,
+  groupTocByVolume
+} from './epub-templates.js';
+
+export { sniffImageMime };
 
 function randomUuid() {
   if (crypto?.randomUUID) return crypto.randomUUID();
   return `wpb-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-}
-
-function decodeDataUrlToBlob(dataUrl) {
-  const match = String(dataUrl).match(/^data:([^;,]+)?(?:;charset=[^;,]+)?(;base64)?,(.*)$/is);
-  if (!match) throw new Error('Invalid data URL for image');
-  const mime = (match[1] || 'image/png').trim().toLowerCase();
-  const isBase64 = Boolean(match[2]);
-  const payload = match[3] || '';
-  if (isBase64) {
-    const bin = atob(payload);
-    const bytes = new Uint8Array(bin.length);
-    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-    return { blob: new Blob([bytes], { type: mime }), mime };
-  }
-  const bytes = new TextEncoder().encode(decodeURIComponent(payload));
-  return { blob: new Blob([bytes], { type: mime }), mime };
-}
-
-async function fetchImageBytes(url, signal) {
-  if (/^data:/i.test(String(url || ''))) {
-    return decodeDataUrlToBlob(url);
-  }
-  let resp = null;
-  let firstErr = null;
-  try {
-    resp = await fetch(url, { credentials: 'include', signal });
-  } catch (err) {
-    if (err.name === 'AbortError') throw err;
-    firstErr = err;
-  }
-
-  // Some CDNs / S3 buckets reject credentialed requests or cookies with 401/403 or CORS errors
-  if (!resp || resp.status === 401 || resp.status === 403) {
-    try {
-      const anonResp = await fetch(url, {
-        credentials: 'omit',
-        referrerPolicy: 'no-referrer',
-        signal
-      });
-      if (anonResp.ok || !resp) {
-        resp = anonResp;
-      }
-    } catch (err) {
-      if (err.name === 'AbortError') throw err;
-      if (!resp && firstErr) throw firstErr;
-      if (!resp) throw err;
-    }
-  }
-
-  if (!resp.ok) {
-    throw new Error(`HTTP ${resp.status} while fetching image ${url}`);
-  }
-  const blob = await resp.blob();
-  const mime = (blob.type || '').split(';')[0].trim().toLowerCase();
-  if (mime && (/^text\//i.test(mime) || /^application\/(?:json|xml|xhtml\+xml)/i.test(mime))) {
-    throw new Error(`Invalid image MIME (${mime}) while fetching ${url}`);
-  }
-  return { blob, mime: mime || 'image/jpeg' };
-}
-
-async function convertImageViaCanvas(
-  blob,
-  { maxDim = 1080, forceJpeg = false, quality = 0.88, grayscale = false }
-) {
-  const bitmap = await createImageBitmap(blob);
-  try {
-    let { width, height } = bitmap;
-    if (maxDim > 0 && (width > maxDim || height > maxDim)) {
-      const scale = Math.min(maxDim / width, maxDim / height);
-      width = Math.max(1, Math.round(width * scale));
-      height = Math.max(1, Math.round(height * scale));
-    }
-
-    const canvas = document.createElement('canvas');
-    canvas.width = width;
-    canvas.height = height;
-    const ctx = canvas.getContext('2d');
-    if (forceJpeg) {
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, width, height);
-    }
-    if (grayscale) {
-      ctx.filter = 'grayscale(100%)';
-    }
-    ctx.drawImage(bitmap, 0, 0, width, height);
-
-    const outMime = forceJpeg ? 'image/jpeg' : (blob.type === 'image/png' ? 'image/png' : 'image/jpeg');
-    const outBlob = await new Promise((resolve) => canvas.toBlob(resolve, outMime, quality));
-    if (!outBlob) {
-      return { bytes: new Uint8Array(await blob.arrayBuffer()), mime: blob.type || 'image/jpeg' };
-    }
-    return { bytes: new Uint8Array(await outBlob.arrayBuffer()), mime: outMime };
-  } finally {
-    bitmap.close();
-  }
-}
-
-function extFromMime(mime) {
-  if (/png/i.test(mime)) return 'png';
-  if (/gif/i.test(mime)) return 'gif';
-  if (/webp/i.test(mime)) return 'webp';
-  return 'jpg';
-}
-
-function buildCoverXhtml({ title, coverHref, useSvg, epub3 }) {
-  const doctype = epub3
-    ? '<!DOCTYPE html>'
-    : '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">';
-
-  const bodyContent = useSvg
-    ? `<div class="svg_outer"><div class="svg_inner"><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" height="100%" preserveAspectRatio="xMidYMid meet" version="1.1" viewBox="0 0 1000 1400" width="100%"><image width="1000" height="1400" xlink:href="${escapeXml(coverHref)}"/></svg></div></div>`
-    : `<div class="svg_outer"><div class="svg_inner"><img src="${escapeXml(coverHref)}" alt="Cover of ${escapeXml(title)}" /></div></div>`;
-
-  const metaTag = epub3
-    ? '<meta charset="utf-8" />'
-    : '<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=utf-8" />';
-
-  return `<?xml version="1.0" encoding="utf-8"?>
-${doctype}
-<html xmlns="http://www.w3.org/1999/xhtml"${epub3 ? ' xmlns:epub="http://www.idpf.org/2007/ops"' : ''}>
-<head>
-  ${metaTag}
-  <title>Capa — ${escapeXml(title)}</title>
-  <link rel="stylesheet" type="text/css" href="../styles/stylesheet.css" />
-</head>
-<body>
-  ${bodyContent}
-</body>
-</html>`;
-}
-
-function buildInfoXhtml({ metadata, bookTitle, chapterCount, epub3 }) {
-  const doctype = epub3
-    ? '<!DOCTYPE html>'
-    : '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">';
-
-  const synParas = (metadata.synopsis || '')
-    .split(/\n+/)
-    .map((p) => p.trim())
-    .filter(Boolean)
-    .map((p) => `<p>${escapeXml(p)}</p>`)
-    .join('\n    ');
-
-  const genresLine = metadata.genres?.length
-    ? `<p><strong>Gêneros:</strong> ${escapeXml(metadata.genres.join(', '))}</p>`
-    : '';
-
-  const sourceLine = metadata.startingUrl
-    ? `\n    <p><strong>Fonte:</strong> <a href="${escapeXml(metadata.startingUrl)}">${escapeXml(metadata.startingUrl)}</a></p>`
-    : '';
-
-  const metaTag = epub3
-    ? '<meta charset="utf-8" />'
-    : '<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=utf-8" />';
-
-  return `<?xml version="1.0" encoding="utf-8"?>
-${doctype}
-<html xmlns="http://www.w3.org/1999/xhtml"${epub3 ? ' xmlns:epub="http://www.idpf.org/2007/ops"' : ''}>
-<head>
-  ${metaTag}
-  <title>Informações — ${escapeXml(bookTitle)}</title>
-  <link rel="stylesheet" type="text/css" href="../styles/stylesheet.css" />
-</head>
-<body>
-  <h1>${escapeXml(bookTitle)}</h1>
-  <div class="info-box info-meta">
-    <p><strong>Autor:</strong> ${escapeXml(metadata.author || '<unknown>')}</p>
-    <p><strong>Idioma:</strong> ${escapeXml(metadata.language || 'pt')}</p>
-    <p><strong>Capítulos neste arquivo:</strong> ${chapterCount}</p>
-    ${genresLine}${sourceLine}
-  </div>
-  ${synParas ? `<h2>Sinopse</h2>\n  <div class="synopsis">\n    ${synParas}\n  </div>` : ''}
-</body>
-</html>`;
-}
-
-function groupTocByVolume(chapterRecords, groupNestedVolumes) {
-  if (!groupNestedVolumes) {
-    return [{ volume: null, items: chapterRecords }];
-  }
-  const groups = [];
-  let current = null;
-  for (const rec of chapterRecords) {
-    const vol = rec.chapter.volume || 'Volume 01';
-    if (!current || current.volume !== vol) {
-      current = { volume: vol, items: [] };
-      groups.push(current);
-    }
-    current.items.push(rec);
-  }
-  return groups;
-}
-
-function buildNavXhtml({ bookTitle, lang, hasCoverPage, hasInfoPage, tocGroups }) {
-  const items = [];
-  if (hasCoverPage) {
-    items.push('      <li><a href="text/cover.xhtml">Capa</a></li>');
-  }
-  if (hasInfoPage) {
-    items.push('      <li><a href="text/info.xhtml">Informações</a></li>');
-  }
-
-  if (tocGroups.length > 1 || (tocGroups.length === 1 && tocGroups[0].volume)) {
-    for (const grp of tocGroups) {
-      const firstHref = grp.items[0].href;
-      items.push(`      <li><a href="${escapeXml(firstHref)}">${escapeXml(grp.volume)}</a>\n        <ol>`);
-      for (const rec of grp.items) {
-        items.push(`          <li><a href="${escapeXml(rec.href)}">${escapeXml(rec.navTitle)}</a></li>`);
-      }
-      items.push('        </ol>\n      </li>');
-    }
-  } else {
-    for (const grp of tocGroups) {
-      for (const rec of grp.items) {
-        items.push(`      <li><a href="${escapeXml(rec.href)}">${escapeXml(rec.navTitle)}</a></li>`);
-      }
-    }
-  }
-
-  return `<?xml version="1.0" encoding="utf-8"?>
-<!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" xml:lang="${escapeXml(lang)}" lang="${escapeXml(lang)}">
-<head>
-  <meta charset="utf-8" />
-  <title>Sumário — ${escapeXml(bookTitle)}</title>
-  <link rel="stylesheet" type="text/css" href="styles/stylesheet.css" />
-</head>
-<body>
-  <nav epub:type="toc" id="toc">
-    <h1>Sumário</h1>
-    <ol>
-${items.join('\n')}
-    </ol>
-  </nav>
-  <nav epub:type="landmarks" id="landmarks" hidden="hidden">
-    <ol>
-${hasCoverPage ? '      <li><a epub:type="cover" href="text/cover.xhtml">Capa</a></li>\n' : ''}${tocGroups[0]?.items?.[0] ? `      <li><a epub:type="bodymatter" href="${escapeXml(tocGroups[0].items[0].href)}">Início</a></li>\n` : ''}    </ol>
-  </nav>
-</body>
-</html>`;
-}
-
-function buildTocNcx({ uuid, bookTitle, hasCoverPage, hasInfoPage, tocGroups }) {
-  let playOrder = 1;
-  const navPoints = [];
-  let maxDepth = 1;
-
-  if (hasCoverPage) {
-    navPoints.push(`    <navPoint id="nav-cover" playOrder="${playOrder++}">
-      <navLabel><text>Capa</text></navLabel>
-      <content src="text/cover.xhtml"/>
-    </navPoint>`);
-  }
-  if (hasInfoPage) {
-    navPoints.push(`    <navPoint id="nav-info" playOrder="${playOrder++}">
-      <navLabel><text>Informações</text></navLabel>
-      <content src="text/info.xhtml"/>
-    </navPoint>`);
-  }
-
-  const useGroups = tocGroups.length > 1 || (tocGroups.length === 1 && tocGroups[0].volume);
-  if (useGroups) {
-    maxDepth = 2;
-    let volIdx = 1;
-    for (const grp of tocGroups) {
-      const firstHref = grp.items[0].href;
-      // Parent volume navPoint shares playOrder with its first chapter because both target firstHref
-      const vp = playOrder;
-      const children = grp.items
-        .map((rec) => {
-          const p = playOrder++;
-          return `      <navPoint id="${escapeXml(rec.id)}" playOrder="${p}">
-        <navLabel><text>${escapeXml(rec.navTitle)}</text></navLabel>
-        <content src="${escapeXml(rec.href)}"/>
-      </navPoint>`;
-        })
-        .join('\n');
-      navPoints.push(`    <navPoint id="nav-vol-${volIdx++}" playOrder="${vp}">
-      <navLabel><text>${escapeXml(grp.volume)}</text></navLabel>
-      <content src="${escapeXml(firstHref)}"/>
-${children}
-    </navPoint>`);
-    }
-  } else {
-    for (const grp of tocGroups) {
-      for (const rec of grp.items) {
-        navPoints.push(`    <navPoint id="${escapeXml(rec.id)}" playOrder="${playOrder++}">
-      <navLabel><text>${escapeXml(rec.navTitle)}</text></navLabel>
-      <content src="${escapeXml(rec.href)}"/>
-    </navPoint>`);
-      }
-    }
-  }
-
-  return `<?xml version="1.0" encoding="utf-8"?>
-<ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1">
-  <head>
-    <meta name="dtb:uid" content="urn:uuid:${escapeXml(uuid)}"/>
-    <meta name="dtb:depth" content="${maxDepth}"/>
-    <meta name="dtb:totalPageCount" content="0"/>
-    <meta name="dtb:maxPageNumber" content="0"/>
-  </head>
-  <docTitle><text>${escapeXml(bookTitle)}</text></docTitle>
-  <navMap>
-${navPoints.join('\n')}
-  </navMap>
-</ncx>`;
-}
-
-function buildContentOpf({
-  uuid,
-  bookTitle,
-  seriesName,
-  seriesIndex,
-  author,
-  language,
-  genres = [],
-  synopsis,
-  sourceUrl,
-  epub3,
-  coverItem,
-  hasCoverPage,
-  coverUsesSvg = false,
-  hasInfoPage,
-  chapterRecords,
-  imageRecords
-}) {
-  const version = epub3 ? '3.0' : '2.0';
-  const modifiedIso = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
-
-  const manifestItems = [
-    '    <item id="ncx" href="toc.ncx" media-type="application/x-dtbncx+xml"/>',
-    '    <item id="css" href="styles/stylesheet.css" media-type="text/css"/>'
-  ];
-  if (epub3) {
-    manifestItems.push('    <item id="nav" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/>');
-  }
-  if (coverItem) {
-    const props = epub3 ? ' properties="cover-image"' : '';
-    manifestItems.push(`    <item id="cover-image" href="${escapeXml(coverItem.href)}" media-type="${escapeXml(coverItem.mime)}"${props}/>`);
-  }
-  if (hasCoverPage) {
-    const coverPageProps = epub3 && coverUsesSvg ? ' properties="svg"' : '';
-    manifestItems.push(`    <item id="cover-page" href="text/cover.xhtml" media-type="application/xhtml+xml"${coverPageProps}/>`);
-  }
-  if (hasInfoPage) {
-    manifestItems.push('    <item id="info-page" href="text/info.xhtml" media-type="application/xhtml+xml"/>');
-  }
-  for (const img of imageRecords) {
-    manifestItems.push(`    <item id="${escapeXml(img.id)}" href="${escapeXml(img.href)}" media-type="${escapeXml(img.mime)}"/>`);
-  }
-  for (const ch of chapterRecords) {
-    manifestItems.push(`    <item id="${escapeXml(ch.id)}" href="${escapeXml(ch.href)}" media-type="application/xhtml+xml"/>`);
-  }
-
-  const spineItems = [];
-  if (hasCoverPage) spineItems.push('    <itemref idref="cover-page"/>');
-  if (hasInfoPage) spineItems.push('    <itemref idref="info-page"/>');
-  for (const ch of chapterRecords) {
-    spineItems.push(`    <itemref idref="${escapeXml(ch.id)}"/>`);
-  }
-
-  const epub3SeriesMeta = epub3 && seriesName
-    ? `\n    <meta property="belongs-to-collection" id="series-col">${escapeXml(seriesName)}</meta>\n    <meta refines="#series-col" property="collection-type">series</meta>\n    <meta refines="#series-col" property="group-position">${escapeXml(String(seriesIndex ?? 1))}</meta>`
-    : '';
-
-  const coverMeta = coverItem ? '\n    <meta name="cover" content="cover-image"/>' : '';
-  const modifiedMeta = epub3 ? `\n    <meta property="dcterms:modified">${modifiedIso}</meta>` : '';
-  const descTag = synopsis ? `\n    <dc:description>${escapeXml(synopsis)}</dc:description>` : '';
-  const subjectTags = (genres || [])
-    .map((g) => g.trim())
-    .filter(Boolean)
-    .map((g) => `\n    <dc:subject>${escapeXml(g)}</dc:subject>`)
-    .join('');
-  const creatorTag = epub3
-    ? `<dc:creator id="creator">${escapeXml(author)}</dc:creator>\n    <meta refines="#creator" property="role" scheme="marc:relators">aut</meta>`
-    : `<dc:creator>${escapeXml(author)}</dc:creator>`;
-
-  const sourceTag = sourceUrl ? `\n    <dc:source>${escapeXml(sourceUrl)}</dc:source>` : '';
-  const packageLangAttr = epub3 ? ` xml:lang="${escapeXml(language)}"` : '';
-
-  const guide = hasCoverPage
-    ? `\n  <guide>\n    <reference type="cover" title="Capa" href="text/cover.xhtml"/>\n  </guide>`
-    : '';
-
-  return `<?xml version="1.0" encoding="utf-8"?>
-<package xmlns="http://www.idpf.org/2007/opf" version="${version}" unique-identifier="BookId"${packageLangAttr}>
-  <metadata xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:opf="http://www.idpf.org/2007/opf">
-    <dc:identifier id="BookId">urn:uuid:${escapeXml(uuid)}</dc:identifier>
-    <dc:title>${escapeXml(bookTitle)}</dc:title>
-    ${creatorTag}
-    <dc:language>${escapeXml(language)}</dc:language>${sourceTag}${subjectTags}${descTag}${coverMeta}${modifiedMeta}${epub3SeriesMeta}
-  </metadata>
-  <manifest>
-${manifestItems.join('\n')}
-  </manifest>
-  <spine toc="ncx">
-${spineItems.join('\n')}
-  </spine>${guide}
-</package>`;
 }
 
 /**
@@ -453,21 +71,33 @@ export async function buildEpubBlob({
   const coverCandidates = [metadata.coverUrl, metadata.coverThumbUrl].filter(Boolean);
   for (const cUrl of coverCandidates) {
     try {
-      const { blob, mime } = await fetchImageBytes(cUrl, signal);
-      let bytes;
+      const { blob, bytes: rawBytes, mime } = await fetchImageBytes(cUrl, signal);
+      let bytes = rawBytes;
       let finalMime = mime;
+      let converted = false;
       const needsCoverCompat = /^image\/avif$/i.test(mime) || (!epub3 && /^image\/webp$/i.test(mime));
-      if (options.restrictCoverJpeg || needsCoverCompat || options.compressImages || options.grayscaleImages) {
-        const conv = await convertImageViaCanvas(blob, {
-          maxDim: options.compressImages ? (options.compressedResolution || 1200) : 1600,
-          forceJpeg: Boolean(options.restrictCoverJpeg) || needsCoverCompat,
-          quality: customImageQuality ?? 0.9,
-          grayscale: Boolean(options.grayscaleImages)
-        });
+      const isGif = /^image\/gif$/i.test(mime);
+      const shouldConvertCover =
+        Boolean(options.restrictCoverJpeg) ||
+        needsCoverCompat ||
+        Boolean(options.grayscaleImages) ||
+        (Boolean(options.compressImages) && !isGif);
+      if (shouldConvertCover) {
+        const conv = await tryConvertImage(
+          blob,
+          rawBytes,
+          mime,
+          {
+            maxDim: options.compressImages ? (options.compressedResolution || 1200) : 1600,
+            forceJpeg: Boolean(options.restrictCoverJpeg) || needsCoverCompat,
+            quality: customImageQuality ?? 0.9,
+            grayscale: Boolean(options.grayscaleImages)
+          },
+          { onLog, label: `capa (${cUrl})` }
+        );
         bytes = conv.bytes;
         finalMime = conv.mime;
-      } else {
-        bytes = new Uint8Array(await blob.arrayBuffer());
+        converted = conv.converted;
       }
       const ext = extFromMime(finalMime);
       const href = `images/cover.${ext}`;
@@ -483,6 +113,10 @@ export async function buildEpubBlob({
           epub3
         })
       });
+      onLog(
+        `[IMG] Capa OK -> ${href} (${mime}${finalMime !== mime ? ` -> ${finalMime}` : ''}, ${(bytes.length / 1024).toFixed(1)} KB${converted ? ', otimizada' : ''}) <- ${cUrl}`,
+        'debug'
+      );
       break;
     } catch (err) {
       if (err.name === 'AbortError') throw err;
@@ -500,6 +134,12 @@ export async function buildEpubBlob({
 
   // Information page
   const hasInfoPage = options.addInfoPage !== false;
+  const includeTocPage = options.includeTocPage !== false;
+  const tocPosition = options.tocPosition === 'end' ? 'end' : 'start';
+  const defaultTocLabel = /^en\b/i.test(metadata.language || '') ? 'Table of Contents' : 'Sumário';
+  const tocHeading = String(options.tocTitle || '').trim() || defaultTocLabel;
+  const infoLabel = String(options.infoPageTitle || '').trim() || (/^en\b/i.test(metadata.language || '') ? 'Information' : 'Informações');
+
   if (hasInfoPage) {
     entries.push({
       name: 'OEBPS/text/info.xhtml',
@@ -507,15 +147,59 @@ export async function buildEpubBlob({
         metadata,
         bookTitle,
         chapterCount: parsedChapters.length,
-        epub3
+        epub3,
+        options
       })
     });
   }
 
+  // Map every chapter's normalized source URL to its internal EPUB filename for cross-chapter hyperlink rewriting
+  const chapterUrlToFile = new Map();
+  for (let i = 0; i < parsedChapters.length; i++) {
+    const srcUrl = parsedChapters[i]?.chapter?.url;
+    if (!srcUrl || !/^https?:\/\//i.test(srcUrl)) continue;
+    const norm = normalizeUrl(srcUrl);
+    if (!chapterUrlToFile.has(norm)) {
+      chapterUrlToFile.set(norm, `ch_${String(i + 1).padStart(4, '0')}.xhtml`);
+    }
+  }
+
+  const rewriteInternalChapterLinks = (nodes) => {
+    if (chapterUrlToFile.size === 0 || !Array.isArray(nodes)) return;
+    for (const root of nodes) {
+      if (!root?.querySelectorAll) continue;
+      const anchors =
+        root.tagName?.toLowerCase() === 'a'
+          ? [root, ...Array.from(root.querySelectorAll('a[href]'))]
+          : Array.from(root.querySelectorAll('a[href]'));
+      for (const a of anchors) {
+        const href = (a.getAttribute('href') || '').trim();
+        if (!href || href.startsWith('#') || !/^https?:\/\//i.test(href)) continue;
+        try {
+          const u = new URL(href);
+          const hash = u.hash || '';
+          u.hash = '';
+          const targetFile = chapterUrlToFile.get(normalizeUrl(u.toString()));
+          if (targetFile) {
+            a.setAttribute('href', `${targetFile}${hash}`);
+          }
+        } catch {
+          // keep original href
+        }
+      }
+    }
+  };
+
   // Inline images + chapter XHTML files
   const imageCache = new Map();
+  const imageHashCache = new Map();
   const imageRecords = [];
   const chapterRecords = [];
+  let failedImagesCount = 0;
+
+  if (options.skipImages) {
+    onLog('[IMG] Imagens desativadas nas opções (skipImages=true)', 'debug');
+  }
 
   for (let i = 0; i < parsedChapters.length; i++) {
     const parsed = parsedChapters[i];
@@ -525,15 +209,20 @@ export async function buildEpubBlob({
         let imgRec = imageCache.get(imgInfo.originalUrl);
         if (!imgRec) {
           let fetched = null;
+          let usedUrl = imgInfo.originalUrl;
           const imgCandidates = [imgInfo.originalUrl];
           const unproxied = toHighResCoverUrl(imgInfo.originalUrl);
           if (unproxied && unproxied !== imgInfo.originalUrl) {
             imgCandidates.push(unproxied);
           }
+          if (imgInfo.fallbackUrl && !imgCandidates.includes(imgInfo.fallbackUrl)) {
+            imgCandidates.push(imgInfo.fallbackUrl);
+          }
           const imgErrors = [];
           for (const candidateUrl of imgCandidates) {
             try {
               fetched = await fetchImageBytes(candidateUrl, signal);
+              usedUrl = candidateUrl;
               break;
             } catch (e) {
               if (e.name === 'AbortError') throw e;
@@ -543,34 +232,65 @@ export async function buildEpubBlob({
           if (!fetched) {
             throw new Error(imgErrors.join(' | ') || 'Failed to fetch image');
           }
-          const { blob, mime } = fetched;
-          let bytes;
+          const { blob, bytes: rawBytes, mime } = fetched;
+          let bytes = rawBytes;
           let finalMime = mime;
+          let converted = false;
           const needsEpub2Convert = /^image\/avif$/i.test(mime) || (!epub3 && /^image\/webp$/i.test(mime));
-          if (options.compressImages || needsEpub2Convert || options.grayscaleImages) {
+          const isAnimated = /^image\/gif$/i.test(mime) || isAnimatedImage(rawBytes, mime);
+          const shouldConvertImg =
+            needsEpub2Convert ||
+            Boolean(options.grayscaleImages) ||
+            (Boolean(options.compressImages) && !isAnimated);
+          if (shouldConvertImg) {
             const forceJpeg = needsEpub2Convert || (options.compressedFormat || 'jpg') === 'jpg';
-            const conv = await convertImageViaCanvas(blob, {
-              maxDim: options.compressImages ? (options.compressedResolution || 1080) : 0,
-              forceJpeg,
-              quality: options.compressImages ? (customImageQuality ?? 0.85) : 0.92,
-              grayscale: Boolean(options.grayscaleImages)
-            });
+            const conv = await tryConvertImage(
+              blob,
+              rawBytes,
+              mime,
+              {
+                maxDim: options.compressImages ? (options.compressedResolution || 1080) : 0,
+                forceJpeg,
+                quality: options.compressImages ? (customImageQuality ?? 0.85) : 0.92,
+                grayscale: Boolean(options.grayscaleImages)
+              },
+              { onLog, label: `Cap. ${i + 1} (${usedUrl})` }
+            );
             bytes = conv.bytes;
             finalMime = conv.mime;
-          } else {
-            bytes = new Uint8Array(await blob.arrayBuffer());
+            converted = conv.converted;
           }
-          const idx = imageRecords.length + 1;
-          const ext = extFromMime(finalMime);
-          const href = `images/img_${String(idx).padStart(4, '0')}.${ext}`;
-          imgRec = { id: `img_${idx}`, href, mime: finalMime };
-          imageCache.set(imgInfo.originalUrl, imgRec);
-          imageRecords.push(imgRec);
-          entries.push({ name: `OEBPS/${href}`, data: bytes });
+
+          const contentHash = `${finalMime}:${hashImageBytes(bytes)}`;
+          const hashHit = imageHashCache.get(contentHash);
+          if (hashHit) {
+            imgRec = hashHit;
+            imageCache.set(imgInfo.originalUrl, imgRec);
+            onLog(
+              `[IMG] Cap. ${i + 1} deduplicada por conteúdo -> ${imgRec.href} <- ${usedUrl}`,
+              'debug'
+            );
+          } else {
+            const idx = imageRecords.length + 1;
+            const ext = extFromMime(finalMime);
+            const href = `images/img_${String(idx).padStart(4, '0')}.${ext}`;
+            imgRec = { id: `img_${idx}`, href, mime: finalMime };
+            imageCache.set(imgInfo.originalUrl, imgRec);
+            imageHashCache.set(contentHash, imgRec);
+            imageRecords.push(imgRec);
+            entries.push({ name: `OEBPS/${href}`, data: bytes });
+            onLog(
+              `[IMG] Cap. ${i + 1} OK -> ${href} (${mime}${finalMime !== mime ? ` -> ${finalMime}` : ''}, ${(bytes.length / 1024).toFixed(1)} KB${converted ? ', otimizada' : ''}) <- ${usedUrl}`,
+              'debug'
+            );
+          }
+        } else {
+          onLog(`[IMG] Cap. ${i + 1} reutilizada -> ${imgRec.href} <- ${imgInfo.originalUrl}`, 'debug');
         }
         imgInfo.element.setAttribute('src', `../${imgRec.href}`);
       } catch (err) {
         if (err.name === 'AbortError') throw err;
+        failedImagesCount++;
         const chTitle = parsed.chapter?.displayTitle || parsed.chapterTitle || `Cap. ${i + 1}`;
         const chUrl = parsed.chapter?.url || '';
         const sourceCtx = chUrl ? `página: ${chUrl} | imagem: ${imgInfo.originalUrl}` : imgInfo.originalUrl;
@@ -593,6 +313,8 @@ export async function buildEpubBlob({
       }
     }
 
+    rewriteInternalChapterLinks(parsed.nodes);
+
     const chNum = String(i + 1).padStart(4, '0');
     const href = `text/ch_${chNum}.xhtml`;
     const xhtml = parsed.serialize('../styles/stylesheet.css', epub3, {
@@ -613,7 +335,7 @@ export async function buildEpubBlob({
   const tocGroups = groupTocByVolume(chapterRecords, groupNestedVolumes);
   entries.push({
     name: 'OEBPS/toc.ncx',
-    data: buildTocNcx({ uuid, bookTitle, hasCoverPage, hasInfoPage, tocGroups })
+    data: buildTocNcx({ uuid, bookTitle, hasCoverPage, hasInfoPage, infoLabel, tocGroups })
   });
   if (epub3) {
     entries.push({
@@ -621,8 +343,23 @@ export async function buildEpubBlob({
       data: buildNavXhtml({
         bookTitle,
         lang: metadata.language || 'pt',
+        tocHeading,
+        infoLabel,
+        includeTocPage,
         hasCoverPage,
         hasInfoPage,
+        tocGroups
+      })
+    });
+  } else if (includeTocPage) {
+    entries.push({
+      name: 'OEBPS/text/toc.xhtml',
+      data: buildEpub2TocXhtml({
+        bookTitle,
+        tocHeading,
+        hasCoverPage,
+        hasInfoPage,
+        infoLabel,
         tocGroups
       })
     });
@@ -644,6 +381,9 @@ export async function buildEpubBlob({
       hasCoverPage,
       coverUsesSvg: Boolean(options.useSvgForImages),
       hasInfoPage,
+      includeTocPage,
+      tocPosition,
+      tocHeading,
       chapterRecords,
       imageRecords
     })
@@ -652,7 +392,7 @@ export async function buildEpubBlob({
   const zipBlob = await createZipBlob(entries);
   const buildMs = Date.now() - buildStartedAt;
   onLog?.(
-    `[BUILD] EPUB ${epub3 ? '3' : '2'} empacotado em ${buildMs}ms (${chapterRecords.length} caps, ${imageRecords.length} imagem(ns), ${(zipBlob.size / 1024).toFixed(1)} KB)`,
+    `[BUILD] EPUB ${epub3 ? '3' : '2'} empacotado em ${buildMs}ms (${chapterRecords.length} caps, capa=${hasCoverPage ? 'sim' : 'não'}, ${imageRecords.length} imagem(ns)${failedImagesCount > 0 ? `, falhasImg=${failedImagesCount}` : ''}, ${(zipBlob.size / 1024).toFixed(1)} KB)`,
     'debug'
   );
   return zipBlob;

@@ -3,8 +3,9 @@
  * e-reader-friendly XHTML while preserving semantic typography and inline spacing.
  */
 
-export const XHTML_NS = 'http://www.w3.org/1999/xhtml';
-export const EPUB_NS = 'http://www.idpf.org/2007/ops';
+import { EPUB_NS, XHTML_NS, escapeXml, serializeChapterXhtml } from './xhtml-serializer.js';
+
+export { EPUB_NS, XHTML_NS, escapeXml, serializeChapterXhtml };
 
 const ALLOWED_TAGS = new Set([
   'p', 'div', 'span', 'br', 'hr',
@@ -21,6 +22,51 @@ const UNWRAP_TAGS = new Set(['center', 'article', 'section', 'main', 'header', '
 const INLINE_TAGS = new Set([
   'span', 'b', 'strong', 'i', 'em', 'u', 's', 'del', 'sup', 'sub', 'small', 'code', 'a'
 ]);
+
+const BLOCK_TAGS = new Set([
+  'p', 'div', 'blockquote', 'pre', 'ul', 'ol', 'dl', 'table',
+  'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'hr', 'figure'
+]);
+
+const DIRECT_IMAGE_URL_RX = /\.(?:jpe?g|png|gif|webp|avif)(?:[?#].*)?$/i;
+
+function normalizeHrefForCompare(rawUrl, baseUrl) {
+  try {
+    const u = new URL(String(rawUrl || '').trim(), baseUrl);
+    u.hash = '';
+    return u.toString().replace(/\/+$/, '');
+  } catch {
+    return '';
+  }
+}
+
+export function decodeCloudflareEmail(hex) {
+  const clean = String(hex || '').trim();
+  if (!/^[0-9a-f]{4,}$/i.test(clean) || clean.length % 2 !== 0) return '';
+  const key = parseInt(clean.slice(0, 2), 16);
+  let out = '';
+  for (let i = 2; i < clean.length; i += 2) {
+    out += String.fromCharCode(parseInt(clean.slice(i, i + 2), 16) ^ key);
+  }
+  return out;
+}
+
+function hasBlockChild(el) {
+  for (const child of el.childNodes) {
+    if (child.nodeType === Node.ELEMENT_NODE && BLOCK_TAGS.has(child.tagName.toLowerCase())) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function unwrapInlineWithBlocks(inlineEl, xmlDoc) {
+  const frag = xmlDoc.createDocumentFragment();
+  while (inlineEl.firstChild) {
+    frag.appendChild(inlineEl.firstChild);
+  }
+  return frag;
+}
 
 const DROP_TAGS = new Set([
   'script', 'style', 'noscript', 'iframe', 'object', 'embed',
@@ -100,16 +146,33 @@ export class HtmlSanitizer {
     this.hiddenClasses = options.hiddenClasses instanceof Set
       ? options.hiddenClasses
       : new Set(options.hiddenClasses || []);
+    this.nextPrevUrls = new Set();
+    if (options.nextPrevUrls) {
+      for (const u of options.nextPrevUrls) {
+        const norm = normalizeHrefForCompare(u);
+        if (norm) this.nextPrevUrls.add(norm);
+      }
+    }
+    this.chapterTitle = String(options.chapterTitle || '').replace(/\s+/g, ' ').trim().toLowerCase();
   }
 
   isHiddenElement(el) {
     const style = (el.getAttribute('style') || '').toLowerCase();
     if (el.hasAttribute('hidden')) return true;
+    if (el.getAttribute('aria-hidden') === 'true' && !el.querySelector?.('img')) return true;
     if (/display\s*:\s*none/i.test(style) || /visibility\s*:\s*hidden/i.test(style)) {
       return true;
     }
+    const isLazyImg =
+      el.tagName?.toLowerCase() === 'img' &&
+      (el.hasAttribute('data-src') ||
+        el.hasAttribute('data-lazy-src') ||
+        el.hasAttribute('data-original') ||
+        el.hasAttribute('data-orig-file') ||
+        el.hasAttribute('data-srcset') ||
+        el.hasAttribute('data-lazy'));
     const rawCls = el.getAttribute('class') || '';
-    if (this.hiddenClasses.size > 0 && rawCls) {
+    if (!isLazyImg && this.hiddenClasses.size > 0 && rawCls) {
       for (const token of rawCls.trim().split(/\s+/)) {
         if (token && this.hiddenClasses.has(token)) return true;
       }
@@ -127,32 +190,81 @@ export class HtmlSanitizer {
     return Array.from(links).some((a) => NAV_LINK_PATTERNS.some((rx) => rx.test((a.textContent || '').trim())));
   }
 
+  parseSrcsetBestUrl(rawSrcset) {
+    const raw = String(rawSrcset || '').trim();
+    if (!raw || /^data:/i.test(raw)) return null;
+    let bestUrl = null;
+    let bestScore = -1;
+    for (const part of raw.split(',')) {
+      const tokens = part.trim().split(/\s+/).filter(Boolean);
+      if (tokens.length === 0) continue;
+      const url = tokens[0];
+      if (!url || /^data:/i.test(url)) continue;
+      const desc = tokens[1] || '';
+      const numMatch = desc.match(/^(\d+(?:\.\d+)?)(w|x)$/i);
+      const score = numMatch
+        ? Number(numMatch[1]) * (numMatch[2].toLowerCase() === 'x' ? 1000 : 1)
+        : 0;
+      if (score >= bestScore) {
+        bestScore = score;
+        bestUrl = url;
+      }
+    }
+    return bestUrl;
+  }
+
   resolveImageUrl(imgEl, baseUrl) {
+    const pictureSources = [];
+    if (imgEl.parentElement?.tagName?.toLowerCase() === 'picture') {
+      for (const source of imgEl.parentElement.querySelectorAll('source')) {
+        pictureSources.push(
+          this.parseSrcsetBestUrl(source.getAttribute('data-srcset')),
+          this.parseSrcsetBestUrl(source.getAttribute('srcset'))
+        );
+      }
+    }
+
     const candidates = [
+      imgEl.getAttribute('data-orig-file'),
       imgEl.getAttribute('data-lazy-src'),
       imgEl.getAttribute('data-src'),
       imgEl.getAttribute('data-original'),
       imgEl.getAttribute('data-cfsrc'),
       imgEl.getAttribute('data-full-url'),
+      imgEl.getAttribute('data-url'),
+      imgEl.getAttribute('data-lazy'),
+      imgEl.getAttribute('data-image'),
+      this.parseSrcsetBestUrl(imgEl.getAttribute('data-srcset')),
+      this.parseSrcsetBestUrl(imgEl.getAttribute('srcset')),
+      ...pictureSources,
       imgEl.getAttribute('src')
     ];
+
+    let fallbackDataUrl = null;
+    let fallbackPlaceholderHttp = null;
     for (const cand of candidates) {
       if (!cand) continue;
       const trimmed = cand.trim();
       if (!trimmed || /^data:image\/svg\+xml/i.test(trimmed)) continue;
       if (/^data:image\/(?:png|jpe?g|gif|webp|avif);base64,/i.test(trimmed)) {
-        return trimmed;
+        if (!fallbackDataUrl) fallbackDataUrl = trimmed;
+        continue;
       }
       try {
         const u = new URL(trimmed, baseUrl);
         if (u.protocol === 'http:' || u.protocol === 'https:') {
-          return u.toString();
+          const resolved = u.toString();
+          if (/(?:^|\/)(?:blank|spacer|transparent|pixel|1x1|loading|placeholder)\.(?:gif|png|svg)(?:$|\?)/i.test(u.pathname)) {
+            if (!fallbackPlaceholderHttp) fallbackPlaceholderHttp = resolved;
+            continue;
+          }
+          return resolved;
         }
       } catch {
         // Ignore malformed URLs
       }
     }
-    return null;
+    return fallbackDataUrl || fallbackPlaceholderHttp || null;
   }
 
   /**
@@ -234,25 +346,58 @@ export class HtmlSanitizer {
 
     const cloneClean = (node) => {
       if (node.nodeType === Node.TEXT_NODE) {
-        const cleanText = (node.nodeValue || '').replace(/[\u200b-\u200d\ufeff]/g, '');
+        // eslint-disable-next-line no-control-regex
+        const cleanText = (node.nodeValue || '').replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f\u200b-\u200d\ufeff]/g, '');
         return cleanText ? xmlDoc.createTextNode(cleanText) : null;
       }
       if (node.nodeType !== Node.ELEMENT_NODE) return null;
 
       const rawTag = node.tagName.toLowerCase();
+      if (rawTag === 'o:p' || rawTag.startsWith('o:')) {
+        return null;
+      }
       if (DROP_TAGS.has(rawTag) || this.isHiddenElement(node) || this.isNavContainer(node)) {
         return null;
       }
 
+      // Decode Cloudflare obfuscated email addresses (__cf_email__ / data-cfemail)
+      const cfHex = node.getAttribute('data-cfemail');
+      if (cfHex) {
+        const decodedEmail = decodeCloudflareEmail(cfHex);
+        if (decodedEmail) {
+          return xmlDoc.createTextNode(decodedEmail);
+        }
+      }
+
+      // Convert WordPress Gutenberg spacer blocks into semantic scene breaks (<hr />)
+      if (rawTag === 'div' && /\bwp-block-spacer\b/i.test(node.getAttribute('class') || '')) {
+        return xmlDoc.createElementNS(XHTML_NS, 'hr');
+      }
+
       if (rawTag === 'img') {
         if (this.skipImages) return null;
-        const resolvedUrl = this.resolveImageUrl(node, baseUrl);
+        let resolvedUrl = this.resolveImageUrl(node, baseUrl);
         if (!resolvedUrl) return null;
+        let fallbackUrl = null;
+        // If a thumbnail <img> is wrapped in <a href="high-res.jpg">, prefer the high-res image with fallback to thumb
+        const parentA = node.parentElement?.tagName?.toLowerCase() === 'a' ? node.parentElement : null;
+        const parentHref = (parentA?.getAttribute('href') || '').trim();
+        if (parentHref && DIRECT_IMAGE_URL_RX.test(parentHref)) {
+          try {
+            const absParent = new URL(parentHref, baseUrl).toString();
+            if (/^https?:\/\//i.test(absParent) && absParent !== resolvedUrl) {
+              fallbackUrl = resolvedUrl;
+              resolvedUrl = absParent;
+            }
+          } catch {
+            // keep resolvedUrl
+          }
+        }
         const cleanImg = xmlDoc.createElementNS(XHTML_NS, 'img');
         cleanImg.setAttribute('src', resolvedUrl);
         const alt = (node.getAttribute('alt') || '').trim();
         cleanImg.setAttribute('alt', alt || 'Illustration');
-        images.push({ originalUrl: resolvedUrl, element: cleanImg });
+        images.push({ originalUrl: resolvedUrl, fallbackUrl, element: cleanImg });
         return cleanImg;
       }
 
@@ -280,6 +425,13 @@ export class HtmlSanitizer {
             safeHref = '';
           }
         }
+        // Remove adjacent Next/Previous chapter links by exact URL match regardless of link text
+        if (this.removeNavLinks && safeHref && this.nextPrevUrls.size > 0 && !node.querySelector('img')) {
+          const normSafe = normalizeHrefForCompare(safeHref, baseUrl);
+          if (normSafe && this.nextPrevUrls.has(normSafe)) {
+            return null;
+          }
+        }
         if (!safeHref && !safeId) {
           const frag = xmlDoc.createDocumentFragment();
           for (const child of node.childNodes) {
@@ -299,6 +451,9 @@ export class HtmlSanitizer {
         for (const child of node.childNodes) {
           const cloned = cloneClean(child);
           if (cloned) cleanA.appendChild(cloned);
+        }
+        if (INLINE_TAGS.has('a') && hasBlockChild(cleanA)) {
+          return unwrapInlineWithBlocks(cleanA, xmlDoc);
         }
         return cleanA;
       }
@@ -359,13 +514,42 @@ export class HtmlSanitizer {
         }
       }
 
+      if (INLINE_TAGS.has(targetTag) && hasBlockChild(cleanEl)) {
+        return unwrapInlineWithBlocks(cleanEl, xmlDoc);
+      }
+
       return cleanEl;
     };
 
     const outNodes = [];
     for (const child of workRoot.childNodes) {
       const cleaned = cloneClean(child);
-      if (cleaned) outNodes.push(cleaned);
+      if (!cleaned) continue;
+      if (cleaned.nodeType === Node.DOCUMENT_FRAGMENT_NODE) {
+        for (const fragChild of Array.from(cleaned.childNodes)) {
+          outNodes.push(fragChild);
+        }
+      } else {
+        outNodes.push(cleaned);
+      }
+    }
+
+    // Remove duplicate leading chapter title heading when serializeChapterXhtml will already emit it
+    if (this.chapterTitle && outNodes.length > 0) {
+      const firstEl = outNodes.find(
+        (n) => n.nodeType === Node.ELEMENT_NODE || (n.nodeType === Node.TEXT_NODE && (n.nodeValue || '').trim())
+      );
+      if (
+        firstEl?.nodeType === Node.ELEMENT_NODE &&
+        /^h[1-3]$/i.test(firstEl.tagName) &&
+        !firstEl.querySelector('img')
+      ) {
+        const headingText = (firstEl.textContent || '').replace(/\s+/g, ' ').trim().toLowerCase();
+        if (headingText && headingText === this.chapterTitle) {
+          const idx = outNodes.indexOf(firstEl);
+          if (idx !== -1) outNodes.splice(idx, 1);
+        }
+      }
     }
 
     return { xmlDoc, nodes: outNodes, images };
@@ -374,179 +558,4 @@ export class HtmlSanitizer {
 
 export function sanitizeChapterContent(contentRoot, baseUrl, options = {}) {
   return new HtmlSanitizer(options).sanitize(contentRoot, baseUrl);
-}
-
-function enhancePopupFootnotesInDoc(xmlDoc, contentDiv) {
-  const idMap = new Map();
-  for (const el of contentDiv.querySelectorAll('[id]')) {
-    const id = el.getAttribute('id');
-    if (id) idMap.set(id, el);
-  }
-  if (idMap.size === 0) return;
-
-  const isNoteContainerTag = (tag) => tag === 'p' || tag === 'div' || tag === 'li';
-  const setEpubType = (el, val) => {
-    if (typeof el.setAttributeNS === 'function') {
-      el.setAttributeNS(EPUB_NS, 'epub:type', val);
-    } else {
-      el.setAttribute('epub:type', val);
-    }
-  };
-  const isDescendantOrSame = (parent, child) => {
-    let cur = child;
-    while (cur) {
-      if (cur === parent) return true;
-      cur = cur.parentNode;
-    }
-    return false;
-  };
-  const asideByContainer = new Map();
-
-  for (const a of contentDiv.querySelectorAll('a[href^="#"]')) {
-    if (a.closest('aside')) continue;
-    const href = a.getAttribute('href') || '';
-    const targetId = href.slice(1);
-    if (!targetId) continue;
-
-    const target = idMap.get(targetId);
-    if (!target) continue;
-
-    const aText = (a.textContent || '').trim();
-    const looksLikeRef =
-      Boolean(a.closest('sup')) ||
-      /^(?:\[\d+\]|\(?\d{1,3}\)?|[¹²³⁴⁵⁶⁷⁸⁹⁰]+|\*{1,3}|†|‡|§|nota\s*\d*|note\s*\d*|fn\s*\d*)$/i.test(aText) ||
-      /^(?:fn|note|nota|foot)/i.test(targetId);
-    if (!looksLikeRef) continue;
-
-    let container = target;
-    while (container.parentElement && container.parentElement !== contentDiv) {
-      if (isNoteContainerTag(container.tagName?.toLowerCase())) break;
-      container = container.parentElement;
-    }
-    const containerTag = container.tagName?.toLowerCase();
-    if (!isNoteContainerTag(containerTag) && container.tagName?.toLowerCase() !== 'aside') continue;
-    if (container === contentDiv || isDescendantOrSame(container, a) || isDescendantOrSame(a, container)) continue;
-
-    setEpubType(a, 'noteref');
-
-    if (asideByContainer.has(container)) continue;
-
-    if (target !== container) {
-      target.removeAttribute('id');
-      if (
-        target.tagName?.toLowerCase() === 'a' &&
-        !target.getAttribute('href') &&
-        target.childNodes.length === 0
-      ) {
-        target.remove();
-      }
-    } else {
-      container.removeAttribute('id');
-    }
-
-    let aside = container.tagName?.toLowerCase() === 'aside' ? container : null;
-    if (!aside) {
-      aside = xmlDoc.createElementNS(XHTML_NS, 'aside');
-      setEpubType(aside, 'footnote');
-      aside.setAttribute('id', targetId);
-      if (typeof container.replaceWith === 'function') {
-        container.replaceWith(aside);
-      } else {
-        container.parentNode.insertBefore(aside, container);
-        container.remove();
-      }
-      if (containerTag === 'li') {
-        const p = xmlDoc.createElementNS(XHTML_NS, 'p');
-        while (container.firstChild) p.appendChild(container.firstChild);
-        aside.appendChild(p);
-      } else {
-        aside.appendChild(container);
-      }
-    } else {
-      setEpubType(aside, 'footnote');
-      aside.setAttribute('id', targetId);
-    }
-    asideByContainer.set(container, aside);
-  }
-}
-
-export function serializeChapterXhtml({
-  title,
-  subtitle = '',
-  xmlDoc,
-  nodes,
-  stylesheetHref = '../styles/stylesheet.css',
-  epub3 = true,
-  popupFootnotes = false
-}) {
-  const html = xmlDoc.documentElement;
-  html.setAttribute('xmlns', XHTML_NS);
-  if (epub3) {
-    html.setAttribute('xmlns:epub', EPUB_NS);
-  }
-
-  const head = xmlDoc.createElementNS(XHTML_NS, 'head');
-  const metaCharset = xmlDoc.createElementNS(XHTML_NS, 'meta');
-  if (epub3) {
-    metaCharset.setAttribute('charset', 'utf-8');
-  } else {
-    metaCharset.setAttribute('http-equiv', 'Content-Type');
-    metaCharset.setAttribute('content', 'application/xhtml+xml; charset=utf-8');
-  }
-  head.appendChild(metaCharset);
-
-  const titleEl = xmlDoc.createElementNS(XHTML_NS, 'title');
-  titleEl.textContent = title;
-  head.appendChild(titleEl);
-
-  const linkEl = xmlDoc.createElementNS(XHTML_NS, 'link');
-  linkEl.setAttribute('rel', 'stylesheet');
-  linkEl.setAttribute('type', 'text/css');
-  linkEl.setAttribute('href', stylesheetHref);
-  head.appendChild(linkEl);
-
-  const body = xmlDoc.createElementNS(XHTML_NS, 'body');
-  const h2 = xmlDoc.createElementNS(XHTML_NS, 'h2');
-  h2.setAttribute('class', 'chapter-title');
-  h2.textContent = title;
-  body.appendChild(h2);
-
-  if (subtitle && subtitle !== title) {
-    const pSub = xmlDoc.createElementNS(XHTML_NS, 'p');
-    pSub.setAttribute('class', 'chapter-subtitle');
-    pSub.textContent = subtitle;
-    body.appendChild(pSub);
-  }
-
-  const contentDiv = xmlDoc.createElementNS(XHTML_NS, 'div');
-  contentDiv.setAttribute('class', 'chapter-content');
-  for (const n of nodes) {
-    contentDiv.appendChild(n);
-  }
-  if (epub3 && popupFootnotes) {
-    enhancePopupFootnotesInDoc(xmlDoc, contentDiv);
-  }
-  body.appendChild(contentDiv);
-
-  html.replaceChildren(head, body);
-
-  // Serialize documentElement (not xmlDoc) and strip any leading XML PI/DOCTYPE so browsers
-  // never emit a duplicate `<?xml ...?>` declaration after line 1.
-  const serialized = new XMLSerializer()
-    .serializeToString(xmlDoc.documentElement)
-    .replace(/^(?:\s*<\?xml[^?]*\?>|\s*<!DOCTYPE[^>]*>)+/i, '')
-    .trimStart();
-  const doctype = epub3
-    ? '<!DOCTYPE html>'
-    : '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">';
-  return `<?xml version="1.0" encoding="utf-8"?>\n${doctype}\n${serialized}`;
-}
-
-export function escapeXml(str) {
-  return String(str ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&apos;');
 }

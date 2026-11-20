@@ -9,6 +9,7 @@ import {
   toHighResCoverUrl,
   waitForTabComplete
 } from '../core/parser-engine.js';
+import { applyNavigationHeaderRules } from '../core/dnr-rules.js';
 
 /**
  * Adapter for Scribble Hub serialized web fiction
@@ -45,20 +46,72 @@ export class ScribbleHubParser extends BaseParser {
 
   async resolveIndexDocument(inputUrl, doc, signal, options = {}) {
     let targetUrl = normalizeUrl(inputUrl);
+    await applyNavigationHeaderRules(['scribblehub.com'], targetUrl);
     let activeDoc = doc;
 
     if (!activeDoc.querySelector('ol.toc_ol') && !activeDoc.querySelector('.fic_title')) {
-      const seriesLink = activeDoc.querySelector(
-        '.wi_breadcrumb a[href*="/series/"], .chp_byauthor a[href*="/series/"], .c_index a[href*="/series/"], a[href*="/series/"]'
-      );
-      if (seriesLink) {
-        const resolved = normalizeUrl(new URL(seriesLink.getAttribute('href'), targetUrl).toString());
-        if (resolved !== targetUrl) {
+      const readIdMatch = targetUrl.match(/\/read\/(\d+)(?:-[^/?#]+)?\/chapter\//i);
+      const expectedSeriesId = readIdMatch ? readIdMatch[1] : '';
+      const seriesPathRx = /^\/series\/(\d+)(?:\/[^/?#]+)?\/?$/i;
+
+      const prioritized = [];
+      const secondary = [];
+      const seen = new Set([targetUrl]);
+
+      const considerHref = (rawHref, isPrimary) => {
+        if (!rawHref || rawHref.startsWith('#') || /^javascript:/i.test(rawHref)) return;
+        try {
+          const u = new URL(rawHref, targetUrl);
+          const m = u.pathname.match(seriesPathRx);
+          if (!m) return;
+          u.hash = '';
+          u.search = '';
+          const abs = normalizeUrl(u.toString());
+          if (seen.has(abs)) return;
+          seen.add(abs);
+          const idMatches = Boolean(expectedSeriesId && m[1] === expectedSeriesId);
+          if (idMatches || (isPrimary && !expectedSeriesId)) {
+            prioritized.push(abs);
+          } else if (!expectedSeriesId) {
+            secondary.push(abs);
+          }
+        } catch {
+          // Ignore malformed href
+        }
+      };
+
+      for (const a of activeDoc.querySelectorAll(
+        '.wi_breadcrumb a[href*="/series/"], .chp_byauthor a[href*="/series/"], .c_index a[href*="/series/"]'
+      )) {
+        considerHref(a.getAttribute('href') || '', true);
+      }
+      for (const a of activeDoc.querySelectorAll('a[href*="/series/"]')) {
+        considerHref(a.getAttribute('href') || '', false);
+      }
+
+      if (expectedSeriesId) {
+        try {
+          const canonical = normalizeUrl(new URL(`/series/${expectedSeriesId}/`, targetUrl).toString());
+          if (!seen.has(canonical)) {
+            seen.add(canonical);
+            prioritized.push(canonical);
+          }
+        } catch {
+          // Ignore invalid URL
+        }
+      }
+
+      const candidates = [...prioritized, ...secondary].slice(0, 2);
+      for (const resolved of candidates) {
+        try {
           const candidateDoc = await fetchDocumentWithOptions(resolved, options, signal);
           if (candidateDoc.querySelector('ol.toc_ol') || candidateDoc.querySelector('.fic_title')) {
             targetUrl = resolved;
             activeDoc = candidateDoc;
+            break;
           }
+        } catch (err) {
+          if (err?.name === 'AbortError') throw err;
         }
       }
     }
@@ -154,10 +207,21 @@ export class ScribbleHubParser extends BaseParser {
 
   findNextPageUrl(doc, currentUrl) {
     const nextEl = doc.querySelector('#pagination-mesh-toc a.page-link.next, #pagination-mesh-toc a.next');
-    const href = nextEl?.getAttribute('href') || '';
-    if (!href) return null;
+    const href = (nextEl?.getAttribute('href') || '').trim();
+    if (!href || href.startsWith('#') || /^javascript:/i.test(href)) return null;
     try {
-      const nextAbs = normalizeUrl(new URL(href, currentUrl).toString());
+      const curParsed = new URL(currentUrl);
+      const nextParsed = new URL(href, currentUrl);
+      nextParsed.hash = '';
+      if (nextParsed.origin !== curParsed.origin || nextParsed.pathname !== curParsed.pathname) {
+        return null;
+      }
+      const curToc = parseInt(curParsed.searchParams.get('toc') || '1', 10) || 1;
+      const nextToc = parseInt(nextParsed.searchParams.get('toc') || '0', 10);
+      if (nextParsed.searchParams.has('toc') && nextToc <= curToc) {
+        return null;
+      }
+      const nextAbs = normalizeUrl(nextParsed.toString());
       return nextAbs !== normalizeUrl(currentUrl) ? nextAbs : null;
     } catch {
       return null;
@@ -169,7 +233,7 @@ export class ScribbleHubParser extends BaseParser {
     if (inputVal && /^\d+$/.test(inputVal.trim())) {
       return inputVal.trim();
     }
-    const urlMatch = String(targetUrl || '').match(/\/series\/(\d+)(?:\/|$)/);
+    const urlMatch = String(targetUrl || '').match(/\/(?:series|read)\/(\d+)(?:[-/]|$)/i);
     return urlMatch ? urlMatch[1] : '';
   }
 
@@ -198,17 +262,52 @@ export class ScribbleHubParser extends BaseParser {
       }
     });
     const payload = results?.[0]?.result;
-    if (payload?.ok && payload.html && payload.html.includes('toc_ol')) {
+    if (payload?.ok && payload.html && (payload.html.includes('toc_ol') || payload.html.includes('toc_w'))) {
       return new DOMParser().parseFromString(payload.html, 'text/html');
     }
     return null;
   }
 
-  async _fetchFullTocViaAjax(indexDoc, targetUrl, signal) {
-    if (!canUseTabScripting() || signal?.aborted) return null;
+  async _fetchFullTocViaDirectAjax(postId, targetUrl, signal) {
+    try {
+      const ajaxUrl = new URL('/wp-admin/admin-ajax.php', targetUrl).toString();
+      const body = new URLSearchParams({
+        action: 'wi_getreleases_pagination',
+        pagenum: '-1',
+        mypostid: String(postId)
+      }).toString();
+      const resp = await fetch(ajaxUrl, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+        body,
+        signal
+      });
+      if (!resp.ok) return null;
+      const html = await resp.text();
+      if (html && (html.includes('toc_ol') || html.includes('toc_w'))) {
+        return new DOMParser().parseFromString(html, 'text/html');
+      }
+    } catch (err) {
+      if (err?.name === 'AbortError') throw err;
+    }
+    return null;
+  }
+
+  async _fetchFullTocViaAjax(indexDoc, targetUrl, signal, options = {}) {
+    if (signal?.aborted) return null;
     const postId = this._extractPostId(indexDoc, targetUrl);
     if (!postId) return null;
 
+    // 1. Try direct extension fetch first (0 background tabs needed when session cookies pass)
+    if (!options.renderWithTab) {
+      const directDoc = await this._fetchFullTocViaDirectAjax(postId, targetUrl, signal);
+      if (directDoc) return directDoc;
+    }
+
+    if (!canUseTabScripting()) return null;
+
+    // 2. Reuse any already-open Scribble Hub tab on the same origin
     try {
       const origin = new URL(targetUrl).origin;
       if (chrome?.tabs?.query) {
@@ -222,9 +321,10 @@ export class ScribbleHubParser extends BaseParser {
         }
       }
     } catch {
-      // Fall back to temporary background tab below
+      // Fall back to a single temporary background tab below
     }
 
+    // 3. Last resort: open a single background tab, fetch full TOC in one POST, and close it
     let createdTab = null;
     try {
       createdTab = await chrome.tabs.create({ url: targetUrl, active: false });
@@ -302,12 +402,24 @@ export class ScribbleHubParser extends BaseParser {
   async collectAllChapters(indexDoc, targetUrl, options = {}, signal) {
     const customListSelector = (options.customListSelector || '').trim();
     if (!customListSelector && indexDoc.querySelector('#pagination-mesh-toc') && !options.disableAjaxToc) {
-      const ajaxDoc = await this._fetchFullTocViaAjax(indexDoc, targetUrl, signal);
+      const ajaxDoc = await this._fetchFullTocViaAjax(indexDoc, targetUrl, signal, options);
       if (ajaxDoc) {
         const ajaxChapters = this.collectChapterNodes(ajaxDoc, targetUrl, options);
         if (ajaxChapters.length > 0) {
           return ajaxChapters;
         }
+      }
+    }
+
+    // Never spawn dozens/hundreds of background tabs during TOC pagination if AJAX failed
+    if (!customListSelector && options.renderWithTab && indexDoc.querySelector('#pagination-mesh-toc')) {
+      const currentOnly = this.collectChapterNodes(indexDoc, targetUrl, options);
+      if (currentOnly.length > 0) {
+        options.onLog?.(
+          `[SCRIBBLEHUB] Paginação via múltiplas abas evitada; usando ${currentOnly.length} capítulos da página atual.`,
+          'warn'
+        );
+        return currentOnly;
       }
     }
 

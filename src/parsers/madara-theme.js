@@ -30,24 +30,52 @@ export class MadaraThemeParser extends BaseParser {
     return Math.min(100, score);
   }
 
-  async resolveIndexDocument(inputUrl, doc, signal) {
+  async resolveIndexDocument(inputUrl, doc, signal, options = {}) {
     let targetUrl = normalizeUrl(inputUrl);
     let activeDoc = doc;
 
     if (!activeDoc.querySelector('.wp-manga-chapter')) {
-      const seriesLink = activeDoc.querySelector('.breadcrumb li:nth-last-child(2) a[href], .c-breadcrumb a[href*="/novel/"], .c-breadcrumb a[href*="/manga/"]');
-      if (seriesLink) {
-        const resolved = normalizeUrl(new URL(seriesLink.getAttribute('href'), targetUrl).toString());
-        if (resolved !== targetUrl) {
-          const candidateDoc = await fetchWithRetry(resolved, { retries: 2, signal });
+      const seriesLinks = activeDoc.querySelectorAll(
+        '.breadcrumb li:nth-last-child(2) a[href], .c-breadcrumb a[href*="/novel/"], .c-breadcrumb a[href*="/manga/"]'
+      );
+      const tried = new Set([targetUrl]);
+      for (const seriesLink of seriesLinks) {
+        const rawHref = (seriesLink.getAttribute('href') || '').trim();
+        if (!rawHref || rawHref.startsWith('#') || /^javascript:/i.test(rawHref)) continue;
+        let resolved;
+        try {
+          const u = new URL(rawHref, targetUrl);
+          if (!u.pathname || u.pathname === '/') continue;
+          u.hash = '';
+          resolved = normalizeUrl(u.toString());
+        } catch {
+          continue;
+        }
+        if (tried.has(resolved)) continue;
+        tried.add(resolved);
+        try {
+          const candidateDoc = await fetchWithRetry(resolved, {
+            retries: options.maxRetries ?? 2,
+            signal,
+            onLog: options.onLog
+          });
           if (candidateDoc.querySelector('.wp-manga-chapter')) {
             targetUrl = resolved;
             activeDoc = candidateDoc;
+            break;
           }
+        } catch (err) {
+          if (err?.name === 'AbortError') throw err;
         }
+        if (tried.size >= 3) break;
       }
     }
     return { targetUrl, doc: activeDoc };
+  }
+
+  findNextPageUrl() {
+    // Madara renders the chapter list on the series page; never follow chapter post rel="next"
+    return null;
   }
 
   extractSiteMetadata(doc, targetUrl) {

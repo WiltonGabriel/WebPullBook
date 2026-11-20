@@ -38,6 +38,9 @@ chrome.action.onClicked.addListener(async (tab) => {
     const workspaceUrl = new URL(chrome.runtime.getURL('src/workspace/workspace.html'));
     if (sourceUrl) {
       workspaceUrl.searchParams.set('url', sourceUrl);
+      if (typeof tab?.id === 'number') {
+        workspaceUrl.searchParams.set('sourceTabId', String(tab.id));
+      }
     }
     await chrome.tabs.create({
       url: workspaceUrl.toString(),

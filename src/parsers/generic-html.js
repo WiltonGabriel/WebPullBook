@@ -1,5 +1,6 @@
 import {
   BaseParser,
+  ensureAscendingChapterOrder,
   extractVolumeLabel,
   fetchDocumentWithOptions,
   normalizeSpaces,
@@ -14,6 +15,12 @@ const TAXONOMY_PATH_RX = /(?:^|\/)(?:genero|generos|genre|genres|tag|tags|catego
 const CTA_TEXT_RX = /^(?:come[çc]ar\s+a\s+ler|continuar\s+lendo|start\s+reading|read\s+first|continue\s+reading)$/i;
 const NEXT_CHAPTER_RX =
   /^(?:next(?:\s+(?:chapter|part|page|ep(?:isode)?))?|pr[óo]xim[oa](?:\s+(?:cap[íi]tulo|parte|p[áa]gina|epis[óo]dio))?|cap[íi]tulo\s+seguinte|seguinte|avan[çc]ar|siguiente(?:\s+cap[íi]tulo)?|»+|›+|→)$/i;
+const TOC_LINK_RX =
+  /^(?:[íi]ndice|sum[áa]rio|table\s+of\s+contents|toc|lista\s+de\s+cap[íi]tulos|todos\s+os\s+cap[íi]tulos|all\s+chapters|chapters?\s+list|chapter\s+index|back\s+to\s+(?:index|toc|series|novel|book))$/i;
+const POSITIVE_PROSE_HINT_RX =
+  /(?:^|[\s_-])(?:content|chapter|prose|reading|story|novel|texto|capitulo|article|entry|post-body|text-body|chapter-text|正文|章节|本文)(?:$|[\s_-])/i;
+const NEGATIVE_PROSE_HINT_RX =
+  /(?:^|[\s_-])(?:comment|sidebar|footer|widget|recommend|related|share|meta|author-bio|nav|menu)(?:$|[\s_-])/i;
 const UTILITY_CLASS_RX = /^(?:flex|inline-flex|grid|block|inline-block|hidden|relative|absolute|fixed|sticky|prose|container|mx-auto|(?:m|p|px|py|pt|pb|pl|pr|mt|mb|ml|mr|gap|space-[xy]|w|h|min-w|min-h|max-w|max-h|text|bg|border|rounded|shadow|overflow|items|justify|self|col|row|z)-.+|_[a-zA-Z0-9_-]{4,}|[a-zA-Z0-9-]+_[a-zA-Z0-9]{5,})$/;
 const VOLUME_HEADING_RX = /\b(?:vol(?:ume)?\.?\s*\d+|book\s*\d+|livro\s*\d+|tome\s*\d+|ano\s*\d+|part(?:e)?\s*(?:\d+|[ivx]+))/i;
 
@@ -205,22 +212,35 @@ export class GenericHtmlParser extends BaseParser {
 
     const root = doc.querySelector('main, article') || doc.body;
     const candidates = Array.from(root.querySelectorAll('ul, ol, table, div, section'));
-    let best = { container: root, score: 0, links: [] };
+    const scored = [];
 
     for (const el of candidates) {
       const evaluated = this._scoreListCandidate(el, targetUrl, baseOrigin, context);
-      if (evaluated.score >= best.score) {
-        best = { ...evaluated, container: el };
+      if (evaluated.score >= 12 && evaluated.links.length > 0) {
+        scored.push({ ...evaluated, container: el });
       }
     }
 
-    if (best.score >= 12) {
+    if (scored.length > 0) {
+      scored.sort((a, b) => b.score - a.score);
+      let best = scored[0];
+      // Innermost Node Wins: prefer a tighter descendant list that preserves >= 85% of chapter links
+      for (let i = 1; i < scored.length; i++) {
+        const challenger = scored[i];
+        if (!isDescendantOf(challenger.container, best.container)) continue;
+        if (
+          challenger.links.length >= Math.max(2, Math.ceil(best.links.length * 0.85)) &&
+          challenger.score >= best.score * 0.8
+        ) {
+          best = challenger;
+        }
+      }
       return best;
     }
 
     return {
       container: root,
-      score: best.score,
+      score: 0,
       links: this._extractSameOriginLinks(root, targetUrl, baseOrigin).filter(
         (l) => CHAPTER_HINT_RX.test(l.text) || URL_HINT_RX.test(l.url)
       )
@@ -285,10 +305,112 @@ export class GenericHtmlParser extends BaseParser {
     return { score, links };
   }
 
+  _findTocIndexUrl(doc, currentUrl, baseOrigin) {
+    const normCurrent = normalizeUrl(currentUrl);
+    const validate = (href) => {
+      if (!href || href.startsWith('#') || /^javascript:/i.test(href)) return null;
+      try {
+        const u = new URL(href, currentUrl);
+        if (u.origin !== baseOrigin || TAXONOMY_PATH_RX.test(u.pathname || '')) return null;
+        u.hash = '';
+        const abs = normalizeUrl(u.toString());
+        if (!abs || abs === normCurrent || u.pathname === '/' || u.pathname === '') return null;
+        return abs;
+      } catch {
+        return null;
+      }
+    };
+
+    const explicitRel = doc.querySelector('a[rel="contents"], a[rel="index"], a[rel="up"]');
+    const relUrl = validate(explicitRel?.getAttribute('href'));
+    if (relUrl) return relUrl;
+
+    for (const a of doc.querySelectorAll('a[href]')) {
+      if (a.closest('#comments, .comments, footer, .sidebar, #sidebar')) continue;
+      const label = normalizeSpaces(a.textContent);
+      const aria = normalizeSpaces(a.getAttribute('aria-label') || a.getAttribute('title') || '');
+      if (TOC_LINK_RX.test(label) || (aria && TOC_LINK_RX.test(aria))) {
+        const abs = validate(a.getAttribute('href'));
+        if (abs) return abs;
+      }
+    }
+
+    const curPath = new URL(currentUrl).pathname;
+    const breadcrumbLinks = Array.from(
+      doc.querySelectorAll('.breadcrumb a[href], .breadcrumbs a[href], [aria-label*="breadcrumb" i] a[href]')
+    ).reverse();
+    for (const a of breadcrumbLinks) {
+      const abs = validate(a.getAttribute('href'));
+      if (!abs) continue;
+      const candPath = new URL(abs).pathname;
+      if (
+        candPath.length < curPath.length &&
+        /(?:^|\/)(?:series|novel|novels|fiction|obra|obras|book|books|story|stories|manga|webnovel)\//i.test(candPath)
+      ) {
+        return abs;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Distinguish a true Table-of-Contents page from a chapter page that happens to include
+   * a small sidebar/footer list of recent chapters.
+   */
+  isTableOfContents(doc, targetUrl, selectedList = null) {
+    const selected = selectedList || this._selectListCandidate(doc, targetUrl, {});
+    if (selected.score >= 999 && selected.links.length >= 2) return true;
+    if (selected.links.length <= 1) return false;
+
+    const proseRoot = this.findChapterContentRoot(doc);
+    const proseChars = proseRoot ? normalizeSpaces(proseRoot.textContent).length : 0;
+    if (proseChars >= 1200) {
+      const baseOrigin = new URL(targetUrl).origin;
+      const hasChapterNav = Boolean(
+        this._findNextChapterUrl(doc, targetUrl, baseOrigin) ||
+          this._findTocIndexUrl(doc, targetUrl, baseOrigin)
+      );
+      if (hasChapterNav && selected.links.length <= 15 && selected.score < 80) {
+        return false;
+      }
+    }
+    return selected.links.length >= 2;
+  }
+
+  async resolveIndexDocument(inputUrl, doc, signal, options = {}) {
+    const targetUrl = normalizeUrl(inputUrl);
+    if ((options.customListSelector || '').trim()) {
+      return { targetUrl, doc };
+    }
+    const initialList = this._selectListCandidate(doc, targetUrl, {});
+    if (this.isTableOfContents(doc, targetUrl, initialList)) {
+      return { targetUrl, doc };
+    }
+
+    const baseOrigin = new URL(targetUrl).origin;
+    const tocUrl = this._findTocIndexUrl(doc, targetUrl, baseOrigin);
+    if (!tocUrl) {
+      return { targetUrl, doc };
+    }
+
+    try {
+      const tocDoc = await fetchDocumentWithOptions(tocUrl, options, signal);
+      const tocList = this._selectListCandidate(tocDoc, tocUrl, {});
+      if (tocList.links.length >= 2) {
+        options.onLog?.(`[PARSE] Índice resolvido automaticamente a partir do capítulo: ${tocUrl}`, 'debug');
+        return { targetUrl: tocUrl, doc: tocDoc };
+      }
+    } catch (err) {
+      if (err.name === 'AbortError') throw err;
+    }
+
+    return { targetUrl, doc };
+  }
+
   collectChapterNodes(doc, targetUrl, _options = {}, context = {}) {
     const selected = this._selectListCandidate(doc, targetUrl, context);
 
-    return selected.links.map((l) => ({
+    const chapters = selected.links.map((l) => ({
       url: l.url,
       numText: '',
       titleText: l.text,
@@ -297,6 +419,7 @@ export class GenericHtmlParser extends BaseParser {
       volume: this._inferVolumeFromAncestors(l.el, selected.container, l.text, l.url),
       included: true
     }));
+    return ensureAscendingChapterOrder(chapters, false);
   }
 
   _findNextChapterUrl(doc, currentUrl, baseOrigin) {
@@ -376,11 +499,12 @@ export class GenericHtmlParser extends BaseParser {
   async collectAllChapters(indexDoc, targetUrl, options = {}, signal) {
     const customListSelector = (options.customListSelector || '').trim();
     if (!customListSelector) {
-      const initialNodes = this.collectChapterNodes(indexDoc, targetUrl, options, {
+      const selected = this._selectListCandidate(indexDoc, targetUrl, {
         pageIndex: 0,
         knownPrefixes: new Set()
       });
-      if (initialNodes.length <= 1) {
+      const isToc = this.isTableOfContents(indexDoc, targetUrl, selected);
+      if (!isToc || selected.links.length <= 1) {
         const proseRoot = this.findChapterContentRoot(indexDoc);
         const proseChars = proseRoot ? normalizeSpaces(proseRoot.textContent).length : 0;
         if (proseChars >= 120) {
@@ -391,7 +515,7 @@ export class GenericHtmlParser extends BaseParser {
               return this._crawlChaptersFromNextLinks(indexDoc, targetUrl, options, signal);
             }
           }
-          if (initialNodes.length === 0) {
+          if (!isToc || selected.links.length === 0) {
             const singleTitle =
               this.extractChapterHeading(indexDoc, { url: targetUrl, displayTitle: 'Capítulo 1' }).chapterTitle ||
               'Capítulo 1';
@@ -411,11 +535,13 @@ export class GenericHtmlParser extends BaseParser {
       }
     }
 
-    return super.collectAllChapters(indexDoc, targetUrl, options, signal);
+    const collected = await super.collectAllChapters(indexDoc, targetUrl, options, signal);
+    return customListSelector ? collected : ensureAscendingChapterOrder(collected, false);
   }
 
   /**
-   * Readability-inspired prose container scorer with Innermost Node Wins refinement.
+   * Readability-inspired prose container scorer with <br>/loose-text support,
+   * semantic class/id signals, and Innermost Node Wins refinement.
    */
   findChapterContentRoot(doc) {
     const explicit = doc.querySelector(
@@ -429,14 +555,28 @@ export class GenericHtmlParser extends BaseParser {
     for (const el of candidates) {
       if (this._isNoiseRegion(el)) continue;
       const blocks = Array.from(el.querySelectorAll('p, blockquote, li')).filter((b) => !this._isNoiseRegion(b));
-      if (blocks.length === 0) continue;
+      const brCount = el.querySelectorAll('br').length;
+      let directTextLen = 0;
+      for (const child of el.childNodes) {
+        if (child.nodeType === Node.TEXT_NODE) {
+          directTextLen += normalizeSpaces(child.nodeValue).length;
+        }
+      }
+
+      if (blocks.length === 0 && brCount < 3 && directTextLen < 160) continue;
 
       let pTextLen = 0;
       let commaCount = 0;
-      for (const blk of blocks) {
-        const txt = normalizeSpaces(blk.textContent);
-        pTextLen += txt.length;
-        commaCount += (txt.match(/[,.;!?—]/g) || []).length;
+      if (blocks.length > 0) {
+        for (const blk of blocks) {
+          const txt = normalizeSpaces(blk.textContent);
+          pTextLen += txt.length;
+          commaCount += (txt.match(/[,.;!?—。，！？]/g) || []).length;
+        }
+      } else {
+        const txt = normalizeSpaces(el.textContent);
+        pTextLen = txt.length;
+        commaCount = (txt.match(/[,.;!?—。，！？]/g) || []).length;
       }
       if (pTextLen < 40) continue;
 
@@ -449,10 +589,17 @@ export class GenericHtmlParser extends BaseParser {
       if (linkDensity > 0.35) continue;
 
       const nonProseOverhead = Math.max(0, totalLen - pTextLen);
-      const proseScore = pTextLen * 0.1 + commaCount * 2 - linkDensity * 200 - nonProseOverhead * 0.05;
+      const brBonus = blocks.length === 0 ? Math.min(40, brCount * 4) : 0;
+      const proseScore =
+        pTextLen * 0.1 + commaCount * 2 + brBonus - linkDensity * 200 - nonProseOverhead * 0.05;
       let score = proseScore;
-      if (el.tagName.toLowerCase() === 'article') score += 40;
-      if (el.tagName.toLowerCase() === 'main') score += 25;
+      const tag = el.tagName.toLowerCase();
+      if (tag === 'article') score += 40;
+      if (tag === 'main') score += 25;
+
+      const idAndClass = `${el.getAttribute('id') || ''} ${typeof el.className === 'string' ? el.className : el.getAttribute('class') || ''}`;
+      if (POSITIVE_PROSE_HINT_RX.test(idAndClass)) score += 35;
+      if (NEGATIVE_PROSE_HINT_RX.test(idAndClass)) score -= 50;
 
       scored.push({ el, score, proseScore, pTextLen, linkDensity });
     }

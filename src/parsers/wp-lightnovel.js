@@ -30,26 +30,52 @@ export class WpNovelThemeParser extends BaseParser {
     return Math.min(100, score);
   }
 
-  async resolveIndexDocument(inputUrl, doc, signal) {
+  async resolveIndexDocument(inputUrl, doc, signal, options = {}) {
     let targetUrl = normalizeUrl(inputUrl);
     let activeDoc = doc;
 
     if (!activeDoc.querySelector('.eplister')) {
-      const seriesLink = activeDoc.querySelector(
+      const seriesLinks = activeDoc.querySelectorAll(
         '.ts-breadcrumb a[href*="/series/"], .allc a[href*="/series/"], .breadcrumb a[href*="/series/"], .allc a[href]'
       );
-      if (seriesLink) {
-        const resolved = normalizeUrl(new URL(seriesLink.getAttribute('href'), targetUrl).toString());
-        if (resolved !== targetUrl) {
-          const candidateDoc = await fetchWithRetry(resolved, { retries: 2, signal });
+      const tried = new Set([targetUrl]);
+      for (const seriesLink of seriesLinks) {
+        const rawHref = (seriesLink.getAttribute('href') || '').trim();
+        if (!rawHref || rawHref.startsWith('#') || /^javascript:/i.test(rawHref)) continue;
+        let resolved;
+        try {
+          const u = new URL(rawHref, targetUrl);
+          if (!u.pathname || u.pathname === '/') continue;
+          u.hash = '';
+          resolved = normalizeUrl(u.toString());
+        } catch {
+          continue;
+        }
+        if (tried.has(resolved)) continue;
+        tried.add(resolved);
+        try {
+          const candidateDoc = await fetchWithRetry(resolved, {
+            retries: options.maxRetries ?? 2,
+            signal,
+            onLog: options.onLog
+          });
           if (candidateDoc.querySelector('.eplister') || candidateDoc.querySelector('.ts-chl-collapsible')) {
             targetUrl = resolved;
             activeDoc = candidateDoc;
+            break;
           }
+        } catch (err) {
+          if (err?.name === 'AbortError') throw err;
         }
+        if (tried.size >= 3) break;
       }
     }
     return { targetUrl, doc: activeDoc };
+  }
+
+  findNextPageUrl() {
+    // WordPress novel theme renders the full chapter list on the series page; never follow post rel="next"
+    return null;
   }
 
   extractSiteMetadata(doc, targetUrl) {

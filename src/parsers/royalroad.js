@@ -112,6 +112,7 @@ export class RoyalRoadParser extends BaseParser {
       return { targetUrl, doc };
     }
 
+    const tried = new Set([targetUrl]);
     for (const a of doc.querySelectorAll('a[href*="/fiction/"]')) {
       const rawHref = a.getAttribute('href') || '';
       if (!rawHref) continue;
@@ -125,7 +126,8 @@ export class RoyalRoadParser extends BaseParser {
       } catch {
         continue;
       }
-      if (resolvedUrl === targetUrl) continue;
+      if (tried.has(resolvedUrl)) continue;
+      tried.add(resolvedUrl);
 
       const candidateDoc = await fetchWithRetry(resolvedUrl, { retries: 2, signal });
       if (
@@ -134,9 +136,15 @@ export class RoyalRoadParser extends BaseParser {
       ) {
         return { targetUrl: resolvedUrl, doc: candidateDoc };
       }
+      if (tried.size >= 3) break;
     }
 
     return { targetUrl, doc };
+  }
+
+  findNextPageUrl() {
+    // Royal Road embeds the full chapter list on the fiction page; never follow chapter rel="next"
+    return null;
   }
 
   extractSiteMetadata(doc, targetUrl) {
