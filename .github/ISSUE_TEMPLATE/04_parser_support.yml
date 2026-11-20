@@ -1,0 +1,60 @@
+name: Parser Support
+description: Request a new dedicated site parser or report a broken parser
+title: "[Parser]: "
+labels: ["parser"]
+body:
+  - type: dropdown
+    id: request_type
+    attributes:
+      label: Request Type
+      options:
+        - New dedicated site parser
+        - Fix broken existing parser
+        - Improve metadata or chapter extraction
+    validations:
+      required: true
+  - type: input
+    id: site_name
+    attributes:
+      label: Site Name & Domain
+      placeholder: "e.g. Example Site (example.com)"
+    validations:
+      required: true
+  - type: input
+    id: index_url
+    attributes:
+      label: Example Index / Table of Contents URL
+      placeholder: "https://example.com/book/123"
+    validations:
+      required: true
+  - type: input
+    id: chapter_url
+    attributes:
+      label: Example Chapter / Page URL
+      placeholder: "https://example.com/book/123/chapter-1"
+    validations:
+      required: true
+  - type: dropdown
+    id: generic_test
+    attributes:
+      label: Did you test with the Generic HTML parser?
+      options:
+        - Yes - failed completely
+        - Yes - works partially
+        - No
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Additional Notes
+      description: Mention pagination, volume grouping, images, Cloudflare/anti-bot, or special formatting.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Verification
+      options:
+        - label: The target content is publicly accessible (no paywall or DRM bypass requested).
+          required: true
+        - label: I checked docs/COMPATIBILITY.md and existing issues first.
+          required: true

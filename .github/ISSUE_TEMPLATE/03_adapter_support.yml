@@ -1,0 +1,44 @@
+name: Adapter Support
+description: Request a new shared layout/theme adapter or report an adapter issue
+title: "[Adapter]: "
+labels: ["adapter"]
+body:
+  - type: dropdown
+    id: request_type
+    attributes:
+      label: Request Type
+      options:
+        - New shared layout / theme adapter
+        - Fix broken existing adapter
+        - Improve existing adapter
+    validations:
+      required: true
+  - type: input
+    id: adapter_name
+    attributes:
+      label: Adapter / Theme / Platform Name
+      placeholder: "e.g. Madara Theme, WP LightNovel, XenForo"
+    validations:
+      required: true
+  - type: input
+    id: example_urls
+    attributes:
+      label: Example URLs
+      description: Provide one or more public sites using this layout/theme.
+      placeholder: "https://example.com/series/sample"
+    validations:
+      required: true
+  - type: textarea
+    id: details
+    attributes:
+      label: Structural Details
+      description: Describe the shared HTML structure, selectors, or what broke.
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Verification
+      options:
+        - label: This request is for a reusable theme/platform adapter (not a single-site parser).
+          required: true

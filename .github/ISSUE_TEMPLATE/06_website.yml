@@ -1,0 +1,41 @@
+name: Website
+description: Report a layout bug, broken link, or improvement on the project website
+title: "[Website]: "
+labels: ["website"]
+body:
+  - type: dropdown
+    id: issue_type
+    attributes:
+      label: Issue Type
+      options:
+        - Layout / CSS bug
+        - Broken link or asset
+        - Translation / Localization issue
+        - SEO / Accessibility / Performance
+        - Content improvement
+    validations:
+      required: true
+  - type: dropdown
+    id: language
+    attributes:
+      label: Website Language Version
+      options:
+        - English (/)
+        - Portuguese (/pt/)
+        - Both
+    validations:
+      required: true
+  - type: input
+    id: page_url
+    attributes:
+      label: Page URL
+      placeholder: "https://wiltongabriel.github.io/WebPullBook/"
+    validations:
+      required: true
+  - type: textarea
+    id: details
+    attributes:
+      label: Details
+      description: Describe the issue or suggested improvement.
+    validations:
+      required: true

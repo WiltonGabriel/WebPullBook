@@ -1,0 +1,59 @@
+name: Compatibility Matrix Update
+description: Add a newly tested site or update a site status in docs/COMPATIBILITY.md
+title: "[Compatibility]: "
+labels: ["compatibility"]
+body:
+  - type: markdown
+    attributes:
+      value: Use this form if you tested a site with WebPullBook and want to add it to or update its status in `docs/COMPATIBILITY.md`.
+  - type: dropdown
+    id: update_type
+    attributes:
+      label: Update Type
+      options:
+        - Add new tested site to Compatibility Matrix
+        - Update status of an existing site
+        - Flag a previously working site as broken
+    validations:
+      required: true
+  - type: input
+    id: site_name
+    attributes:
+      label: Site Name & Domain
+      placeholder: "e.g. Example Site (example.com)"
+    validations:
+      required: true
+  - type: dropdown
+    id: status
+    attributes:
+      label: Observed Compatibility Status
+      options:
+        - Working
+        - Partially working
+        - Broken / Unsupported
+    validations:
+      required: true
+  - type: dropdown
+    id: parser_used
+    attributes:
+      label: Parser / Adapter Used
+      options:
+        - Generic HTML
+        - Royal Road
+        - ScribbleHub
+        - Novel Mania
+        - Madara Theme
+        - WP LightNovel
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: tested_url
+    attributes:
+      label: Tested URL (optional)
+      placeholder: "https://example.com/book/123"
+  - type: textarea
+    id: notes
+    attributes:
+      label: Test Notes
+      description: Note what worked or failed (metadata, cover, chapter order, images, pagination, or custom selectors).
