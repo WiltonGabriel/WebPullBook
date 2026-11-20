@@ -429,6 +429,8 @@ export function applyReaderPreset(presetKey) {
   const cfg = READER_PRESETS[presetKey];
   if (!cfg) {
     state.options.readerPreset = 'custom';
+    if ($('reader-preset')) $('reader-preset').value = 'custom';
+    if ($('adv-reader-preset')) $('adv-reader-preset').value = 'custom';
     updateReaderPresetWarning();
     return;
   }
