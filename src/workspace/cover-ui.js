@@ -1,4 +1,5 @@
-import { normalizeSpaces } from '../core/parser-engine.js';
+import { fetchDocumentWithOptions, normalizeSpaces, toHighResCoverUrl } from '../core/parser-engine.js';
+import { parserRegistry } from '../parsers/index.js';
 import { $, state, t } from './state.js';
 import { appendLog, showBanner } from './logger.js';
 import { readMetadataFromUi, updateCoverPreview } from './options-storage.js';
@@ -212,4 +213,68 @@ export function handleGenerateCover() {
   readMetadataFromUi();
   updateCoverPreview();
   showBanner(t('msgCoverGenerated', { title }), 'success');
+}
+
+function isHttpUrl(raw) {
+  return /^https?:\/\//i.test(String(raw || '').trim());
+}
+
+function applyReloadedCover(originalUrl, thumbUrl) {
+  const upgraded = toHighResCoverUrl(originalUrl) || originalUrl;
+  $('meta-cover-url').value = upgraded;
+  readMetadataFromUi();
+  state.metadata.coverUrl = upgraded;
+  state.metadata.coverThumbUrl = thumbUrl || upgraded;
+  updateCoverPreview();
+  appendLog(`[IMG] Capa original recarregada em alta resolução: ${upgraded}`, 'debug');
+  showBanner(t('msgCoverReloaded'), 'success');
+}
+
+/**
+ * Restores the series' original cover (saved at load time) after Generate/Clear/Upload,
+ * or re-fetches it from the source page when no original was stored.
+ */
+export async function handleReloadCover() {
+  const btn = $('btn-reload-cover');
+  const current = $('meta-cover-url').value.trim();
+  const savedOriginal = state.metadata.originalCoverUrl || state.metadata.originalCoverThumbUrl || '';
+
+  if (isHttpUrl(savedOriginal) && savedOriginal !== current) {
+    applyReloadedCover(savedOriginal, state.metadata.originalCoverThumbUrl);
+    return;
+  }
+
+  const sourceUrl = state.metadata.startingUrl || $('starting-url').value.trim();
+  if (!isHttpUrl(sourceUrl)) {
+    showBanner(t('msgCoverReloadNotFound'), 'info');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = t('btnReloadingCover');
+  try {
+    const doc = await fetchDocumentWithOptions(sourceUrl, {
+      ...state.options,
+      ...(state.seriesRequiresTab ? { renderWithTab: true } : {}),
+      onLog: appendLog
+    });
+    const parser = parserRegistry.detect(doc, sourceUrl, state.options.parserId || 'auto');
+    const meta = {
+      ...parser.extractCommonMetadata(doc, sourceUrl),
+      ...parser.extractSiteMetadata(doc, sourceUrl)
+    };
+    const found = meta.coverUrl || meta.coverThumbUrl || '';
+    if (isHttpUrl(found)) {
+      state.metadata.originalCoverUrl = found;
+      state.metadata.originalCoverThumbUrl = meta.coverThumbUrl || found;
+      applyReloadedCover(found, meta.coverThumbUrl);
+    } else {
+      showBanner(t('msgCoverReloadNotFound'), 'info');
+    }
+  } catch (err) {
+    showBanner(err.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = t('btnReloadCover');
+  }
 }

@@ -368,8 +368,9 @@ body {
 /* Cover & Pack */
 .cover-box {
   width: 100%;
-  aspect-ratio: 37 / 50;
-  max-height: 245px;
+  max-width: 170px;
+  aspect-ratio: 2 / 3;
+  margin: 0 auto;
   background: var(--surface-2);
   border: 1px solid var(--border);
   border-radius: 10px;

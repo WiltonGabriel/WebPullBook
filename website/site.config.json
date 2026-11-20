@@ -1,6 +1,6 @@
 {
   "siteName": "WebPullBook",
-  "version": "1.6.0",
+  "version": "1.6.1",
   "baseUrl": "https://wiltongabriel.github.io/WebPullBook",
   "repositoryUrl": "https://github.com/WiltonGabriel/WebPullBook",
   "releasesUrl": "https://github.com/WiltonGabriel/WebPullBook/releases",
@@ -68,5 +68,5 @@
       "ptFile": "pt/contributing.html"
     }
   ],
-  "versionName": "1.6.0-beta"
+  "versionName": "1.6.1-beta"
 }

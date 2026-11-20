@@ -8,7 +8,7 @@ Only the latest released version of **WebPullBook** on the `main` branch receive
 
 | Version | Supported |
 | :--- | :--- |
-| Latest `1.x` release (`1.6.0-beta`) | ✅ Yes |
+| Latest `1.x` release (`1.6.1-beta`) | ✅ Yes |
 | Older `1.x` releases | ❌ No (update to the latest release) |
 
 ## Security Model & Protections

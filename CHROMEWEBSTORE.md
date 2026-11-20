@@ -1,7 +1,7 @@
 # Chrome Web Store & Mozilla Add-ons Listing Readiness — WebPullBook
 
 > Last Updated: 2026-11-20
-> Current Release Status: **Beta (`v1.6.0-beta`)** — distributed via [GitHub Releases](https://github.com/WiltonGabriel/WebPullBook/releases); prepared for future store publication.
+> Current Release Status: **Beta (`v1.6.1-beta`)** — distributed via [GitHub Releases](https://github.com/WiltonGabriel/WebPullBook/releases); prepared for future store publication.
 
 ## Store Listing
 
@@ -43,7 +43,7 @@ PERMISSIONS
 SUPPORT
 Found a bug or want to suggest an improvement? Open an issue at https://github.com/WiltonGabriel/WebPullBook/issues or visit https://wiltongabriel.github.io/WebPullBook/
 
-Version 1.6.0-beta — Verified NovelBin React SPA parser adapter, generic SPA tab-pool & DOM-stability upgrades, XHTML `.sr-only`/duplicate-heading cleanup, CodeQL security hardening, official 5-theme website, and expanded contributor/security documentation.
+Version 1.6.1-beta — Reload Cover button restoring the original series cover in high resolution, vertical 2:3 cover preview, emoji-free language/theme selectors, plus the verified NovelBin React SPA adapter, generic SPA tab-pool & DOM-stability upgrades, and CodeQL security hardening.
 
 **Category** [REQUIRED]
 Productivity
@@ -161,6 +161,7 @@ Mozilla Add-ons (`addons.mozilla.org`) does not charge a developer registration 
 
 | Version | Date | Changes | Status |
 |---------|------|---------|--------|
+| `1.6.1` (`1.6.1-beta`) | 2026-11-20 | Reload Cover button (restores the original series cover in high resolution), vertical 2:3 cover preview, emoji-free language/theme selectors, versioning policy and Firefox for Android roadmap documentation. | Draft (GitHub Release Beta) |
 | `1.6.0` (`1.6.0-beta`) | 2026-11-20 | Verified NovelBin React SPA adapter, generic SPA `TabRenderPool` & DOM stability upgrades, `.sr-only`/duplicate-heading sanitizer hardening, CodeQL security fixes, 5-theme website improvements, and updated policies/docs. | Released (GitHub Release Beta) |
 | `1.5.0` (`1.5.0-beta`) | 2026-11-20 | Automatic default cover fallback with WebPullBook logo, official bilingual GitHub Pages site with dynamic version detection and direct `.zip` download, `AGENTS.md`, `CHROMEWEBSTORE.md`, and quiet/minimalist documentation review. | Released (GitHub Release Beta) |
 | `1.4.0` (`1.4.0-beta`) | 2026-11-20 | Reader Profiles for Kindle (Legacy/Modern) & Kobo, Start-of-Book TOC, customizable Information & End-of-Book pages, active-tab live DOM capture, resilient image pipeline, Ctrl/Shift range selection, per-site selector isolation, Library batch updates, and SRP modularization. | Released (GitHub Release Beta) |

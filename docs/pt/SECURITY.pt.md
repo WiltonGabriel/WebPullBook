@@ -10,7 +10,7 @@ Apenas a versão mais recente do **WebPullBook** publicada na branch `main` rece
 
 | Versão | Suportada |
 | :--- | :--- |
-| Release `1.x` mais recente (`1.6.0-beta`) | ✅ Sim |
+| Release `1.x` mais recente (`1.6.1-beta`) | ✅ Sim |
 | Releases `1.x` anteriores | ❌ Não (atualize para a versão mais recente) |
 
 ## Modelo de Segurança & Proteções

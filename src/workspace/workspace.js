@@ -40,6 +40,7 @@ import {
 import {
   generateDefaultCoverDataUrl,
   handleGenerateCover,
+  handleReloadCover,
   handleUploadCoverFile
 } from './cover-ui.js';
 import {
@@ -265,7 +266,13 @@ function wireEvents() {
   $('btn-use-downloads-folder').addEventListener('click', handleUseDownloadsFolder);
 
   $('meta-cover-url').addEventListener('input', updateCoverPreview);
-  $('meta-cover-url').addEventListener('change', updateCoverPreview);
+  $('meta-cover-url').addEventListener('change', () => {
+    const cur = $('meta-cover-url').value.trim();
+    if (/^https?:\/\//i.test(cur)) {
+      $('meta-cover-url').value = toHighResCoverUrl(cur) || cur;
+    }
+    updateCoverPreview();
+  });
   $('cover-preview').addEventListener('error', () => {
     const failedUrl = $('meta-cover-url').value.trim();
     if (!failedUrl || /^data:/i.test(failedUrl)) return;
@@ -300,13 +307,7 @@ function wireEvents() {
     state.metadata.coverThumbUrl = '';
     updateCoverPreview();
   });
-  $('btn-hires-cover').addEventListener('click', () => {
-    const cur = $('meta-cover-url').value.trim();
-    if (cur) {
-      $('meta-cover-url').value = toHighResCoverUrl(cur);
-      updateCoverPreview();
-    }
-  });
+  $('btn-reload-cover').addEventListener('click', handleReloadCover);
   $('btn-preview-chapter').addEventListener('click', () => openChapterPreview(-1));
   $('btn-preview-toggle-edit').addEventListener('click', () => {
     setPreviewEditMode(!state.activePreviewEditable);

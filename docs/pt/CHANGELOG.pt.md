@@ -4,6 +4,16 @@
 
 Todas as mudanças notáveis do **WebPullBook** estão documentadas neste arquivo (espelho de referência de [CHANGELOG.md](../../CHANGELOG.md)).
 
+## [1.6.1] - 2026-11-20 (Beta)
+
+### Ajustes de Interface & Capa
+- **Botão Recarregar Capa (`src/workspace/cover-ui.js`):** o botão **Alta Res.** foi substituído por **Recarregar Capa**, que restaura a capa original da obra após **Gerar Capa**, **Limpar Capa** ou envio local (buscando novamente na página de origem quando necessário) e aplica automaticamente o upgrade de URL para alta resolução. URLs de capa coladas manualmente também são melhoradas automaticamente.
+- **Proporção da Prévia da Capa:** a moldura da prévia agora segue a proporção vertical `2:3` de livro, em vez de parecer quadrada.
+- **Seletores mais limpos:** removidos emojis de bandeira e de tema dos seletores de idioma (`Português` / `English`) e de tema do workspace.
+
+### Documentação
+- Política concisa de versionamento `MAJOR.MINOR.PATCH` adicionada ao `AGENTS.md` e ao `CONTRIBUTING.md`, além do roadmap do Firefox para Android e das notas de publicação no Mozilla Add-ons em `CHROMEWEBSTORE.md`.
+
 ## [1.6.0] - 2026-11-20 (Beta)
 
 ### Novidades & Compatibilidade

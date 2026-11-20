@@ -9,7 +9,7 @@ For human-oriented contributor guidelines and parser tutorials, see [CONTRIBUTIN
 ## 1. Project Identity
 
 - **Purpose:** WebPullBook is an open-source, cross-browser **Manifest V3** extension (Chrome, Edge, Brave, and Mozilla Firefox 128+) that extracts web novels, light novels, serialized fiction, articles, documentation, and open browser tabs into volume-organized **EPUB 2**, **EPUB 3**, **Single-File HTML**, **Markdown**, and **Plain Text (TXT)** files for offline reading.
-- **Current Status:** Beta (`v1.6.0-beta`, see [manifest.json](manifest.json) and [package.json](package.json)).
+- **Current Status:** Beta (`v1.6.1-beta`, see [manifest.json](manifest.json) and [package.json](package.json)).
 - **Communication Philosophy:** Quiet design and minimalism (*design silencioso e minimalismo*). Documentation, UI strings, and website copy must remain objective, discreet, clear, and honest—free of promotional adjectives, sales language, or unverified claims.
 - **Technology Stack:**
   - **Runtime:** Vanilla JavaScript (native ES modules), HTML5, CSS3, Web Extensions API (`chrome.*`), `DOMParser`, `XMLSerializer`, `CompressionStream` (`deflate-raw`), `IndexedDB`, `OffscreenCanvas` / `<canvas>`, and File System Access API (`showDirectoryPicker`).

@@ -4,6 +4,16 @@
 
 All notable changes to **WebPullBook** are documented in this file.
 
+## [1.6.1] - 2026-11-20 (Beta)
+
+### UI & Cover Refinements
+- **Reload Cover Button (`src/workspace/cover-ui.js`):** Replaced the **High-Res** cover button with **Reload Cover**, which restores the original series cover after **Generate Cover**, **Clear Cover**, or a local upload (re-fetching it from the source page when needed) and automatically applies the high-resolution URL upgrade. Pasted cover URLs are also upgraded automatically.
+- **Cover Preview Proportion:** Fixed the cover preview frame to a vertical `2:3` book ratio instead of a squarish box.
+- **Cleaner Selectors:** Removed flag and theme emojis from the workspace language (`Português` / `English`) and theme selectors.
+
+### Documentation
+- Added the concise `MAJOR.MINOR.PATCH` versioning policy to `AGENTS.md` and `CONTRIBUTING.md`, and recorded the Firefox for Android roadmap and Mozilla Add-ons readiness notes in `CHROMEWEBSTORE.md`.
+
 ## [1.6.0] - 2026-11-20 (Beta)
 
 ### New Features & Compatibility

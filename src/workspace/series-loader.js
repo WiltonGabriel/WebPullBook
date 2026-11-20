@@ -152,6 +152,8 @@ export async function handleLoadSeries(url, { sourceTabId = null } = {}) {
       ...series,
       coverUrl: resolvedCoverUrl,
       coverThumbUrl: series.coverThumbUrl || resolvedCoverUrl,
+      originalCoverUrl: series.coverUrl || series.coverThumbUrl || '',
+      originalCoverThumbUrl: series.coverThumbUrl || series.coverUrl || '',
       filename: sanitizeFilename(series.title, true)
     };
     state.chapters = await hydrateChaptersFromCache(series.chapters);

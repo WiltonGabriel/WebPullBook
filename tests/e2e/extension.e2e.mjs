@@ -310,6 +310,17 @@ async function runE2E() {
     await page.click('#btn-generate-cover');
     const generatedCover = await page.inputValue('#meta-cover-url');
     assert.match(generatedCover, /^data:image\/jpeg;base64,/);
+    await page.click('#btn-reload-cover');
+    await page.waitForFunction(
+      (orig) => document.querySelector('#meta-cover-url')?.value === orig,
+      origCoverUrl,
+      { timeout: 10000 }
+    );
+    assert.equal(await page.inputValue('#meta-cover-url'), origCoverUrl, 'Reload Cover should restore the original series cover');
+    const langLabels = await page.$$eval('#ui-lang-top option', (opts) => opts.map((o) => o.textContent.trim()));
+    assert.deepEqual(langLabels, ['Português', 'English']);
+    const themeLabels = await page.$$eval('#ui-theme-top option', (opts) => opts.map((o) => o.textContent.trim()));
+    assert.ok(themeLabels.every((l) => /^[\p{L}\- ]+$/u.test(l)), `Theme options must have no emojis: ${themeLabels.join(', ')}`);
     await page.fill('#meta-cover-url', origCoverUrl);
 
     // 4. Test Domain Rule persistence & Library batch check
