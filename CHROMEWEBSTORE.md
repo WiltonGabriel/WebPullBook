@@ -151,6 +151,9 @@ Mozilla Add-ons (`addons.mozilla.org`) does not charge a developer registration 
   - **Screenshots (`1280×800` PNG):** Reuse the 5 screenshots listed under `website/assets/screenshots/`
 - **Ready-to-Paste Notes for Reviewers:**
   > WebPullBook is a 100% client-side, zero-dependency Manifest V3 extension with no build step or remote code execution (`src/` runs unmodified). `tabs` and `scripting` are used only when the user clicks the extension action (to read the active tab URL or DOM cleanly, populate the Merge Tabs dialog, or reuse one background tab when extracting React/JS-hydrated SPAs). `declarativeNetRequestWithHostAccess` sets Firefox session rule ID `1` to remove `Origin: moz-extension://` on extension-initiated fetches so images/chapters are not rejected by CORS, plus temporary rules ID `100..119` for navigation headers during extraction. `http://*/*` and `https://*/*` host permissions are required because users extract books and articles from arbitrary websites of their choice. No user telemetry or analytics are collected by the extension.
+- **Target Platforms & Firefox for Android Roadmap:**
+  - Currently targets **Firefox Desktop (128+)** only (keep *Firefox for Android* unchecked during AMO submission until mobile testing is complete).
+  - **Planned Future Work (`gecko_android`):** Add `browser_specific_settings.gecko_android` in `manifest.json` (`strict_min_version: "142.0"` for `data_collection_permissions`), refine mobile touch/viewport layouts in `src/workspace/workspace.css`, and test `tabs`/`scripting`/downloads behavior on Firefox for Android.
 
 ---
 
@@ -158,7 +161,7 @@ Mozilla Add-ons (`addons.mozilla.org`) does not charge a developer registration 
 
 | Version | Date | Changes | Status |
 |---------|------|---------|--------|
-| `1.6.0` (`1.6.0-beta`) | 2026-11-20 | Verified NovelBin React SPA adapter, generic SPA `TabRenderPool` & DOM stability upgrades, `.sr-only`/duplicate-heading sanitizer hardening, CodeQL security fixes, 5-theme website improvements, and updated policies/docs. | Draft (GitHub Release Beta) |
+| `1.6.0` (`1.6.0-beta`) | 2026-11-20 | Verified NovelBin React SPA adapter, generic SPA `TabRenderPool` & DOM stability upgrades, `.sr-only`/duplicate-heading sanitizer hardening, CodeQL security fixes, 5-theme website improvements, and updated policies/docs. | Released (GitHub Release Beta) |
 | `1.5.0` (`1.5.0-beta`) | 2026-11-20 | Automatic default cover fallback with WebPullBook logo, official bilingual GitHub Pages site with dynamic version detection and direct `.zip` download, `AGENTS.md`, `CHROMEWEBSTORE.md`, and quiet/minimalist documentation review. | Released (GitHub Release Beta) |
 | `1.4.0` (`1.4.0-beta`) | 2026-11-20 | Reader Profiles for Kindle (Legacy/Modern) & Kobo, Start-of-Book TOC, customizable Information & End-of-Book pages, active-tab live DOM capture, resilient image pipeline, Ctrl/Shift range selection, per-site selector isolation, Library batch updates, and SRP modularization. | Released (GitHub Release Beta) |
 | `1.3.0` (`1.3.0-beta`) | 2026-11-15 | Mozilla Firefox 128+ MV3 compatibility, heuristic CSS selector assistant, Royal Road / Novel Mania / Scribble Hub verified adapters, 2-column UI, and 4 color themes. | Released (GitHub Release Beta) |
