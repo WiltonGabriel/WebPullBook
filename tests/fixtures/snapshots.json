@@ -169,5 +169,33 @@
         "volume": "Volume 01"
       }
     ]
+  },
+  "novelbin": {
+    "parserId": "novelbin",
+    "startingUrl": "https://novelbin.example.org/novel/glass-spire",
+    "title": "Chronicles of the Glass Spire",
+    "author": "H. Ashford",
+    "language": "en",
+    "status": "Completed",
+    "genres": ["Fantasy", "Mystery", "Adventure"],
+    "coverUrl": "https://cdn.novelbin.example.org/thumbnail/glass-spire.jpg",
+    "synopsis": "High above the mist, a forgotten observatory charts stars that no longer exist.\n\nEvery midnight chime awakens another sealed floor of the glass spire.",
+    "chapters": [
+      {
+        "url": "https://novelbin.example.org/read/glass-spire/chapter-1",
+        "displayTitle": "Chapter 1 - The Lantern",
+        "volume": "Volume 01"
+      },
+      {
+        "url": "https://novelbin.example.org/read/glass-spire/chapter-2",
+        "displayTitle": "Chapter 2 - Brass Gears",
+        "volume": "Volume 01"
+      },
+      {
+        "url": "https://novelbin.example.org/read/glass-spire/chapter-3",
+        "displayTitle": "Chapter 3 - Clockwork Tower",
+        "volume": "Volume 01"
+      }
+    ]
   }
 }

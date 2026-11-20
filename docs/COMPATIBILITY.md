@@ -17,6 +17,7 @@ Sites and adapters verified end-to-end in live usage and covered by automated re
 | Royal Road | `royalroad` | 2026-11-15 | [royalroad-index.html](../tests/fixtures/royalroad-index.html) | End-to-end tested (20 chapters): volume & chapter metadata, full synopsis, tags, cover, inline images, and hidden `<style>` watermark filtering. |
 | Novel Mania | `novelmania` | 2026-11-15 | [novelmania-index.html](../tests/fixtures/novelmania-index.html) | End-to-end tested (20 chapters): paginated chapter API & multi-volume detection, full synopsis, genres, status, original cover, inline images, `.sr-only` heading cleanup, and footnote anchors. |
 | Scribble Hub | `scribblehub` | 2026-11-19 | [scribblehub-index-p1.html](../tests/fixtures/scribblehub-index-p1.html) | End-to-end tested (index & direct chapter URL): AJAX full TOC, open-tab reuse, chronological ordering, metadata, inline images, and author note cleanup. |
+| NovelBin | `novelbin` | 2026-11-20 | [novelbin-index.html](../tests/fixtures/novelbin-index.html) | End-to-end tested (index & direct chapter URL, 2 novels): automatic SPA tab hydration, reusable tab pool, JSON-LD author & full metadata, cover, sr-only/duplicate-heading cleanup, and ad-free chapter XHTML. |
 
 ## Added / Not Officially Tested (Adicionados / Não Testados Oficialmente)
 
@@ -58,4 +59,5 @@ Each parser adapter has automated HTML snapshot fixtures verified on every CI ru
 | `royalroad` | 2026-11-15 | [royalroad-index.html](../tests/fixtures/royalroad-index.html) | [royalroad-chapter.html](../tests/fixtures/royalroad-chapter.html) | [snapshots.json](../tests/fixtures/snapshots.json) |
 | `novelmania` | 2026-11-15 | [novelmania-index.html](../tests/fixtures/novelmania-index.html) | [novelmania-chapter.html](../tests/fixtures/novelmania-chapter.html) | [snapshots.json](../tests/fixtures/snapshots.json) |
 | `scribblehub` | 2026-11-19 | [scribblehub-index-p1.html](../tests/fixtures/scribblehub-index-p1.html) | [scribblehub-chapter.html](../tests/fixtures/scribblehub-chapter.html) | [snapshots.json](../tests/fixtures/snapshots.json) |
+| `novelbin` | 2026-11-20 | [novelbin-index.html](../tests/fixtures/novelbin-index.html) | [novelbin-chapter.html](../tests/fixtures/novelbin-chapter.html) | [snapshots.json](../tests/fixtures/snapshots.json) |
 | `generic-html` | 2026-11-11 | [generic-index-p1.html](../tests/fixtures/generic-index-p1.html) | [generic-chapter.html](../tests/fixtures/generic-chapter.html) | [snapshots.json](../tests/fixtures/snapshots.json) |

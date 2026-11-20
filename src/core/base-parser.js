@@ -87,6 +87,18 @@ export class BaseParser {
     this.maxIndexPages = maxIndexPages;
   }
 
+  getIndexWaitSelector() {
+    return '';
+  }
+
+  getChapterWaitSelector() {
+    return '';
+  }
+
+  requiresTabForChapters() {
+    return false;
+  }
+
   /**
    * Return confidence score 0..100 for how well this parser matches the given DOM.
    */
@@ -170,8 +182,12 @@ export class BaseParser {
     const langAttr = (doc.documentElement.getAttribute('lang') || 'pt-BR').trim();
     const language = langAttr.split('-')[0].toLowerCase() || 'pt';
 
+    const ogSiteName = normalizeSpaces(doc.querySelector('meta[property="og:site_name"]')?.getAttribute('content') || '');
+    const rawMetaAuthor = normalizeSpaces(doc.querySelector('meta[name="author"]')?.getAttribute('content') || '');
+    const validMetaAuthor =
+      rawMetaAuthor && !(ogSiteName && rawMetaAuthor.toLowerCase() === ogSiteName.toLowerCase()) ? rawMetaAuthor : '';
     const authorMeta =
-      doc.querySelector('meta[name="author"]')?.getAttribute('content') ||
+      validMetaAuthor ||
       doc.querySelector('[rel="author"], .author a, .author')?.textContent ||
       dlMeta.author ||
       '';
@@ -403,6 +419,7 @@ export class BaseParser {
         const renderedDoc = await fetchRenderedTabDocument(targetUrl, {
           waitMs: options.renderWaitMs ?? 1100,
           preferOpenTab: options.preferOpenTabDom !== false,
+          waitForSelector: this.getIndexWaitSelector(),
           signal
         });
         const retryChapters = await this.collectAllChapters(
@@ -436,7 +453,7 @@ export class BaseParser {
 
     return {
       ...metadata,
-      requiresTabRender: usedTabFallback,
+      requiresTabRender: usedTabFallback || Boolean(this.requiresTabForChapters()),
       _attemptedTabFallback: attemptedTabFallback,
       chapters
     };
@@ -486,6 +503,7 @@ export class BaseParser {
     const preferOpenTab = options.preferOpenTabDom !== false;
     const useTabFirst = Boolean(options.renderWithTab || (chapter.tabId && preferOpenTab));
     let doc = options.pageDomCache?.get(chapter.url) || null;
+    const chapterWaitSelector = this.getChapterWaitSelector();
     if (doc) {
       onLog?.(`[NET] Reaproveitado DOM em memória: ${chapter.url}`, 'debug');
     } else if (useTabFirst) {
@@ -495,6 +513,7 @@ export class BaseParser {
         tabId: chapter.tabId ?? null,
         preferOpenTab,
         tabPool: options.tabPool || null,
+        waitForSelector: chapterWaitSelector,
         signal
       });
     } else {
@@ -516,6 +535,7 @@ export class BaseParser {
             tabId: chapter.tabId ?? null,
             preferOpenTab,
             tabPool: options.tabPool || null,
+            waitForSelector: chapterWaitSelector,
             signal
           });
         } else {
@@ -547,6 +567,7 @@ export class BaseParser {
           tabId: chapter.tabId ?? null,
           preferOpenTab,
           tabPool: options.tabPool || null,
+          waitForSelector: chapterWaitSelector,
           signal
         });
         const retryExtracted = this.extractChapter(renderedDoc, chapter, options);

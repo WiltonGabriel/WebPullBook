@@ -225,15 +225,31 @@ export function isRateLimitDocument(doc) {
   return RATE_LIMIT_TEXT_RX.test(text) || /\berror\s*1015\b|you are being rate limited/i.test(text);
 }
 
-function isTabNavigationComplete(tab) {
-  return Boolean(tab?.status === 'complete' && tab?.url && tab.url !== 'about:blank');
+function isTabNavigationComplete(
+  tab,
+  { expectedUrl = '', previousUrl = '', sawLoading = false } = {}
+) {
+  if (!(tab?.status === 'complete' && tab?.url && tab.url !== 'about:blank')) {
+    return false;
+  }
+  if (previousUrl && expectedUrl && normalizeUrl(previousUrl) !== normalizeUrl(expectedUrl)) {
+    return sawLoading || normalizeUrl(tab.url) !== normalizeUrl(previousUrl);
+  }
+  return true;
 }
 
-export async function waitForTabComplete(tabId, initialTab = null, signal = null, timeoutMs = 12000) {
-  if (isTabNavigationComplete(initialTab)) return;
+export async function waitForTabComplete(
+  tabId,
+  initialTab = null,
+  signal = null,
+  timeoutMs = 12000,
+  navOpts = {}
+) {
+  if (isTabNavigationComplete(initialTab, navOpts)) return;
 
   await new Promise((resolve, reject) => {
     let settled = false;
+    let sawLoading = initialTab?.status === 'loading';
     const finish = () => {
       if (settled) return;
       settled = true;
@@ -258,8 +274,14 @@ export async function waitForTabComplete(tabId, initialTab = null, signal = null
 
     function listener(updatedId, changeInfo, tab) {
       if (updatedId !== tabId) return;
+      if (changeInfo.status === 'loading' || tab?.status === 'loading') {
+        sawLoading = true;
+      }
       const effectiveUrl = tab?.url || changeInfo?.url || '';
-      if (changeInfo.status === 'complete' && effectiveUrl && effectiveUrl !== 'about:blank') {
+      if (
+        changeInfo.status === 'complete' &&
+        isTabNavigationComplete({ status: 'complete', url: effectiveUrl }, { ...navOpts, sawLoading })
+      ) {
         finish();
       }
     }
@@ -269,7 +291,10 @@ export async function waitForTabComplete(tabId, initialTab = null, signal = null
     const poller = setInterval(async () => {
       try {
         const tabInfo = await chrome.tabs.get(tabId);
-        if (isTabNavigationComplete(tabInfo)) finish();
+        if (tabInfo?.status === 'loading') {
+          sawLoading = true;
+        }
+        if (isTabNavigationComplete(tabInfo, { ...navOpts, sawLoading })) finish();
       } catch {
         finish();
       }
@@ -338,6 +363,7 @@ export function clearSpaDomainCircuit(rawUrl = '') {
 export class TabRenderPool {
   constructor() {
     this._tabId = null;
+    this._lastUrl = '';
     this._lock = Promise.resolve();
   }
 
@@ -360,9 +386,14 @@ export class TabRenderPool {
     if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
     if (typeof this._tabId === 'number' && chrome?.tabs?.update) {
       try {
+        const prevUrl = this._lastUrl;
         const updated = await chrome.tabs.update(this._tabId, { url: safeUrl, active: false });
         if (updated?.id !== undefined) {
-          await waitForTabComplete(this._tabId, null, signal, 12000);
+          await waitForTabComplete(this._tabId, null, signal, 12000, {
+            expectedUrl: safeUrl,
+            previousUrl: prevUrl
+          });
+          this._lastUrl = safeUrl;
           return this._tabId;
         }
       } catch (err) {
@@ -371,12 +402,14 @@ export class TabRenderPool {
           throw err;
         }
         this._tabId = null;
+        this._lastUrl = '';
       }
     }
     const created = await chrome.tabs.create({ url: safeUrl, active: false });
     this._tabId = created.id;
     try {
-      await waitForTabComplete(this._tabId, created, signal, 12000);
+      await waitForTabComplete(this._tabId, created, signal, 12000, { expectedUrl: safeUrl });
+      this._lastUrl = safeUrl;
     } catch (err) {
       if (err?.name === 'AbortError') {
         await this.close();
@@ -389,6 +422,7 @@ export class TabRenderPool {
   async close() {
     const id = this._tabId;
     this._tabId = null;
+    this._lastUrl = '';
     if (typeof id === 'number' && chrome?.tabs?.remove) {
       try {
         await chrome.tabs.remove(id);
@@ -403,15 +437,16 @@ export class TabRenderPool {
  * Wait intelligently inside a rendered tab until DOM content stabilizes (MutationObserver + debounce)
  * instead of blindly sleeping for a fixed interval. Exits immediately if an anti-bot challenge is detected.
  */
-async function waitForDomStabilityInTab(tabId, waitMs, signal) {
+async function waitForDomStabilityInTab(tabId, waitMs, signal, waitForSelector = '') {
   if (!waitMs || waitMs <= 0) return;
   if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
-  const maxWaitMs = Math.max(waitMs, 2600);
+  const selectorStr = String(waitForSelector || '').trim();
+  const maxWaitMs = selectorStr ? Math.max(waitMs, 6000) : Math.max(waitMs, 2600);
   try {
     const res = await chrome.scripting.executeScript({
       target: { tabId },
-      args: [maxWaitMs],
-      func: (timeoutMs) =>
+      args: [maxWaitMs, selectorStr],
+      func: (timeoutMs, targetSelector) =>
         new Promise((resolve) => {
           const started = Date.now();
           let lastSig = '';
@@ -432,11 +467,31 @@ async function waitForDomStabilityInTab(tabId, waitMs, signal) {
                 '#challenge-running, #cf-challenge-running, #challenge-stage, form#challenge-form, iframe[src*="challenges.cloudflare.com"]'
               )
             );
+          const hasVisibleSkeleton = () =>
+            Array.from(document.querySelectorAll('.skeleton, [class*="skeleton-"]')).some(
+              (el) => el.offsetParent !== null
+            );
           const measure = () => {
             const textLen = (document.body?.innerText || '').trim().length;
             const linkCount = document.querySelectorAll('a[href]').length;
             const pCount = document.querySelectorAll('p').length;
-            return { textLen, linkCount, pCount, sig: `${textLen}:${linkCount}:${pCount}` };
+            let selectorReady = false;
+            if (targetSelector) {
+              try {
+                selectorReady = Boolean(document.querySelector(targetSelector));
+              } catch {
+                selectorReady = false;
+              }
+            }
+            const skeletonVisible = hasVisibleSkeleton();
+            return {
+              textLen,
+              linkCount,
+              pCount,
+              selectorReady,
+              skeletonVisible,
+              sig: `${textLen}:${linkCount}:${pCount}:${selectorReady ? 1 : 0}:${skeletonVisible ? 1 : 0}`
+            };
           };
           const check = () => {
             if (isChallenge()) {
@@ -444,7 +499,10 @@ async function waitForDomStabilityInTab(tabId, waitMs, signal) {
               return;
             }
             const m = measure();
-            const hasContent = m.textLen >= 220 || m.pCount >= 2 || m.linkCount >= 8;
+            const nearTimeout = Date.now() - started >= Math.max(800, timeoutMs - 500);
+            const hasContent = targetSelector
+              ? m.selectorReady && (!m.skeletonVisible || nearTimeout)
+              : (m.textLen >= 220 || m.pCount >= 2 || m.linkCount >= 8) && (!m.skeletonVisible || nearTimeout);
             if (m.sig !== lastSig) {
               lastSig = m.sig;
               if (stableTimer) clearTimeout(stableTimer);
@@ -477,7 +535,7 @@ async function waitForDomStabilityInTab(tabId, waitMs, signal) {
  */
 export async function fetchRenderedTabDocument(
   url,
-  { waitMs = 950, tabId = null, preferOpenTab = true, tabPool = null, onLog = null, signal } = {}
+  { waitMs = 950, tabId = null, preferOpenTab = true, tabPool = null, waitForSelector = '', onLog = null, signal } = {}
 ) {
   const safeUrl = assertSafeHttpUrl(url);
   if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
@@ -514,7 +572,15 @@ export async function fetchRenderedTabDocument(
       const liveHtml = results?.[0]?.result;
       if (liveHtml && liveHtml.length > 60) {
         const parsedLive = new DOMParser().parseFromString(liveHtml, 'text/html');
-        if (!isAntiBotChallengeDocument(parsedLive) && !isRateLimitDocument(parsedLive)) {
+        let selectorSatisfied = true;
+        if (waitForSelector) {
+          try {
+            selectorSatisfied = Boolean(parsedLive.querySelector(waitForSelector));
+          } catch {
+            selectorSatisfied = true;
+          }
+        }
+        if (selectorSatisfied && !isAntiBotChallengeDocument(parsedLive) && !isRateLimitDocument(parsedLive)) {
           clearSpaDomainCircuit(safeUrl);
           parsedLive._wpbRenderedByTab = true;
           return parsedLive;
@@ -538,7 +604,7 @@ export async function fetchRenderedTabDocument(
   const expectedHost = getHostKey(safeUrl);
 
   const extractFromTab = async (targetTabId) => {
-    await waitForDomStabilityInTab(targetTabId, waitMs, signal);
+    await waitForDomStabilityInTab(targetTabId, waitMs, signal, waitForSelector);
     const injected = await chrome.scripting.executeScript({
       target: { tabId: targetTabId },
       func: () => ({
@@ -693,6 +759,7 @@ export async function fetchDocumentWithOptions(url, options = {}, signal) {
       waitMs: options.renderWaitMs ?? 950,
       tabId: options.tabId ?? null,
       preferOpenTab,
+      waitForSelector: options.waitForSelector || '',
       signal
     });
   }
@@ -713,6 +780,7 @@ export async function fetchDocumentWithOptions(url, options = {}, signal) {
         waitMs: options.renderWaitMs ?? 1100,
         tabId: options.tabId ?? null,
         preferOpenTab,
+        waitForSelector: options.waitForSelector || '',
         signal
       });
     }

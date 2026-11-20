@@ -32,6 +32,7 @@ import { wpLightNovelParser } from '../src/parsers/wp-lightnovel.js';
 import { royalRoadParser } from '../src/parsers/royalroad.js';
 import { novelManiaParser } from '../src/parsers/novelmania.js';
 import { scribbleHubParser } from '../src/parsers/scribblehub.js';
+import { novelBinParser } from '../src/parsers/novelbin.js';
 import { genericHtmlParser } from '../src/parsers/generic-html.js';
 
 const FIXTURES_DIR = path.resolve('tests/fixtures');
@@ -83,12 +84,14 @@ test('ParserRegistry ranks specialized adapters above generic fallback and honor
   const madaraDoc = new DOMParser().parseFromString(readFixture('madara-index.html'), 'text/html');
   const rrDoc = new DOMParser().parseFromString(readFixture('royalroad-index.html'), 'text/html');
   const nmDoc = new DOMParser().parseFromString(readFixture('novelmania-index.html'), 'text/html');
+  const nbDoc = new DOMParser().parseFromString(readFixture('novelbin-index.html'), 'text/html');
   const genericDoc = new DOMParser().parseFromString(readFixture('generic-index-p1.html'), 'text/html');
 
   assert.equal(parserRegistry.detect(wpDoc, 'https://novel.example.org/').id, 'wp-lightnovel');
   assert.equal(parserRegistry.detect(madaraDoc, 'https://madara.example.org/').id, 'madara-theme');
   assert.equal(parserRegistry.detect(rrDoc, 'https://www.royalroad.com/fiction/99900/clockwork-vanguard').id, 'royalroad');
   assert.equal(parserRegistry.detect(nmDoc, 'https://novelmania.com.br/novels/cronicas-da-nevoa').id, 'novelmania');
+  assert.equal(parserRegistry.detect(nbDoc, 'https://novelbin.example.org/novel/glass-spire').id, 'novelbin');
   assert.equal(parserRegistry.detect(genericDoc, 'https://blog.example.org/').id, 'generic-html');
 
   // Explicit forcedId overrides DOM score
@@ -1409,4 +1412,177 @@ test('resolveSafeHttpUrl allows only HTTP/HTTPS and blocks javascript, data, and
   assert.equal(resolveSafeHttpUrl('data:text/html,<script>alert(1)</script>', 'https://fiction.example.org/'), null);
   assert.equal(resolveSafeHttpUrl('vbscript:msgbox(1)', 'https://fiction.example.org/'), null);
   assert.equal(resolveSafeHttpUrl('file:///etc/passwd', 'https://fiction.example.org/'), null);
+});
+
+test('Regression snapshot: novelbin chapter-to-index resolution, metadata, chapter list, and sr-only/duplicate-heading/ad cleanup', async () => {
+  const expected = SNAPSHOTS.novelbin;
+  const indexHtml = readFixture('novelbin-index.html');
+  const ch1Html = readFixture('novelbin-chapter.html');
+
+  mockFetchRoutes({
+    [expected.startingUrl]: indexHtml,
+    [expected.chapters[0].url]: ch1Html
+  });
+
+  // Loading directly from a chapter URL resolves back to the /novel/<slug> index
+  const { parser, series } = await loadSeriesWithParser(expected.chapters[0].url);
+  assert.equal(parser.id, expected.parserId);
+  assert.equal(series.startingUrl, expected.startingUrl);
+  assert.equal(series.title, expected.title);
+  assert.equal(series.author, expected.author);
+  assert.notEqual(series.author, 'Novelbin');
+  assert.equal(series.language, expected.language);
+  assert.equal(series.status, expected.status);
+  assert.deepEqual(series.genres, expected.genres);
+  assert.equal(series.coverUrl, expected.coverUrl);
+  assert.equal(series.synopsis, expected.synopsis);
+  assert.equal(series.requiresTabRender, true);
+  assert.deepEqual(
+    series.chapters.map((c) => ({ url: c.url, displayTitle: c.displayTitle, volume: c.volume })),
+    expected.chapters
+  );
+
+  const parsedCh1 = await parser.downloadChapter(series.chapters[0], {});
+  assert.equal(parsedCh1.chapterTitle, 'Chapter 1 - The Lantern');
+  const xhtml = parsedCh1.serialize('../styles/book.css', true);
+  assert.ok(!/sr-only/i.test(xhtml), 'Screen-reader-only h1 should be stripped by sanitizer');
+  assert.ok(!/Chapter 1: The Lantern/i.test(xhtml), 'Duplicate leading <h3> inside wrapper div should be removed');
+  assert.ok(!/<iframe/i.test(xhtml), 'Middle ad iframe should be stripped');
+  assert.match(xhtml, /Rain tapped against the brass windowpanes/);
+  assert.match(xhtml, /clocktower bell tolled once/);
+
+  // Loading from an unhydrated chapter URL containing a <noscript> SEO fallback list
+  // must resolve to /novel/<slug>, never to an unrelated link in #ssr-home-fallback
+  const ssrChapterStubHtml = `<html><head>
+    <meta property="og:site_name" content="Novelbin">
+  </head><body>
+    <div id="root"><main class="container"><div class="skeleton"></div><div class="skeleton"></div></main></div>
+    <noscript><div id="ssr-home-fallback"><a href="/novel/unrelated-popular">Unrelated</a></div></noscript>
+  </body></html>`;
+  const stubChapterUrl = 'https://novelbin.example.org/read/glass-spire/chapter-2';
+  mockFetchRoutes({
+    [stubChapterUrl]: ssrChapterStubHtml,
+    [expected.startingUrl]: indexHtml
+  });
+  const stubRes = await loadSeriesWithParser(stubChapterUrl);
+  assert.equal(stubRes.series.startingUrl, expected.startingUrl);
+  assert.equal(stubRes.series.title, expected.title);
+
+  // resolveParserForChapterUrl routes novelbin.xyz URLs cleanly even from generic hub contexts
+  const resolved = resolveParserForChapterUrl(
+    'https://novelbin.xyz/read/demo/chapter-1',
+    genericHtmlParser,
+    'auto',
+    'https://hub.example.org/toc'
+  );
+  assert.equal(resolved.id, novelBinParser.id);
+});
+
+test('NovelBinParser matches SSR stub & domain-agnostic hydrated DOM, and rejects skeleton reader content', () => {
+  const ssrStubDoc = new DOMParser().parseFromString(
+    `<html><head>
+      <meta property="og:site_name" content="Novelbin">
+    </head><body><div id="root">
+      <div id="ssr-novel-card">
+        <img src="https://cdn.novelbin.example.org/thumbnail/demo.jpg" alt="Cover">
+        <h1>Demo Skyblade</h1>
+        <p><strong>Author:</strong> L. Author</p>
+        <p><strong>Status:</strong> Ongoing</p>
+        <a href="/genre/fantasy">Fantasy</a>
+        <section><h2>Synopsis</h2><div><p>Full SSR synopsis paragraph.</p></div></section>
+      </div>
+    </div></body></html>`,
+    'text/html'
+  );
+  assert.ok(novelBinParser.matchScore(ssrStubDoc, 'https://mirror.example.org/novel/demo-skyblade') >= 50);
+  const ssrMeta = novelBinParser.extractSiteMetadata(ssrStubDoc, 'https://mirror.example.org/novel/demo-skyblade');
+  assert.equal(ssrMeta.title, 'Demo Skyblade');
+  assert.equal(ssrMeta.author, 'L. Author');
+  assert.equal(ssrMeta.status, 'Ongoing');
+  assert.deepEqual(ssrMeta.genres, ['Fantasy']);
+
+  const skeletonChapterDoc = new DOMParser().parseFromString(
+    `<html><body><main class="reader-content">
+      <div class="skeleton"></div><div class="skeleton"></div>
+    </main></body></html>`,
+    'text/html'
+  );
+  assert.equal(novelBinParser.findChapterContentRoot(skeletonChapterDoc), null);
+
+  const hydratedNoDomainDoc = new DOMParser().parseFromString(
+    `<html><body><div class="novel-page-wrapper">
+      <div class="novel-detail-hero"><h1 class="detail-title">Domainless Test</h1></div>
+      <div class="chapter-box"><div class="chapter-list">
+        <a class="chapter-item" href="/read/domainless/chapter-1"><span>Chapter 1</span></a>
+      </div></div>
+    </div></body></html>`,
+    'text/html'
+  );
+  assert.equal(parserRegistry.detect(hydratedNoDomainDoc, 'https://mirror.example.org/novel/domainless').id, 'novelbin');
+});
+
+test('looksLikeSpaShell detects React skeleton SPA even when noscript SEO fallback contains many links', () => {
+  const spaWithNoscriptDoc = new DOMParser().parseFromString(
+    `<html><head><title>App</title><script type="module" src="/assets/app.js"></script></head><body>
+      <div id="root">
+        <div class="navbar">App</div>
+        <main class="reader-content">
+          <div class="skeleton"></div>
+          <div class="skeleton"></div>
+          <div class="skeleton"></div>
+        </main>
+      </div>
+      <noscript>
+        <div>
+          ${Array.from({ length: 18 }, (_, i) => `<a href="/genre/g${i}">Genre ${i}</a>`).join('')}
+          <p>Fallback SEO copy 1</p><p>Fallback SEO copy 2</p><p>Fallback SEO copy 3</p>
+        </div>
+      </noscript>
+    </body></html>`,
+    'text/html'
+  );
+  assert.equal(looksLikeSpaShell(spaWithNoscriptDoc), true);
+});
+
+test('TabRenderPool waits until tab URL transitions off previous chapter when tabs.get returns stale complete URL', async () => {
+  let activeTabUrl = 'https://spa.example.org/read/book/chapter-1';
+  let pollCount = 0;
+
+  globalThis.chrome = {
+    tabs: {
+      onUpdated: { addListener() {}, removeListener() {} },
+      query: async () => [],
+      create: async ({ url }) => {
+        activeTabUrl = url;
+        return { id: 901, status: 'complete', url };
+      },
+      update: async (id, { url }) => {
+        pollCount = 0;
+        // Simulate Chrome keeping previous URL with status complete for multiple polls before loading next URL
+        setTimeout(() => {
+          activeTabUrl = url;
+        }, 280);
+        return { id, status: 'complete', url: activeTabUrl };
+      },
+      get: async (id) => {
+        pollCount++;
+        return { id, status: 'complete', url: activeTabUrl };
+      },
+      remove: async () => {}
+    },
+    scripting: {
+      executeScript: async () => [
+        { result: `<html><body><article><p>Hydrated prose for ${activeTabUrl}</p></article></body></html>` }
+      ]
+    }
+  };
+
+  const pool = new TabRenderPool();
+  const ch1 = await fetchRenderedTabDocument('https://spa.example.org/read/book/chapter-1', { waitMs: 0, tabPool: pool });
+  const ch2 = await fetchRenderedTabDocument('https://spa.example.org/read/book/chapter-2', { waitMs: 0, tabPool: pool });
+  await pool.close();
+
+  assert.match(ch1.body.textContent, /chapter-1/);
+  assert.match(ch2.body.textContent, /chapter-2/);
+  assert.ok(pollCount >= 2, 'Should poll until tab URL transitions off chapter-1');
 });

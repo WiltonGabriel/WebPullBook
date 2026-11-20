@@ -178,6 +178,9 @@ export class HtmlSanitizer {
       }
     }
     const cls = rawCls.toLowerCase();
+    if (/(^|\s)(sr-only|visually-hidden)(\s|$)/.test(cls) && !el.querySelector?.('img')) {
+      return true;
+    }
     return /(^|\s)(code-block|ads|ad-slot|adsby|share-?buttons|naveg|nextprev|wp-block-buttons)(\s|$)/.test(cls);
   }
 
@@ -536,18 +539,41 @@ export class HtmlSanitizer {
 
     // Remove duplicate leading chapter title heading when serializeChapterXhtml will already emit it
     if (this.chapterTitle && outNodes.length > 0) {
+      const normalizeHeadingKey = (text) =>
+        String(text || '')
+          .toLowerCase()
+          .replace(/[\s\-–—:|]+/g, ' ')
+          .trim();
+      const targetHeadingKey = normalizeHeadingKey(this.chapterTitle);
+      const isDuplicateHeadingEl = (el) => {
+        if (el?.nodeType !== Node.ELEMENT_NODE || !/^h[1-3]$/i.test(el.tagName) || el.querySelector('img')) {
+          return false;
+        }
+        const headingKey = normalizeHeadingKey(el.textContent || '');
+        return Boolean(headingKey && targetHeadingKey && headingKey === targetHeadingKey);
+      };
+
       const firstEl = outNodes.find(
         (n) => n.nodeType === Node.ELEMENT_NODE || (n.nodeType === Node.TEXT_NODE && (n.nodeValue || '').trim())
       );
-      if (
+      if (isDuplicateHeadingEl(firstEl)) {
+        const idx = outNodes.indexOf(firstEl);
+        if (idx !== -1) outNodes.splice(idx, 1);
+      } else if (
         firstEl?.nodeType === Node.ELEMENT_NODE &&
-        /^h[1-3]$/i.test(firstEl.tagName) &&
-        !firstEl.querySelector('img')
+        firstEl.tagName.toLowerCase() === 'div' &&
+        !firstEl.getAttribute('id') &&
+        !firstEl.getAttribute('class')
       ) {
-        const headingText = (firstEl.textContent || '').replace(/\s+/g, ' ').trim().toLowerCase();
-        if (headingText && headingText === this.chapterTitle) {
-          const idx = outNodes.indexOf(firstEl);
-          if (idx !== -1) outNodes.splice(idx, 1);
+        const firstChildEl = Array.from(firstEl.childNodes).find(
+          (n) => n.nodeType === Node.ELEMENT_NODE || (n.nodeType === Node.TEXT_NODE && (n.nodeValue || '').trim())
+        );
+        if (isDuplicateHeadingEl(firstChildEl)) {
+          firstChildEl.remove();
+          if (!firstEl.querySelector('img, br, hr, [id]') && !firstEl.textContent.trim()) {
+            const idx = outNodes.indexOf(firstEl);
+            if (idx !== -1) outNodes.splice(idx, 1);
+          }
         }
       }
     }

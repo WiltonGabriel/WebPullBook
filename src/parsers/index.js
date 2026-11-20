@@ -10,6 +10,7 @@ import { madaraThemeParser } from './madara-theme.js';
 import { royalRoadParser } from './royalroad.js';
 import { scribbleHubParser } from './scribblehub.js';
 import { novelManiaParser } from './novelmania.js';
+import { novelBinParser } from './novelbin.js';
 import { genericHtmlParser } from './generic-html.js';
 
 /**
@@ -63,6 +64,7 @@ export const parserRegistry = new ParserRegistry([
   royalRoadParser,
   scribbleHubParser,
   novelManiaParser,
+  novelBinParser,
   genericHtmlParser
 ]);
 
@@ -130,25 +132,30 @@ export function resolveParserForChapterUrl(
 }
 
 const KNOWN_SSR_CONTENT_SELECTOR =
-  '.eplister, .epcontent, .ts-chl-collapsible, .wp-manga-chapter, .reading-content, table#chapters, .chapter-inner, ol.toc_ol, #chp_raw, .fic_title, [data-testid="novel-synopsis"], #reader-chapter-title';
+  '.eplister, .epcontent, .ts-chl-collapsible, .wp-manga-chapter, .reading-content, table#chapters, .chapter-inner, ol.toc_ol, #chp_raw, .fic_title, [data-testid="novel-synopsis"], #reader-chapter-title, .chapter-list a.chapter-item';
 
-function getVisibleBodyText(doc) {
+function analyzeVisibleBodyDom(doc) {
   const body = doc?.body;
-  if (!body) return '';
+  if (!body) {
+    return { visibleText: '', linkCount: 0, paragraphCount: 0, skeletonCount: 0 };
+  }
   const clone = body.cloneNode(true);
   for (const hidden of clone.querySelectorAll('script, style, noscript, template')) {
     hidden.remove();
   }
-  return normalizeSpaces(clone.textContent || '');
+  return {
+    visibleText: normalizeSpaces(clone.textContent || ''),
+    linkCount: clone.querySelectorAll('a[href]').length,
+    paragraphCount: clone.querySelectorAll('p').length,
+    skeletonCount: clone.querySelectorAll('.skeleton, [class*="skeleton-"]').length
+  };
 }
 
 export function looksLikeSpaShell(doc) {
   if (!doc || !doc.body) return false;
   if (doc.querySelector(KNOWN_SSR_CONTENT_SELECTOR)) return false;
 
-  const visibleText = getVisibleBodyText(doc);
-  const linkCount = doc.querySelectorAll('a[href]').length;
-  const paragraphCount = doc.querySelectorAll('p').length;
+  const { visibleText, linkCount, paragraphCount, skeletonCount } = analyzeVisibleBodyDom(doc);
 
   // Normal SSR pages with real readable content or navigation are never SPA shells
   if (visibleText.length >= 300 || paragraphCount >= 3 || linkCount >= 12) {
@@ -164,6 +171,9 @@ export function looksLikeSpaShell(doc) {
     `${visibleText} ${noscriptText}`
   );
 
+  if (skeletonCount >= 2 && visibleText.length < 220 && linkCount < 6 && hasModuleOrBundleScript) {
+    return true;
+  }
   if (hasEmptySpaMount && visibleText.length < 180) return true;
   if (visibleText.length < 120 && linkCount < 3 && (hasModuleOrBundleScript || hasJsGateMessage)) {
     return true;

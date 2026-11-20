@@ -88,6 +88,8 @@ const PT_TRANSLATIONS = {
     'Testado de ponta a ponta (20 capítulos): API paginada de capítulos e múltiplos volumes, sinopse completa, gêneros, status, capa original, imagens internas, limpeza de `.sr-only` e âncoras de notas de rodapé.',
   'End-to-end tested (index & direct chapter URL): AJAX full TOC, open-tab reuse, chronological ordering, metadata, inline images, and author note cleanup.':
     'Testado de ponta a ponta (índice e URL direta de capítulo): sumário completo via AJAX, reaproveitamento de aba aberta, ordenação cronológica, metadados, imagens internas e limpeza de notas de autor.',
+  'End-to-end tested (index & direct chapter URL, 2 novels): automatic SPA tab hydration, reusable tab pool, JSON-LD author & full metadata, cover, sr-only/duplicate-heading cleanup, and ad-free chapter XHTML.':
+    'Testado de ponta a ponta (índice e URL direta de capítulo, 2 obras): hidratação automática de SPA via aba, pool reutilizável de abas, autor via JSON-LD e metadados completos, capa, limpeza de sr-only/título duplicado e XHTML de capítulos sem anúncios.',
 
   // Tier 2
   'Madara-based platforms (`.wp-manga-chapter`, `.reading-content`)':
