@@ -295,6 +295,31 @@ function replaceSyncedLimitationsSummary(html, compatData, isPt) {
   );
 }
 
+export function normalizeGoatCounterConfig(analytics) {
+  const endpoint = String(analytics?.endpoint || '').trim();
+  const scriptSrc = String(analytics?.scriptSrc || 'https://gc.zgo.at/count.js').trim();
+  return {
+    enabled: Boolean(endpoint),
+    endpoint,
+    scriptSrc
+  };
+}
+
+export function syncGoatCounterScript(html, analyticsConfig) {
+  const withoutExisting = String(html || '').replace(
+    /^[ \t]*<script\b[^>]*\bdata-goatcounter\s*=\s*"[^"]*"[^>]*><\/script>[ \t]*\n?/gim,
+    ''
+  );
+  if (!analyticsConfig?.enabled) {
+    return withoutExisting;
+  }
+  const tag = `<script data-goatcounter="${escapeHtml(analyticsConfig.endpoint)}" async src="${escapeHtml(analyticsConfig.scriptSrc)}"></script>`;
+  return withoutExisting.replace(
+    /^([ \t]*)(<script\b[^>]*\bsrc="[^"]*assets\/js\/site\.js"[^>]*><\/script>)/m,
+    `$1$2\n$1${tag}`
+  );
+}
+
 export function syncWebsite() {
   const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'manifest.json'), 'utf8'));
   const compatMd = fs.readFileSync(path.join(ROOT, 'docs', 'COMPATIBILITY.md'), 'utf8');
@@ -303,14 +328,16 @@ export function syncWebsite() {
 
   const versionLabel = `v${manifest.version_name || manifest.version}`;
   const siteConfigPath = path.join(WEBSITE_DIR, 'site.config.json');
+  let siteConfig = null;
   try {
-    const cfg = JSON.parse(fs.readFileSync(siteConfigPath, 'utf8'));
-    cfg.version = manifest.version;
-    cfg.versionName = manifest.version_name || manifest.version;
-    fs.writeFileSync(siteConfigPath, `${JSON.stringify(cfg, null, 2)}\n`, 'utf8');
+    siteConfig = JSON.parse(fs.readFileSync(siteConfigPath, 'utf8'));
+    siteConfig.version = manifest.version;
+    siteConfig.versionName = manifest.version_name || manifest.version;
+    fs.writeFileSync(siteConfigPath, `${JSON.stringify(siteConfig, null, 2)}\n`, 'utf8');
   } catch (err) {
     if (err.code !== 'ENOENT') throw err;
   }
+  const goatCounterConfig = normalizeGoatCounterConfig(siteConfig?.analytics);
 
   const compatEn = buildCompatibilityTbodies(compatMd, false);
   const compatPt = buildCompatibilityTbodies(compatMd, true);
@@ -376,6 +403,9 @@ export function syncWebsite() {
         /(<div class="footer-bottom">\s*)<span>[\s\S]*?<\/span><\/span>/,
         `$1${footerLine}`
       );
+
+      // 6. Sync optional GoatCounter analytics script tag from website/site.config.json
+      html = syncGoatCounterScript(html, goatCounterConfig);
 
       fs.writeFileSync(filePath, html, 'utf8');
     }

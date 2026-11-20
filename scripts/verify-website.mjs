@@ -29,6 +29,55 @@ if (!fs.existsSync(configPath)) {
 const siteConfig = JSON.parse(fs.readFileSync(configPath, 'utf8'));
 const BASE_URL = siteConfig.baseUrl.replace(/\/+$/, '');
 
+// 0. Validate GoatCounter analytics configuration
+const analyticsCfg = siteConfig.analytics;
+let analyticsEndpoint = '';
+let analyticsScriptSrc = 'https://gc.zgo.at/count.js';
+
+if (!analyticsCfg || typeof analyticsCfg !== 'object' || Array.isArray(analyticsCfg)) {
+  fail('website/site.config.json: missing analytics configuration object');
+} else {
+  if (analyticsCfg.provider !== 'goatcounter') {
+    fail(`website/site.config.json: analytics.provider must be "goatcounter" (found "${analyticsCfg.provider}")`);
+  }
+  if (typeof analyticsCfg.scriptSrc !== 'string' || !analyticsCfg.scriptSrc.trim()) {
+    fail('website/site.config.json: analytics.scriptSrc must be a non-empty HTTPS URL');
+  } else {
+    analyticsScriptSrc = analyticsCfg.scriptSrc.trim();
+    try {
+      const scriptUrl = new URL(analyticsScriptSrc);
+      if (scriptUrl.protocol !== 'https:') {
+        fail(`website/site.config.json: analytics.scriptSrc must use https: (${analyticsScriptSrc})`);
+      }
+    } catch {
+      fail(`website/site.config.json: invalid analytics.scriptSrc URL (${analyticsScriptSrc})`);
+    }
+  }
+
+  if (typeof analyticsCfg.endpoint !== 'string') {
+    fail('website/site.config.json: analytics.endpoint must be a string (empty until configured)');
+  } else {
+    analyticsEndpoint = analyticsCfg.endpoint.trim();
+    if (analyticsEndpoint) {
+      if (/(?:your[-_]?code|mycode|example\.com|placeholder|[<>])/i.test(analyticsEndpoint)) {
+        fail(`website/site.config.json: analytics.endpoint contains placeholder text (${analyticsEndpoint})`);
+      } else {
+        try {
+          const endpointUrl = new URL(analyticsEndpoint);
+          if (endpointUrl.protocol !== 'https:') {
+            fail(`website/site.config.json: analytics.endpoint must use https: (${analyticsEndpoint})`);
+          }
+          if (!endpointUrl.pathname.endsWith('/count')) {
+            fail(`website/site.config.json: analytics.endpoint pathname must end with /count (${analyticsEndpoint})`);
+          }
+        } catch {
+          fail(`website/site.config.json: invalid analytics.endpoint URL (${analyticsEndpoint})`);
+        }
+      }
+    }
+  }
+}
+
 // 1. Validate robots.txt
 const robotsPath = path.join(SITE_DIR, 'robots.txt');
 if (!fs.existsSync(robotsPath)) {
@@ -258,9 +307,24 @@ for (const page of siteConfig.pages) {
       }
     }
 
+    const goatCounterTags = [];
     for (const scriptMatch of html.matchAll(/<script\b[^>]+>/gi)) {
       const tag = scriptMatch[0];
+      const dataGoatCounter = extractAttr(tag, 'data-goatcounter');
       const src = extractAttr(tag, 'src');
+      if (dataGoatCounter !== null) {
+        goatCounterTags.push(tag);
+        if (dataGoatCounter !== analyticsEndpoint) {
+          fail(`${v.relFile}: data-goatcounter="${dataGoatCounter}" !== expected "${analyticsEndpoint}"`);
+        }
+        if (src !== analyticsScriptSrc) {
+          fail(`${v.relFile}: GoatCounter script src "${src}" !== expected "${analyticsScriptSrc}"`);
+        }
+        if (!/\basync\b/i.test(tag)) {
+          fail(`${v.relFile}: GoatCounter script must include the async attribute`);
+        }
+        continue;
+      }
       if (!src) continue;
       const resolved = src.startsWith('/WebPullBook/')
         ? path.join(SITE_DIR, src.replace(/^\/WebPullBook\//, ''))
@@ -268,6 +332,16 @@ for (const page of siteConfig.pages) {
       if (!fs.existsSync(resolved)) {
         fail(`${v.relFile}: missing script file "${src}" -> ${resolved}`);
       }
+    }
+
+    if (analyticsEndpoint) {
+      if (goatCounterTags.length === 0) {
+        fail(`${v.relFile}: missing GoatCounter script tag for configured endpoint "${analyticsEndpoint}"`);
+      } else if (goatCounterTags.length > 1) {
+        fail(`${v.relFile}: duplicate GoatCounter script tags found (${goatCounterTags.length})`);
+      }
+    } else if (goatCounterTags.length > 0) {
+      fail(`${v.relFile}: unexpected GoatCounter script tag while analytics.endpoint is empty`);
     }
   }
 }
@@ -284,4 +358,9 @@ if (errors.length > 0) {
   process.exit(1);
 }
 
-console.log(`[OK] Website verified (${siteConfig.pages.length * 2} bilingual pages, sitemap.xml, robots.txt, links, images, canonicals, hreflang, and social metadata).`);
+const goatCounterStatus = analyticsEndpoint
+  ? `GoatCounter active: ${analyticsEndpoint}`
+  : 'GoatCounter ready: endpoint pending in website/site.config.json';
+console.log(
+  `[OK] Website verified (${siteConfig.pages.length * 2} bilingual pages, sitemap.xml, robots.txt, links, images, canonicals, hreflang, social metadata, and ${goatCounterStatus}).`
+);

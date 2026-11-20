@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="color-scheme" content="light dark">
   <title>Política de Privacidade &amp; Declaração de Permissões — WebPullBook</title>
-  <meta name="description" content="Política de Privacidade e justificativa técnica das permissões Manifest V3 do WebPullBook: execução local no navegador, zero telemetria, requisições diretas aos sites de origem e dados armazenados localmente.">
+  <meta name="description" content="Política de Privacidade e permissões Manifest V3 do WebPullBook: execução local da extensão sem telemetria, armazenamento local e métricas sem cookies via GoatCounter no site público.">
   <link rel="canonical" href="https://wiltongabriel.github.io/WebPullBook/pt/privacy.html">
   <link rel="alternate" hreflang="en" href="https://wiltongabriel.github.io/WebPullBook/privacy.html">
   <link rel="alternate" hreflang="pt-BR" href="https://wiltongabriel.github.io/WebPullBook/pt/privacy.html">
@@ -30,6 +30,7 @@
   <link rel="icon" type="image/png" sizes="128x128" href="../assets/images/icon-128.png">
   <link rel="stylesheet" href="../assets/css/styles.css">
   <script src="../assets/js/site.js" defer></script>
+  <script data-goatcounter="https://wiltongabriel.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
 </head>
 <body>
   <a class="skip-link" href="#main-content">Pular para o conteúdo principal</a>
@@ -83,7 +84,7 @@
     <section class="page-hero">
       <div class="container">
         <h1>Política de Privacidade &amp; Declaração de Permissões</h1>
-        <p>Este documento explica o que é executado localmente no navegador, como funcionam as requisições aos sites de origem, quais dados são salvos no seu dispositivo e por que cada permissão do Manifest V3 é declarada.</p>
+        <p>Este documento explica o que é executado localmente na extensão WebPullBook, como funcionam as requisições aos sites de origem, quais dados são salvos no seu dispositivo, por que cada permissão do Manifest V3 é declarada e como este site público contabiliza acessos agregados com o GoatCounter.</p>
       </div>
     </section>
 
@@ -91,13 +92,14 @@
       <div class="container">
         <div class="callout success">
           <strong>Resumo</strong>
-          <p>O WebPullBook <strong>não coleta, não transmite, não aluga e não vende dados pessoais, histórico de navegação ou telemetria de uso</strong>. O projeto <strong>não opera servidores próprios</strong> e <strong>não inclui scripts de rastreamento ou analytics de terceiros</strong>. Toda a extração de conteúdo, sanitização XHTML, processamento de imagens e geração de ebooks ocorre localmente no seu dispositivo.</p>
+          <p>A extensão WebPullBook não coleta, não transmite, não aluga e não vende dados pessoais, histórico de navegação ou telemetria de uso. A extensão não opera servidores próprios e não inclui scripts de rastreamento ou analytics: toda a extração de conteúdo, sanitização XHTML, processamento de imagens e geração de ebooks ocorre localmente no seu dispositivo.</p>
+          <p style="margin-block-start: 0.5rem;">Separadamente, este site público de documentação (<code>wiltongabriel.github.io/WebPullBook</code>) utiliza o <a href="https://www.goatcounter.com/">GoatCounter</a>, uma ferramenta open source de métricas sem cookies, exclusivamente para contabilizar visualizações agregadas de páginas sem cookies, identificadores persistentes ou perfis individuais.</p>
         </div>
 
         <div class="grid-2" style="margin-block-start: 2rem;">
           <article class="card">
             <h2>1. Processamento Local vs. Requisições aos Sites de Origem</h2>
-            <p>O WebPullBook separa transmissão a terceiros (que não ocorre) das requisições diretas aos sites escolhidos pelo usuário:</p>
+            <p>Na extensão WebPullBook, não há transmissão de dados a terceiros; o tráfego de rede limita-se às requisições diretas iniciadas por você para os sites escolhidos:</p>
             <ul>
               <li><strong>Processamento Local:</strong> Análise de DOM, limpeza HTML para XHTML (<code>HtmlSanitizer</code>), redimensionamento de imagens via Canvas e compressão ZIP/EPUB (<code>CompressionStream</code>) rodam na memória local do seu navegador.</li>
               <li><strong>Requisições Diretas aos Sites Escolhidos:</strong> Quando você carrega a URL de uma obra, verifica atualizações na sua Biblioteca ou exporta capítulos, seu navegador faz requisições HTTP/HTTPS diretas apenas ao site de origem (e aos CDNs de imagens daquela página) para baixar o conteúdo solicitado.</li>
@@ -122,7 +124,7 @@
       <div class="container">
         <div class="section-header">
           <h2>3. Dados Armazenados Localmente no Seu Dispositivo</h2>
-          <p>Todas as configurações e caches permanecem dentro do perfil local do seu navegador (nunca sincronizados via <code>chrome.storage.sync</code>) e podem ser apagados a qualquer momento:</p>
+          <p>Todas as configurações e caches da extensão permanecem dentro do perfil local do seu navegador (nunca sincronizados via <code>chrome.storage.sync</code>) e podem ser apagados a qualquer momento:</p>
         </div>
 
         <div class="table-wrap">
@@ -228,8 +230,42 @@
             </tbody>
           </table>
         </div>
+      </div>
+    </section>
 
-        <div class="callout" style="margin-block-start: 2rem;">
+    <section class="section alt" id="metricas-do-site">
+      <div class="container">
+        <div class="section-header">
+          <h2>5. Métricas do Site Público (GoatCounter)</h2>
+          <p>Embora a extensão WebPullBook não realize nenhuma coleta de analytics ou telemetria, as páginas públicas de documentação hospedadas no GitHub Pages utilizam o <a href="https://www.goatcounter.com/">GoatCounter</a> para contagem simples e agregada de acessos sem uso de cookies.</p>
+        </div>
+
+        <div class="grid-2">
+          <article class="card">
+            <h3>Finalidade e Escopo</h3>
+            <ul>
+              <li><strong>Somente no Site Público (Nunca na Extensão):</strong> O GoatCounter é executado exclusivamente nas páginas públicas de documentação (<code>wiltongabriel.github.io/WebPullBook/</code> e <code>/pt/</code>). Ele nunca é carregado dentro da extensão de navegador WebPullBook nem durante a extração de livros.</li>
+              <li><strong>Finalidade:</strong> As contagens agregadas de visualizações ajudam os mantenedores a entender o volume geral de acessos e identificar quais guias, páginas e idiomas (inglês ou português) são mais úteis para melhorar a documentação.</li>
+              <li><strong>Sem Perfis de Rastreamento ou Anúncios:</strong> As métricas são estritamente agregadas e não identificáveis. Nenhum dado é utilizado para publicidade, rastreamento entre sites, perfilamento comportamental ou compartilhamento comercial.</li>
+              <li><strong>Armazenamento Local do Site Estático:</strong> Separadamente do GoatCounter, este site salva apenas a preferência opcional de tema visual (<code>wpb-site-theme</code> em <code>localStorage</code>) e um cache de 10 minutos com dados públicos de releases e documentação do GitHub em <code>sessionStorage</code>.</li>
+            </ul>
+          </article>
+
+          <article class="card">
+            <h3>Dados Processados e Proteções de Privacidade</h3>
+            <ul>
+              <li><strong>Métricas Agregadas Processadas:</strong> Caminho e título da página visitada, URL de origem (referrer), nome/versão do navegador e sistema operacional (derivados do cabeçalho <code>User-Agent</code> e gravados apenas como totais agregados, sem armazenar a string bruta de <code>User-Agent</code>), país ou região aproximada (derivados temporariamente do endereço IP sem gravar o IP bruto), largura de tela e idioma do navegador.</li>
+              <li><strong>Visitas Únicas Sem Cookies:</strong> Para diferenciar visitas diárias únicas sem rastrear indivíduos, o GoatCounter calcula temporariamente um hash não reversível em memória usando o site, endereço IP, <code>User-Agent</code> e um salt aleatório rotacionado diariamente. Esse vínculo permanece apenas em memória por até 8 horas e nunca é salvo no banco de dados.</li>
+              <li><strong>Sem Cookies e Sem Banner de Consentimento:</strong> O GoatCounter não grava cookies, não usa <code>localStorage</code> e não cria identificadores persistentes de usuário, dispensando banners ou modais de consentimento de cookies. Consulte a <a href="https://www.goatcounter.com/help/privacy">Política de Privacidade do GoatCounter</a> para mais detalhes técnicos.</li>
+            </ul>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <div class="callout" style="margin-block: 0;">
           <strong>Contato &amp; Relato de Vulnerabilidades de Segurança</strong>
           <p>Para dúvidas sobre privacidade, abra uma issue em <a href="https://github.com/WiltonGabriel/WebPullBook/issues">GitHub Issues</a>. Para reportar vulnerabilidades de segurança (como bypass de sanitização HTML ou CSP), utilize os <a href="https://github.com/WiltonGabriel/WebPullBook/security/advisories/new">Relatórios Privados de Segurança do GitHub</a> conforme documentado em <a href="https://github.com/WiltonGabriel/WebPullBook/blob/main/.github/SECURITY.md">SECURITY.md</a>.</p>
         </div>
