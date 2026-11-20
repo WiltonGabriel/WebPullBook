@@ -126,7 +126,7 @@ O código da extensão não precisa de `npm install` nem de compilação (`npm r
 | `npm run check` | Apenas Node.js | Executa `npm run lint && npm test` (recomendado antes de todo commit/PR). |
 | `npm run lint` | Apenas Node.js | Paridade `manifest.json`/`package.json`, chaves MV3 do Firefox, sintaxe JS, CSP MV3, links Markdown, paridade PT/EN no i18n, IDs do DOM, LF/espaços e `verify-website.mjs`. |
 | `npm run lint:fix` | Apenas Node.js | Corrige automaticamente fins de linha LF e espaços no fim das linhas. |
-| `npm test` | Apenas Node.js | 58 testes nativos (`HtmlSanitizer`, `createZipBlob`, `ParserRegistry`, `ExporterRegistry`, `CacheStore`, `ImageProcessor`, `AdaptiveRateLimiter`, `TabRenderPool`, mais `EPUBCheck` se disponível). |
+| `npm test` | Apenas Node.js | 65 testes nativos (`HtmlSanitizer`, `createZipBlob`, `ParserRegistry`, `ExporterRegistry`, `CacheStore`, `ImageProcessor`, `AdaptiveRateLimiter`, `TabRenderPool`, mais `EPUBCheck` se disponível). |
 | `npm run sync:website` | Apenas Node.js | Sincroniza tabelas e versões de `website/` a partir de `docs/` e `manifest.json`. |
 | `REQUIRE_EPUBCHECK=1 npm run test:epubcheck` | Java 21+ e EPUBCheck | Valida EPUB 2 e EPUB 3 gerados (0 erros, 0 avisos). |
 | `npm run test:e2e` | `npm install` + `npx playwright install chromium` | Abre o Chromium com a extensão carregada e testa extração, seleção, perfis, biblioteca, regras por domínio, download real e mesclagem de abas. |
@@ -134,6 +134,15 @@ O código da extensão não precisa de `npm install` nem de compilação (`npm r
 > **Cobertura por Navegador:** O E2E automatizado roda no Chromium via Playwright (`--load-extension`). A compatibilidade MV3 do Firefox (`background.scripts` + `browser_specific_settings.gecko`) é validada estaticamente pelo `npm run lint` e testada manualmente em `about:debugging#/runtime/this-firefox`.
 
 ## Checklist de Pull Request & Release
+
+### Versionamento (`MAJOR.MINOR.PATCH`)
+
+- **`MAJOR` (`1.x.x` → `2.0.0`):** Apenas quando houver um grande marco após muita evolução.
+- **`MINOR` (`1.6.0` → `1.7.0`):** Atualizações relevantes de recursos ou novos adaptadores.
+- **`PATCH` (`1.6.0` → `1.6.1`):** Pequenas correções, ajustes leves ou manutenção pontual.
+- **Quem lança releases é o mantenedor:** Contribuidores não precisam alterar versões nem criar tags nos Pull Requests.
+
+### Checklist
 
 - Execute `npm run check` sem erros antes de abrir um PR.
 - Se alterar textos da UI ou HTML, mantenha paridade PT/EN em `src/workspace/locales/`, respeite a CSP (sem `<script>` inline nem `on*`) e confira os 4 temas (`light`, `dark`, `sepia`, `midnight`).

@@ -165,6 +165,11 @@ Always inspect the actual files before making changes. Do not invent or assume u
 12. **Repository Language Policy (English Default + Optional Portuguese Mirror):**
     - **Mandatory:** **English is the default and primary language of the repository.** Always write and maintain all primary documentation (`README.md`, `CHANGELOG.md`, `CONTRIBUTING.md`, `CHROMEWEBSTORE.md`, `AGENTS.md`, `docs/*.md`), release notes (`scripts/extract-release-notes.mjs`), GitHub Issue/PR templates (`.github/`), code comments/docstrings, and commit messages **in English only** (never mix Portuguese into English primary docs or GitHub Releases).
     - **Recommended (Optional):** Dedicated Portuguese reference mirrors are organized in `README.pt.md`, `docs/READER_PRESETS.pt.md`, `website/pt/`, and `docs/pt/` (`docs/pt/CHANGELOG.pt.md`, `docs/pt/CONTRIBUTING.pt.md`, `docs/pt/SECURITY.pt.md`). When adding or updating primary repository documentation or release changelogs, it is helpful—though optional and not strictly required unless requested—to also add or update the corresponding Portuguese mirror in `docs/pt/` (while UI string changes in `src/workspace/locales/` and official pages in `website/pt/` remain required to preserve PT/EN parity enforced by `npm run lint`).
+13. **Versioning Policy (`MAJOR.MINOR.PATCH`):**
+    - Follow strict `MAJOR.MINOR.PATCH` discipline (do **not** bump `version` in regular PRs unless preparing a release for the maintainer):
+      - **`MAJOR` (`1.x.x` → `2.0.0`):** Reserved **only** for a major project milestone after substantial evolution.
+      - **`MINOR` (`1.6.0` → `1.7.0`):** Notable new features, verified parser adapters, or significant updates.
+      - **`PATCH` (`1.6.0` → `1.6.1`):** Small fixes, minor adjustments, or lightweight maintenance updates.
 
 ---
 

@@ -130,7 +130,7 @@ The extension runtime has **zero npm dependencies and zero build steps** (`npm r
 | `npm run check` | Node.js only | Runs `npm run lint && npm test` (recommended before every commit/PR). |
 | `npm run lint` | Node.js only | Manifest/package parity, Firefox MV3 keys, JS syntax, MV3 CSP, EPUB media-type, relative Markdown links, PT/EN i18n key parity, DOM IDs, LF/whitespace hygiene, and `verify-website.mjs`. |
 | `npm run lint:fix` | Node.js only | Auto-fixes LF line endings and trailing whitespace. |
-| `npm test` | Node.js only | 58 native `node:test` unit & snapshot tests (`HtmlSanitizer`, `createZipBlob`, `ParserRegistry`, `ExporterRegistry`, `CacheStore`, `ImageProcessor`, `AdaptiveRateLimiter`, `TabRenderPool`, plus W3C EPUBCheck when available). |
+| `npm test` | Node.js only | 65 native `node:test` unit & snapshot tests (`HtmlSanitizer`, `createZipBlob`, `ParserRegistry`, `ExporterRegistry`, `CacheStore`, `ImageProcessor`, `AdaptiveRateLimiter`, `TabRenderPool`, plus W3C EPUBCheck when available). |
 | `npm run sync:website` | Node.js only | Updates `website/` compatibility/preset tables and version strings from `docs/` and `manifest.json`. |
 | `REQUIRE_EPUBCHECK=1 npm run test:epubcheck` | Java 21+ & EPUBCheck (`.tools/epubcheck` or `EPUBCHECK_JAR`) | Strictly validates generated EPUB 2 & EPUB 3 outputs (0 errors, 0 warnings). |
 | `npm run test:e2e` | `npm install` + `npx playwright install chromium` | Loads the unpacked extension in headless Chromium and exercises series loading, selection, profiles, library updates, domains, settings I/O, downloads, and tab merging. |
@@ -138,6 +138,15 @@ The extension runtime has **zero npm dependencies and zero build steps** (`npm r
 > **Note on Browser Coverage:** Automated unpacked-extension E2E runs on Chromium via Playwright (`--load-extension`). Firefox MV3 manifest compatibility (`background.scripts` + `browser_specific_settings.gecko`) is statically verified by `npm run lint`, while interactive Firefox runtime testing is performed manually via `about:debugging#/runtime/this-firefox`.
 
 ## Pull Request & Release Checklist
+
+### Versioning (`MAJOR.MINOR.PATCH`)
+
+- **`MAJOR` (`1.x.x` → `2.0.0`):** Only for a major milestone after significant progress.
+- **`MINOR` (`1.6.0` → `1.7.0`):** Notable feature updates or new verified adapters.
+- **`PATCH` (`1.6.0` → `1.6.1`):** Small fixes, minor adjustments, or quick patches.
+- **Releases are published by the maintainer:** Contributors do **not** need to bump versions or create tags in Pull Requests.
+
+### Checklist
 
 - Run `npm run check` cleanly before opening a PR (both lint and unit/snapshot tests must pass).
 - If modifying UI strings or HTML, keep PT/EN parity in `src/workspace/locales/`, avoid inline `<script>` / `on*` handlers, and verify light, dark, sepia, and midnight themes render cleanly.
