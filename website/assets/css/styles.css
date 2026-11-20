@@ -160,12 +160,15 @@ body {
   background-color: var(--bg);
   color: var(--text);
   line-height: 1.6;
+  overflow-x: clip;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 a {
   color: var(--accent-2);
   text-decoration: underline;
   text-underline-offset: 0.2em;
+  transition: color 0.15s ease;
 }
 
 a:hover {
@@ -195,7 +198,7 @@ a:hover {
 }
 
 .container {
-  inline-size: min(1200px, calc(100dvw - 2rem));
+  inline-size: min(1220px, calc(100% - 2rem));
   margin-inline: auto;
 }
 
@@ -261,28 +264,29 @@ a:hover {
   inset-block-start: 0;
   z-index: 100;
   background: color-mix(in srgb, var(--surface) 92%, transparent);
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(12px);
   border-block-end: 1px solid var(--border);
 }
 
 .header-inner {
+  position: relative;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  padding-block: 0.75rem;
-  flex-wrap: wrap;
+  gap: clamp(0.75rem, 1.8vw, 1.5rem);
+  padding-block: 0.65rem;
+  flex-wrap: nowrap;
 }
 
 .brand-link {
   display: inline-flex;
   align-items: center;
-  gap: 0.65rem;
+  gap: 0.55rem;
   text-decoration: none;
   color: var(--text);
   font-weight: 800;
-  font-size: 1.2rem;
+  font-size: 1.15rem;
   letter-spacing: -0.02em;
+  flex-shrink: 0;
 }
 
 .brand-link:hover {
@@ -290,52 +294,66 @@ a:hover {
 }
 
 .brand-logo {
-  inline-size: 2rem;
-  block-size: 2rem;
+  inline-size: 1.95rem;
+  block-size: 1.95rem;
   flex-shrink: 0;
+  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.brand-link:hover .brand-logo {
+  transform: scale(1.06);
 }
 
 .site-nav {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.35rem;
+  min-inline-size: 0;
 }
 
 .nav-toggle {
   display: none;
   align-items: center;
-  gap: 0.4rem;
+  justify-content: center;
+  gap: 0.35rem;
   background: var(--surface-2);
   color: var(--text);
   border: 1px solid var(--border);
   border-radius: 0.5rem;
-  padding: 0.45rem 0.75rem;
-  font-size: 0.875rem;
+  padding: 0.4rem 0.7rem;
+  font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
+  flex-shrink: 0;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.nav-toggle:hover {
+  border-color: var(--accent-2);
 }
 
 .nav-list {
   display: flex;
   align-items: center;
-  gap: 0.25rem;
+  gap: 0.15rem;
   list-style: none;
   margin: 0;
   padding: 0;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 }
 
 .nav-list a {
   display: inline-flex;
   align-items: center;
-  padding: 0.42rem 0.75rem;
+  padding: 0.38rem 0.62rem;
   border-radius: 0.5rem;
   text-decoration: none;
   color: var(--muted);
   font-weight: 500;
-  font-size: 0.92rem;
+  font-size: 0.89rem;
+  white-space: nowrap;
   border-block-end: 2px solid transparent;
-  transition: background-color 0.15s ease, color 0.15s ease;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
 
 .nav-list a:hover {
@@ -351,31 +369,39 @@ a:hover {
 }
 
 .nav-list a.nav-github-link {
-  padding: 0.42rem 0.55rem;
+  padding: 0.38rem 0.5rem;
 }
 
 .nav-list a.nav-github-link svg {
   display: block;
+  transition: transform 0.2s ease;
+}
+
+.nav-list a.nav-github-link:hover svg {
+  transform: scale(1.08);
 }
 
 .header-actions {
+  margin-inline-start: auto;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.45rem;
+  flex-shrink: 0;
 }
 
 .header-select {
   appearance: auto;
-  padding: 0.38rem 0.65rem;
+  padding: 0.36rem 0.55rem;
   border-radius: 0.5rem;
   border: 1px solid var(--border);
   background: var(--surface-2);
   color: var(--text);
   font-family: inherit;
-  font-size: 0.85rem;
+  font-size: 0.83rem;
   font-weight: 600;
   cursor: pointer;
   line-height: 1.3;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
 }
 
 .header-select:hover {
@@ -387,7 +413,20 @@ a:hover {
   color: var(--text);
 }
 
-@media (max-width: 920px) {
+@media (max-width: 980px) {
+  .header-inner {
+    gap: 0.5rem;
+  }
+
+  .header-actions {
+    order: 2;
+    margin-inline-start: auto;
+  }
+
+  .site-nav {
+    order: 3;
+  }
+
   .nav-toggle {
     display: inline-flex;
   }
@@ -395,19 +434,70 @@ a:hover {
   .nav-list {
     display: none;
     position: absolute;
-    inset-block-start: 100%;
-    inset-inline: 1rem;
+    inset-block-start: calc(100% + 0.35rem);
+    inset-inline: 0;
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 0.75rem;
-    padding: 0.75rem;
+    padding: 0.65rem;
     flex-direction: column;
     align-items: stretch;
+    gap: 0.2rem;
     box-shadow: 0 16px 40px rgba(0, 0, 0, 0.28);
+    z-index: 120;
+  }
+
+  .nav-list a {
+    padding: 0.55rem 0.75rem;
+    font-size: 0.94rem;
   }
 
   .nav-list.is-open {
     display: flex;
+    animation: wpbMenuDrop 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+}
+
+@media (max-width: 540px) {
+  .container {
+    inline-size: calc(100% - 1.25rem);
+  }
+
+  .header-inner {
+    gap: 0.3rem;
+    padding-block: 0.5rem;
+  }
+
+  .brand-link {
+    gap: 0.35rem;
+    font-size: 0.94rem;
+  }
+
+  .brand-logo {
+    inline-size: 1.5rem;
+    block-size: 1.5rem;
+  }
+
+  .header-actions {
+    gap: 0.25rem;
+  }
+
+  .header-select {
+    padding: 0.28rem 0.3rem;
+    font-size: 0.74rem;
+    max-inline-size: 6.1rem;
+  }
+
+  .nav-toggle {
+    padding: 0.28rem 0.48rem;
+    font-size: 0.75rem;
+  }
+}
+
+@media (max-width: 370px) {
+  .header-inner {
+    flex-wrap: wrap;
+    row-gap: 0.45rem;
   }
 }
 
@@ -465,14 +555,18 @@ a:hover {
 
 .hero-grid {
   display: grid;
-  grid-template-columns: 1.05fr 1.15fr;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1.15fr);
   gap: 2.5rem;
   align-items: center;
 }
 
+.hero-grid > * {
+  min-inline-size: 0;
+}
+
 @media (max-width: 980px) {
   .hero-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -626,14 +720,19 @@ h3 {
 
 .grid-3 {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
   gap: 1.25rem;
 }
 
 .grid-2 {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr));
   gap: 1.5rem;
+}
+
+.grid-2 > *,
+.grid-3 > * {
+  min-inline-size: 0;
 }
 
 @media (max-width: 520px) {
@@ -966,4 +1065,133 @@ pre code {
   flex-wrap: wrap;
   gap: 1rem;
   font-size: 0.85rem;
+}
+
+/* Mobile Layout Refinements */
+@media (max-width: 768px) {
+  .hero {
+    padding-block: 2.25rem 2rem;
+  }
+
+  .page-hero {
+    padding-block: 2rem 1.75rem;
+  }
+
+  .section {
+    padding-block: 2.5rem;
+  }
+
+  .section-header {
+    margin-block-end: 1.6rem;
+  }
+
+  .showcase-card {
+    padding: 0.75rem;
+  }
+
+  .showcase-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    padding-block-end: 0.55rem;
+  }
+
+  .showcase-tab {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+
+  th,
+  td {
+    padding: 0.65rem 0.75rem;
+    font-size: 0.86rem;
+  }
+
+  .card {
+    padding: 1.15rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .cta-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .cta-row .btn {
+    inline-size: 100%;
+  }
+}
+
+/* Subtle Animations & Transitions (Quiet Design) */
+@keyframes wpbFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes wpbPanelIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes wpbMenuDrop {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .hero-grid > div:first-child,
+  .page-hero .container {
+    animation: wpbFadeUp 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .showcase-card {
+    animation: wpbFadeUp 0.42s cubic-bezier(0.22, 1, 0.36, 1) 0.05s both;
+  }
+
+  .showcase-panel:not([hidden]) {
+    animation: wpbPanelIn 0.22s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .card,
+  .screenshot-card {
+    transition:
+      transform 0.22s cubic-bezier(0.22, 1, 0.36, 1),
+      border-color 0.2s ease,
+      box-shadow 0.22s ease;
+  }
+
+  .card:hover,
+  .screenshot-card:hover {
+    transform: translateY(-2px);
+    border-color: color-mix(in srgb, var(--accent-2) 42%, var(--border));
+    box-shadow: 0 10px 24px -8px rgba(0, 0, 0, 0.2);
+  }
+
+  .btn:hover {
+    transform: translateY(-1px);
+  }
+
+  .btn:active {
+    transform: translateY(0);
+  }
 }

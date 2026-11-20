@@ -210,9 +210,9 @@ WebPullBook/
 
 ---
 
-## Mantenedores e Contribuições
+## Autoria, Manutenção e Contribuições
 
-O WebPullBook é um projeto open source mantido pelos **WebPullBook Contributors** sob a [Licença MIT](LICENSE) e segue nosso [Código de Conduta](.github/CODE_OF_CONDUCT.md).
+O WebPullBook foi criado e é mantido por **Wilton Gabriel** ([@WiltonGabriel](https://github.com/WiltonGabriel)), contando com a colaboração de contribuidores da comunidade open source. O projeto é distribuído sob a [Licença MIT](LICENSE) e segue nosso [Código de Conduta](.github/CODE_OF_CONDUCT.md).
 
 ### Formas de Contribuir (Código e Documentação)
 
