@@ -303,11 +303,13 @@ export function syncWebsite() {
 
   const versionLabel = `v${manifest.version_name || manifest.version}`;
   const siteConfigPath = path.join(WEBSITE_DIR, 'site.config.json');
-  if (fs.existsSync(siteConfigPath)) {
+  try {
     const cfg = JSON.parse(fs.readFileSync(siteConfigPath, 'utf8'));
     cfg.version = manifest.version;
     cfg.versionName = manifest.version_name || manifest.version;
     fs.writeFileSync(siteConfigPath, `${JSON.stringify(cfg, null, 2)}\n`, 'utf8');
+  } catch (err) {
+    if (err.code !== 'ENOENT') throw err;
   }
 
   const compatEn = buildCompatibilityTbodies(compatMd, false);
@@ -333,9 +335,13 @@ export function syncWebsite() {
       const filePath = isPt
         ? path.join(WEBSITE_DIR, 'pt', page)
         : path.join(WEBSITE_DIR, page);
-      if (!fs.existsSync(filePath)) continue;
-
-      let html = fs.readFileSync(filePath, 'utf8');
+      let html;
+      try {
+        html = fs.readFileSync(filePath, 'utf8');
+      } catch (err) {
+        if (err.code === 'ENOENT') continue;
+        throw err;
+      }
 
       // 1. Sync version labels in [data-wpb-version] and JSON-LD softwareVersion
       html = html.replace(

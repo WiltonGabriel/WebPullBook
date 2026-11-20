@@ -109,8 +109,9 @@ export class PageDomCache {
 }
 
 export async function fetchHtmlDocument(url, signal, onLog = null) {
+  const safeUrl = assertSafeHttpUrl(url);
   const startedAt = Date.now();
-  const response = await fetch(url, {
+  const response = await fetch(safeUrl, {
     credentials: 'include',
     signal
   });
@@ -122,7 +123,7 @@ export async function fetchHtmlDocument(url, signal, onLog = null) {
     } catch {
       bodySnippet = '';
     }
-    const err = new Error(`HTTP ${response.status} ao carregar ${url}`);
+    const err = new Error(`HTTP ${response.status} ao carregar ${safeUrl}`);
     err.status = response.status;
     const retryAfterRaw = response.headers?.get?.('Retry-After');
     if (retryAfterRaw && /^\d+$/.test(retryAfterRaw.trim())) {
@@ -132,7 +133,7 @@ export async function fetchHtmlDocument(url, signal, onLog = null) {
       response.status === 429 ||
       response.status === 509 ||
       (response.status === 503 && RATE_LIMIT_TEXT_RX.test(bodySnippet));
-    onLog?.(`[NET] HTTP ${response.status} (${elapsedMs} ms) -> ${url}`, err.isRateLimit ? 'warn' : 'debug');
+    onLog?.(`[NET] HTTP ${response.status} (${elapsedMs} ms) -> ${safeUrl}`, err.isRateLimit ? 'warn' : 'debug');
     throw err;
   }
   let html;

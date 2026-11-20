@@ -19,8 +19,7 @@ import {
   createSourceBadge,
   getItemOriginInfo,
   refreshLibrarySiteFilter,
-  renderCollectionView,
-  updateLibraryBadgeCount
+  renderCollectionView
 } from './library-view.js';
 import { renderCacheSessions, restoreCachedSession } from './cache-sessions-ui.js';
 

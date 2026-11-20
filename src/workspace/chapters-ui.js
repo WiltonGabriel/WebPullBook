@@ -1,7 +1,6 @@
 import {
   canUseTabScripting,
   extractVolumeLabel,
-  normalizeSpaces,
   normalizeUrl
 } from '../core/parser-engine.js';
 import { cacheStore, hydrateCachedChapter } from '../core/cache-store.js';

@@ -193,7 +193,7 @@ export function t(key, vars = {}) {
 }
 
 export function detectMatchingReaderPreset(opts) {
-  for (const [key, cfg] of Object.entries(READER_PRESETS)) {
+  for (const key of Object.keys(READER_PRESETS)) {
     if (presetMatches(key, opts)) return key;
   }
   return 'custom';

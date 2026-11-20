@@ -29,7 +29,6 @@ import {
   resolveParserForChapterUrl
 } from '../src/parsers/index.js';
 import { wpLightNovelParser } from '../src/parsers/wp-lightnovel.js';
-import { madaraThemeParser } from '../src/parsers/madara-theme.js';
 import { royalRoadParser } from '../src/parsers/royalroad.js';
 import { novelManiaParser } from '../src/parsers/novelmania.js';
 import { scribbleHubParser } from '../src/parsers/scribblehub.js';

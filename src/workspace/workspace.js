@@ -25,8 +25,7 @@ import {
   readOptionsFromUi,
   saveOptions,
   updateCoverPreview,
-  updatePackButtonLabel,
-  updateTypographyPreview
+  updatePackButtonLabel
 } from './options-storage.js';
 import { updatePathPreview, updateSaveLocationUi } from './directory-handle.js';
 import { loadDomainRules, renderDomainRules } from './domain-rules-ui.js';
