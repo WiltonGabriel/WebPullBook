@@ -124,7 +124,7 @@ WebPullBook/
 ├── CONTRIBUTING.md               # Development setup and parser authoring guide
 ├── LICENSE                       # MIT License
 ├── README.md                     # Documentation (English)
-├── README.pt.md                  # Documentação (Português)
+├── README.pt.md                  # Documentation (Portuguese)
 ├── manifest.json                 # Extension manifest (MV3)
 ├── docs/
 │   ├── COMPATIBILITY.md          # Four-tier compatibility table (PR-friendly)

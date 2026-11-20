@@ -43,9 +43,9 @@ if (!sectionBody) {
 }
 
 const installNote = [
-  '### Instalação / Atualização',
-  `- **Chrome / Chromium:** Baixe **\`WebPullBook-v${cleanVer}.zip\`** abaixo, extraia para uma pasta, abra \`chrome://extensions/\` com o **Modo do desenvolvedor** ativo e clique em **Carregar sem compactação** (ou **Recarregar (\`↻\`)** se já estiver instalada).`,
-  `- **Mozilla Firefox (128+):** Baixe **\`WebPullBook-v${cleanVer}.zip\`**, abra \`about:debugging#/runtime/this-firefox\`, clique em **Carregar extensão temporária...** e selecione o arquivo \`.zip\` diretamente.`
+  '### Installation / Update',
+  `- **Chrome / Chromium:** Download **\`WebPullBook-v${cleanVer}.zip\`** below, extract it to a folder, open \`chrome://extensions/\` with **Developer mode** enabled, and click **Load unpacked** (or **Reload (\`↻\`)** if already installed).`,
+  `- **Mozilla Firefox (128+):** Download **\`WebPullBook-v${cleanVer}.zip\`**, open \`about:debugging#/runtime/this-firefox\`, click **Load Temporary Add-on...**, and select the \`.zip\` file directly.`
 ].join('\n');
 
 const output = `${headingLine}\n\n${sectionBody}\n\n${installNote}\n`;
