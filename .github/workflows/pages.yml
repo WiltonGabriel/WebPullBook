@@ -44,7 +44,7 @@ jobs:
         run: node scripts/verify-website.mjs
 
       - name: Setup GitHub Pages
-        uses: actions/configure-pages@v5
+        uses: actions/configure-pages@v6
 
       - name: Upload website artifact
         uses: actions/upload-pages-artifact@v3
