@@ -8,23 +8,31 @@ Only the latest released version of **WebPullBook** on the `main` branch receive
 
 | Version | Supported |
 | :--- | :--- |
-| `1.x` | ✅ Yes |
+| Latest `1.x` release (`1.5.0-beta`) | ✅ Yes |
+| Older `1.x` releases | ❌ No (update to the latest release) |
 
-## Security Model
+## Security Model & Protections
 
-WebPullBook runs locally inside the user's browser with no external backend servers:
+**WebPullBook** is a Manifest V3 browser extension that runs locally inside the user's browser with no external backend servers:
 
-- Untrusted web page HTML is sanitized via `HtmlSanitizer` ([`src/core/sanitizer.js`](../src/core/sanitizer.js)) into strict XHTML before packaging EPUBs or offline HTML files (`<script>`, `<iframe>`, `<object>`, and inline `on*` handlers are stripped).
-- No remote analytics, telemetry, or external code loading is used anywhere in the extension.
-- Local preferences and Library entries remain inside `chrome.storage.local` and `IndexedDB` (`WebPullBookCache`), while network requests are made directly from the user's browser only to the origin websites the user chooses to extract.
-- Full privacy details are documented at `https://wiltongabriel.github.io/WebPullBook/privacy.html`.
+- **Untrusted HTML & XHTML Sanitization:** All extracted chapter HTML is treated as untrusted, sanitized via [`HtmlSanitizer`](../src/core/sanitizer.js), and serialized into strict XML/XHTML via [`serializeChapterXhtml`](../src/core/xhtml-serializer.js) before packaging EPUB or offline HTML files (`<script>`, `<iframe>`, `<object>`, `<embed>`, event attributes `on*`, and unsafe URIs are stripped).
+- **Strict Protocol & Redirect Validation:** Extracted chapter links, banner actions, cover previews, and SPA background tabs are validated via positive HTTP/HTTPS allowlists (`assertSafeHttpUrl`, `resolveSafeHttpUrl`, `sanitizeCoverPreviewUrl`, and `data:image/*` raster allowlists for local/generated covers), rejecting `javascript:`, `data:text/html`, `vbscript:`, and `file:` URIs.
+- **Manifest V3 CSP:** Extension UI pages (`src/workspace/workspace.html`) enforce Manifest V3 Content Security Policy with zero inline `<script>` tags or `on*` event handlers (enforced on every CI run by `scripts/check.mjs`).
+- **SPA & Anti-Bot Guardrails:** Background tab rendering (`TabRenderPool`) uses a per-domain circuit breaker and pauses automatically on Cloudflare/CAPTCHA challenges or HTTP 429 rate limits. WebPullBook never circumvents DRM, locked paywalls, or anti-bot challenges.
+- **No Telemetry or External Servers:** No analytics, crash reporting, or remote code loading exists anywhere in the codebase. Preferences, Library items, domain rules, and chapter cache remain on the user's device (`chrome.storage.local`, `IndexedDB` `WebPullBookCache`, and optional user-selected folder via `showDirectoryPicker`). Network requests are sent directly from the user's browser only to the websites chosen by the user.
+- **Privacy Policy:** Full details are available in the [Privacy Policy](https://wiltongabriel.github.io/WebPullBook/privacy.html).
+
+## Scope Notes
+
+- **In Scope:** XSS in the extension workspace or official website, HTML/XHTML sanitization bypasses in exported EPUB/HTML outputs, unsafe URL/protocol handling (`javascript:`, `data:text/html`), unsafe `chrome.tabs`/`chrome.scripting` execution, or Manifest V3 CSP violations.
+- **Expected Behavior (Out of Scope):** Because WebPullBook is a client-side Web-to-EPUB extractor, fetching HTTP/HTTPS pages or images explicitly requested by the user within their browser session is intentional core functionality.
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability (for example, HTML/XHTML sanitization bypass, XSS in the extension workspace, or unsafe CSP behavior):
+If you discover a security vulnerability in **WebPullBook**:
 
-1. **Do not open a public issue** with exploit details.
-2. Report it privately using GitHub's **Security Advisories** (**Security -> Report a vulnerability**) on this repository.
-3. Include steps to reproduce, affected HTML snippet or extension component, and the browser version tested.
+1. **Do not open a public issue** with exploit details or proof-of-concept payloads.
+2. Report it privately using GitHub **Private Vulnerability Reporting** on this repository (**Security → Advisories → Report a vulnerability**).
+3. Include clear steps to reproduce, the affected HTML snippet or module (`src/...` or `website/...`), and the browser/version tested.
 
-We will acknowledge your report as soon as possible and coordinate a fix before public disclosure.
+We will acknowledge reports as soon as possible and coordinate a fix before public disclosure.

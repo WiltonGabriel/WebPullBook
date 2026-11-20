@@ -10,21 +10,31 @@ Apenas a versão mais recente do **WebPullBook** publicada na branch `main` rece
 
 | Versão | Suportada |
 | :--- | :--- |
-| `1.x` | Sim |
+| Release `1.x` mais recente (`1.5.0-beta`) | ✅ Sim |
+| Releases `1.x` anteriores | ❌ Não (atualize para a versão mais recente) |
 
-## Modelo de Segurança
+## Modelo de Segurança & Proteções
 
-O WebPullBook é executado localmente dentro do navegador do usuário, sem servidores externos próprios:
+O **WebPullBook** é uma extensão de navegador Manifest V3 executada localmente dentro do navegador do usuário, sem servidores externos próprios:
 
-- Todo HTML externo extraído passa pelo sanitizador [`HtmlSanitizer`](../../src/core/sanitizer.js) e é serializado em XHTML estrito antes de empacotar EPUBs ou HTML offline (`<script>`, `<iframe>`, `<object>` e atributos `on*` são removidos).
-- Não há analytics remotos, telemetria nem carregamento de código externo.
-- Preferências locais e Biblioteca permanecem em `chrome.storage.local` e `IndexedDB` (`WebPullBookCache`); requisições de rede vão diretamente do navegador para os sites escolhidos pelo usuário.
-- Detalhes completos de privacidade estão em `https://wiltongabriel.github.io/WebPullBook/pt/privacy.html`.
+- **Sanitização de HTML Externo e XHTML:** todo HTML de capítulos extraídos é tratado como conteúdo não confiável, sanitizado pelo [`HtmlSanitizer`](../../src/core/sanitizer.js) e serializado em XML/XHTML estrito por [`serializeChapterXhtml`](../../src/core/xhtml-serializer.js) antes de empacotar EPUBs ou HTML offline (`<script>`, `<iframe>`, `<object>`, `<embed>`, atributos `on*` e URIs inseguros são removidos).
+- **Validação Estrita de Protocolos & Redirecionamentos:** links de capítulos, botões de banner, prévias de capa e abas auxiliares SPA passam por listas positivas HTTP/HTTPS (`assertSafeHttpUrl`, `resolveSafeHttpUrl`, `sanitizeCoverPreviewUrl` e `data:image/*` raster validado para capas locais/geradas), bloqueando `javascript:`, `data:text/html`, `vbscript:` e `file:`.
+- **CSP do Manifest V3:** as páginas da extensão (`src/workspace/workspace.html`) seguem a Content Security Policy do Manifest V3, sem blocos `<script>` inline nem atributos `on*` (validado em todo CI pelo `scripts/check.mjs`).
+- **Proteções SPA & Anti-Bot:** a renderização em aba auxiliar (`TabRenderPool`) utiliza *circuit breaker* por domínio e pausa automaticamente em desafios Cloudflare/CAPTCHA ou limites HTTP 429. O WebPullBook não contorna DRM, paywalls fechados nem CAPTCHAs.
+- **Sem Telemetria nem Servidores Externos:** não há analytics, envio de erros remoto nem carregamento de código externo. Preferências, Biblioteca, regras por domínio e cache de capítulos permanecem no dispositivo (`chrome.storage.local`, `IndexedDB` `WebPullBookCache` e pasta opcional escolhida via `showDirectoryPicker`). As requisições HTTP/HTTPS partem diretamente do navegador apenas para os sites escolhidos pelo usuário.
+- **Política de Privacidade:** detalhes completos na [Política de Privacidade](https://wiltongabriel.github.io/WebPullBook/pt/privacy.html).
 
-## Reportando Vulnerabilidades
+## Escopo dos Relatos
 
-Se descobrir qualquer falha de segurança (como contorno do sanitizador HTML/XHTML, XSS no workspace ou problema de CSP):
+- **Dentro do escopo:** XSS na interface da extensão ou no site oficial, falhas de contorno no sanitizador HTML/XHTML de arquivos exportados, execução/aceitação de protocolos inseguros (`javascript:`, `data:text/html`), uso inseguro de `chrome.tabs`/`chrome.scripting` ou violações da CSP do Manifest V3.
+- **Comportamento esperado (fora do escopo):** como o WebPullBook é um extrator Web-to-EPUB client-side, buscar páginas ou imagens HTTP/HTTPS explicitamente solicitadas pelo usuário na sessão do navegador faz parte do funcionamento intencional da extensão.
 
-1. **Não abra uma issue pública** com detalhes do exploit.
-2. Envie o relato de forma privada via **GitHub Security Advisories** (**Security → Report a vulnerability**) no repositório.
-3. Inclua passos de reprodução, trecho HTML ou componente afetado e versão do navegador testada.
+## Como Reportar uma Vulnerabilidade
+
+Se encontrar uma vulnerabilidade de segurança no **WebPullBook**:
+
+1. **Não abra uma issue pública** com detalhes do exploit ou payloads de ataque.
+2. Envie o relato de forma privada pelo **Private Vulnerability Reporting** do GitHub neste repositório (**Security → Advisories → Report a vulnerability**).
+3. Inclua passos claros de reprodução, o trecho HTML ou módulo afetado (`src/...` ou `website/...`) e a versão do navegador testada.
+
+Responderemos o mais rápido possível para coordenar a correção antes de qualquer divulgação pública.

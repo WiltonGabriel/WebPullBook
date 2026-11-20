@@ -7,4 +7,5 @@ Esta pasta reúne as traduções espelho em português brasileiro para consulta 
 - [Guia de Contribuição (`CONTRIBUTING.pt.md`)](CONTRIBUTING.pt.md)
 - [Perfis de Leitor (`READER_PRESETS.pt.md`)](../READER_PRESETS.pt.md)
 - [Política de Segurança (`SECURITY.pt.md`)](SECURITY.pt.md)
+- [Código de Conduta (`CODE_OF_CONDUCT.pt.md`)](CODE_OF_CONDUCT.pt.md)
 - [Site Oficial em Português](https://wiltongabriel.github.io/WebPullBook/pt/)
