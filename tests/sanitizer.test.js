@@ -242,3 +242,70 @@ test('serializeChapterXhtml converts footnote targets to EPUB 3 pop-up aside ele
   const fn1Matches = xhtml.match(/\bid="fn1"/g) || [];
   assert.equal(fn1Matches.length, 1);
 });
+
+test('HtmlSanitizer resolves srcset, picture sources, skips 1x1 placeholders, and keeps lazy images with hidden classes', () => {
+  const root = parseHtmlBodyFragment(`
+    <p>
+      <img
+        class="lazyload"
+        src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
+        data-srcset="https://cdn.example.com/art-400.jpg 400w, https://cdn.example.com/art-1600.jpg 1600w"
+        alt="HiRes"
+      />
+    </p>
+    <picture>
+      <source srcset="https://cdn.example.com/pic-1x.webp 1x, https://cdn.example.com/pic-2x.webp 2x" />
+      <img src="/static/blank.gif" alt="PictureArt" />
+    </picture>
+  `);
+
+  const res = sanitizeChapterContent(root, 'https://example.com/ch/1', {
+    hiddenClasses: new Set(['lazyload'])
+  });
+  assert.equal(res.images.length, 2);
+  assert.equal(res.images[0].originalUrl, 'https://cdn.example.com/art-1600.jpg');
+  assert.equal(res.images[1].originalUrl, 'https://cdn.example.com/pic-2x.webp');
+});
+
+test('HtmlSanitizer strips adjacent nextPrevUrls, decodes __cf_email__, converts wp-block-spacer, unwraps blocks in inline tags, deduplicates leading heading, and upgrades thumb links', () => {
+  const root = parseHtmlBodyFragment(`
+    <h2>Capítulo 5: A Ponte</h2>
+    <p><a href="https://example.com/cap-4">← A Floresta Sombria</a> | <a href="https://example.com/cap-6">O Castelo →</a></p>
+    <p>Contato: <a class="__cf_email__" data-cfemail="7a1b1e1713143a1f021b170a161f54191517">[email&#160;protected]</a></p>
+    <div class="wp-block-spacer" style="height:40px"></div>
+    <span aria-hidden="true">Decoy hidden icon</span>
+    <span><p>Parágrafo dentro de span inválido</p></span>
+    <p><a href="https://cdn.example.com/full-art.jpg"><img src="https://cdn.example.com/thumb-art-300x200.jpg" alt="Cena"/></a></p>
+  `);
+
+  const res = sanitizeChapterContent(root, 'https://example.com/cap-5', {
+    nextPrevUrls: ['https://example.com/cap-4', 'https://example.com/cap-6'],
+    chapterTitle: 'Capítulo 5: A Ponte'
+  });
+
+  const xhtml = serializeChapterXhtml({
+    title: 'Capítulo 5: A Ponte',
+    xmlDoc: res.xmlDoc,
+    nodes: res.nodes,
+    epub3: true
+  });
+
+  // Duplicate leading <h2> removed (only the serialized chapter-title <h2> remains)
+  assert.equal((xhtml.match(/Capítulo 5: A Ponte/g) || []).length, 2, 'Title appears only in <title> and <h2 class="chapter-title">');
+  // Adjacent chapter links removed even with custom chapter-name text
+  assert.doesNotMatch(xhtml, /A Floresta Sombria/);
+  assert.doesNotMatch(xhtml, /O Castelo/);
+  // Cloudflare obfuscated email decoded ("admin@example.com")
+  assert.match(xhtml, /admin@example\.com/);
+  // wp-block-spacer converted to <hr />
+  assert.match(xhtml, /<hr\s*\/>/);
+  // aria-hidden decoy stripped
+  assert.doesNotMatch(xhtml, /Decoy hidden icon/);
+  // Block <p> unwrapped out of inline <span>
+  assert.doesNotMatch(xhtml, /<span>\s*<p>/);
+  assert.match(xhtml, /<p>Parágrafo dentro de span inválido<\/p>/);
+  // Wrapping <a href="full-art.jpg"> promoted with fallback to thumbnail
+  assert.equal(res.images.length, 1);
+  assert.equal(res.images[0].originalUrl, 'https://cdn.example.com/full-art.jpg');
+  assert.equal(res.images[0].fallbackUrl, 'https://cdn.example.com/thumb-art-300x200.jpg');
+});

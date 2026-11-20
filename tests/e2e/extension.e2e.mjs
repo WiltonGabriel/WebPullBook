@@ -210,7 +210,7 @@ async function runE2E() {
     await page.waitForSelector('#preview-modal[open]', { state: 'detached' });
 
     // 2. Test Reader Preset selector (kindle vs kindle-modern, legacy, kobo, modern, and custom auto-detection)
-    const expectedPresetOrder = ['modern', 'kobo', 'kindle-modern', 'kindle', 'textonly', 'custom', 'legacy'];
+    const expectedPresetOrder = ['modern', 'kobo', 'kindle-modern', 'kindle', 'textonly', 'legacy', 'custom'];
     for (const selId of ['#reader-preset', '#adv-reader-preset']) {
       assert.deepEqual(
         await page.$$eval(`${selId} option`, (opts) => opts.map((o) => o.value)),
@@ -229,6 +229,11 @@ async function runE2E() {
     assert.equal(await page.isChecked('#opt-skip-images'), true, 'Text Only should skip images');
     assert.equal(await page.inputValue('#opt-line-height'), '1.55', 'Preset should reset line height');
     assert.equal(await page.inputValue('#opt-img-res'), '1080');
+    // Quick delay control on main sidebar syncs bidirectionally with Advanced #opt-delay
+    await page.fill('#opt-delay-quick', '1500');
+    await page.dispatchEvent('#opt-delay-quick', 'change');
+    assert.equal(await page.inputValue('#opt-delay'), '1500', 'Quick delay should sync to Advanced #opt-delay');
+
     await page.click('[data-tab="advanced"]');
     await page.selectOption('#adv-reader-preset', 'kindle');
     await page.click('[data-tab="main"]');
@@ -286,6 +291,7 @@ async function runE2E() {
     assert.equal(await page.inputValue('#reader-preset'), 'kobo');
     await page.fill('#opt-delay', '123');
     await page.dispatchEvent('#opt-delay', 'change');
+    assert.equal(await page.inputValue('#opt-delay-quick'), '123', 'Advanced #opt-delay should sync back to #opt-delay-quick');
     assert.equal(await page.inputValue('#adv-reader-preset'), 'custom', 'Editing delay must switch Advanced preset to custom');
     assert.equal(await page.inputValue('#reader-preset'), 'custom', 'Editing delay must switch Main preset to custom');
     await page.selectOption('#adv-reader-preset', 'kindle-modern');
@@ -390,10 +396,11 @@ async function runE2E() {
     const epubBytes = fs.readFileSync(epubOutPath);
     assert.ok(epubBytes.length > 500, 'Downloaded EPUB should be non-empty');
 
-    // Verify ZIP/EPUB contents (including edited chapter text from Quick Edit below if run before pack — tested separately below)
+    // Verify ZIP/EPUB contents (EPUB 3 under modern preset includes nav.xhtml)
     const zip = await readZipArchive(epubBytes);
     assert.equal(zip.entries[0].name, 'mimetype');
     assert.equal(zip.entries[0].text(), 'application/epub+zip');
+    assert.ok(zip.files.has('OEBPS/nav.xhtml'), 'Modern preset should export EPUB 3 with nav.xhtml');
     assert.ok(zip.files.has('OEBPS/text/ch_0001.xhtml'));
     assert.ok(zip.files.has('OEBPS/text/ch_0002.xhtml'));
     assert.match(zip.files.get('OEBPS/text/ch_0001.xhtml').text(), /Primeiro Ato|Texto editado no E2E/);
@@ -416,7 +423,13 @@ async function runE2E() {
     await page.waitForSelector('#tab-logs:not(.hidden)', { timeout: 5000 });
     const allLogsText = await page.textContent('#log-output');
     assert.match(allLogsText, /\[PARSER\]/, 'Logs should contain parser diagnostic telemetry');
+    assert.match(allLogsText, /\[IMG\]/, 'Logs should contain image download diagnostic telemetry');
     assert.match(allLogsText, /\[BUILD\]/, 'Logs should contain EPUB build timing telemetry');
+    assert.equal(
+      await page.evaluate(() => document.getElementById('loading-overlay')?.classList.contains('hidden')),
+      true,
+      'Loading overlay should be hidden once loading finishes'
+    );
     await page.click('#log-filter-warn');
     assert.equal(await page.locator('.log-line.log-error').count(), 0, 'Warn filter should hide error lines');
     await page.click('#log-filter-all');
@@ -471,7 +484,10 @@ async function runE2E() {
     await page.waitForSelector('#preview-modal[open]', { state: 'detached' });
     await page.waitForSelector('#chapters-tbody tr:first-child .badge.edited', { timeout: 5000 });
 
-    // Re-pack EPUB and verify edited chapter text + title landed inside the EPUB archive
+    // Switch to Kindle (Antigo) preset before re-packing and verify exported EPUB is actually EPUB 2 (no nav.xhtml)
+    await page.selectOption('#reader-preset', 'kindle');
+    assert.equal(await page.isChecked('#opt-epub3'), false, 'Kindle (Antigo) should set EPUB 2 in UI');
+    assert.equal(await page.inputValue('#adv-reader-preset'), 'kindle');
     const [editedDownload] = await Promise.all([
       page.waitForEvent('download', { timeout: 25000 }),
       page.click('#btn-pack-epub')
@@ -480,6 +496,7 @@ async function runE2E() {
     const editedEpubPath = path.join(userDataDir, 'downloaded-edited-e2e.epub');
     await editedDownload.saveAs(editedEpubPath);
     const editedZip = await readZipArchive(fs.readFileSync(editedEpubPath));
+    assert.equal(editedZip.files.has('OEBPS/nav.xhtml'), false, 'Kindle (Antigo) preset must export EPUB 2 without nav.xhtml');
     assert.match(editedZip.files.get('OEBPS/text/ch_0001.xhtml').text(), /Texto editado no E2E\./);
 
     // Merge the 2 checked chapters into 1 combined chapter
@@ -491,9 +508,49 @@ async function runE2E() {
     assert.equal(await page.locator('#chapters-tbody tr').count(), 1);
     assert.match(await page.textContent('#chapters-tbody tr:first-child'), /Capítulo Único E2E/);
 
-    // Verify Batch Download Updates button exists in Library tab
+    // Verify Batch Download Updates & Optional Unified vs By-Site Library Organization (preserving origin badges)
     await page.click('[data-tab="library"]');
     assert.equal(await page.isVisible('#btn-download-library-updates'), true);
+    assert.equal(await page.isVisible('#opt-library-view-mode'), true);
+    await page.evaluate(async () => {
+      const res = await chrome.storage.local.get('wpbLibrary');
+      const list = Array.isArray(res?.wpbLibrary) ? res.wpbLibrary : [];
+      list.push({
+        id: 'https://second-site.example.org/series/other-novel/',
+        startingUrl: 'https://second-site.example.org/series/other-novel/',
+        sourceDomain: 'second-site.example.org',
+        title: 'Obra de Outro Site',
+        author: 'Outro Autor',
+        totalChapters: 5,
+        knownUrls: [],
+        updatedAt: new Date().toISOString()
+      });
+      await chrome.storage.local.set({ wpbLibrary: list });
+    });
+    await page.waitForFunction(() => document.querySelectorAll('#library-grid .lib-card').length === 2, null, { timeout: 5000 });
+    assert.equal(await page.locator('#library-grid .lib-source-badge').count(), 2, 'Unified mode must preserve origin badges on all cards');
+
+    // Switch to Separated by Site mode (must group by origin without resetting reader preset!)
+    await page.selectOption('#opt-library-view-mode', 'by-site');
+    await page.waitForSelector('#library-grid.is-grouped .lib-site-group', { timeout: 5000 });
+    assert.equal(await page.locator('#library-grid .lib-site-group').count(), 2, 'By-site mode should group library into 2 site sections');
+    assert.equal(await page.inputValue('#reader-preset'), 'kindle', 'Changing library view mode must not alter reader preset');
+
+    // Filter to a single site and then restore unified mode
+    await page.selectOption('#library-site-filter', 'second-site.example.org');
+    assert.equal(await page.locator('#library-grid .lib-card').count(), 1);
+    await page.selectOption('#library-site-filter', 'all');
+    await page.selectOption('#opt-library-view-mode', 'unified');
+    assert.equal(await page.locator('#library-grid .lib-site-group').count(), 0);
+    assert.equal(await page.locator('#library-grid .lib-card').count(), 2);
+
+    // Reload workspace tab and verify Reader Preset ('kindle') & Advanced Options persisted cleanly
+    await page.reload();
+    await page.waitForFunction(() => document.querySelector('#reader-preset')?.value === 'kindle', null, { timeout: 10000 });
+    assert.equal(await page.inputValue('#adv-reader-preset'), 'kindle');
+    assert.equal(await page.isChecked('#opt-epub3'), false);
+    assert.equal(await page.inputValue('#opt-img-res'), '1200');
+    await page.selectOption('#reader-preset', 'modern');
     await page.click('[data-tab="main"]');
 
     // 5. Test interactive Merge Open Tabs modal (preview eye, uncheck, separate-books mode)
@@ -532,6 +589,11 @@ async function runE2E() {
     );
 
     // 6. Remove saved 127.0.0.1 rule and test intelligent automatic selector prefill on unknown generic HTML site
+    // Quick delay control on main sidebar syncs bidirectionally with Advanced #opt-delay
+    await page.fill('#opt-delay-quick', '1500');
+    await page.dispatchEvent('#opt-delay-quick', 'change');
+    assert.equal(await page.inputValue('#opt-delay'), '1500', 'Quick delay should sync to Advanced #opt-delay');
+
     await page.click('[data-tab="advanced"]');
     await page.click('#domain-rules-list .domain-rule-chip button:last-child');
     await page.waitForFunction(() => document.querySelectorAll('#domain-rules-list .domain-rule-chip').length === 0);

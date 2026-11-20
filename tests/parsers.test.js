@@ -3,8 +3,29 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { installDomGlobals } from './helpers/dom-shim.js';
-import { BaseParser, buildOutputPath, generateCssSelector, isAntiBotChallengeDocument, sanitizePathSegment } from '../src/core/parser-engine.js';
-import { ParserRegistry, loadSeriesWithParser, parserRegistry } from '../src/parsers/index.js';
+import {
+  AdaptiveRateLimiter,
+  BaseParser,
+  PageDomCache,
+  TabRenderPool,
+  assertSafeHttpUrl,
+  buildOutputPath,
+  clearSpaDomainCircuit,
+  decodeHtmlBytes,
+  fetchDocumentWithOptions,
+  fetchRenderedTabDocument,
+  generateCssSelector,
+  isAntiBotChallengeDocument,
+  isSpaDomainCircuitOpen,
+  sanitizePathSegment
+} from '../src/core/parser-engine.js';
+import {
+  ParserRegistry,
+  loadSeriesWithParser,
+  looksLikeSpaShell,
+  parserRegistry,
+  resolveParserForChapterUrl
+} from '../src/parsers/index.js';
 import { wpLightNovelParser } from '../src/parsers/wp-lightnovel.js';
 import { madaraThemeParser } from '../src/parsers/madara-theme.js';
 import { royalRoadParser } from '../src/parsers/royalroad.js';
@@ -659,7 +680,8 @@ test('Universal Smart Extractor crawls sequential Next Chapter links and beats w
     { customStripPatterns: 'Traduzido por Equipe Exemplo\n/\\[Nota do Tradutor:.*?\\]/gi' }
   );
   const textOut = parsedNoisy.nodes.map((n) => n.textContent).join(' ').trim();
-  assert.equal(textOut, 'Chapter 1 Texto real do capítulo.');
+  assert.equal(parsedNoisy.chapterTitle, 'Chapter 1');
+  assert.equal(textOut, 'Texto real do capítulo.');
 });
 
 test('WP ascending chapter lists stay ascending and standalone articles become 1-chapter books', async () => {
@@ -828,4 +850,475 @@ test('generateCssSelector produces reusable list, content, and exclude selectors
   const excludeSel = generateCssSelector(adBanner, 'exclude');
   assert.equal(excludeSel, 'div.promo-banner');
   assert.equal(doc.querySelectorAll(excludeSel).length, 1);
+});
+
+test('looksLikeSpaShell does not flag normal SSR WordPress pages with noscript or empty widget mounts', () => {
+  const ssrDoc = new DOMParser().parseFromString(
+    `<html><head><title>Central Novel — Obra Teste</title></head><body>
+      <noscript>Por favor, ative o JavaScript para comentários.</noscript>
+      <div id="app"></div>
+      <h1 class="entry-title">Crônica SSR</h1>
+      <div class="eplister"><ul>
+        <li><a href="https://centralnovel.example.org/cap-1/"><div class="epl-num">Cap. 1</div></a></li>
+        <li><a href="https://centralnovel.example.org/cap-2/"><div class="epl-num">Cap. 2</div></a></li>
+      </ul></div>
+      <script src="/wp-includes/app.js"></script>
+    </body></html>`,
+    'text/html'
+  );
+  assert.equal(looksLikeSpaShell(ssrDoc), false);
+
+  const spaDoc = new DOMParser().parseFromString(
+    `<html><head><title>App</title></head><body>
+      <div id="root"></div>
+      <noscript>Please enable JavaScript to continue.</noscript>
+      <script type="module" src="/assets/main.js"></script>
+    </body></html>`,
+    'text/html'
+  );
+  assert.equal(looksLikeSpaShell(spaDoc), true);
+});
+
+test('WP novel chapter/index with noscript and rel=next loads statically with zero tab opens and no loops', async () => {
+  const indexUrl = 'https://centralnovel.example.org/series/cr-teste/';
+  const ch1Url = 'https://centralnovel.example.org/cr-teste-cap-1/';
+  const ch2Url = 'https://centralnovel.example.org/cr-teste-cap-2/';
+
+  const ch1Html = `<html><head>
+    <link rel="next" href="${ch2Url}">
+    <title>Cap 1</title>
+  </head><body>
+    <noscript>Ative o JavaScript para melhor experiência.</noscript>
+    <div id="root"></div>
+    <div class="ts-breadcrumb"><a href="https://centralnovel.example.org/">Home</a> &gt; <a href="${indexUrl}">Crônica Teste</a></div>
+    <h1 class="entry-title">Capítulo 1</h1>
+    <div class="epcontent"><p>Texto normal do primeiro capítulo em um site SSR WordPress.</p></div>
+  </body></html>`;
+
+  const indexHtml = `<html><head><title>Crônica Teste</title></head><body>
+    <noscript>Enable JavaScript to view comments.</noscript>
+    <h1 class="entry-title">Crônica Teste</h1>
+    <div class="eplister"><ul>
+      <li><a href="${ch2Url}"><div class="epl-num">Cap. 2</div><div class="epl-title">Dois</div></a></li>
+      <li><a href="${ch1Url}"><div class="epl-num">Cap. 1</div><div class="epl-title">Um</div></a></li>
+    </ul></div>
+  </body></html>`;
+
+  const calls = mockFetchRoutes({
+    [ch1Url]: ch1Html,
+    [indexUrl]: indexHtml
+  });
+
+  let createdTabs = 0;
+  globalThis.chrome = {
+    tabs: {
+      onUpdated: { addListener() {}, removeListener() {} },
+      query: async () => [],
+      create: async ({ url }) => {
+        createdTabs += 1;
+        return { id: 10, status: 'complete', url };
+      },
+      get: async () => ({ id: 10, status: 'complete', url: ch1Url }),
+      remove: async () => {}
+    },
+    scripting: { executeScript: async () => [{ result: '' }] }
+  };
+
+  const { parser, series, usedAutoSpa } = await loadSeriesWithParser(ch1Url, { renderWaitMs: 0 });
+  assert.equal(parser.id, wpLightNovelParser.id);
+  assert.equal(series.startingUrl, indexUrl);
+  assert.equal(series.chapters.length, 2);
+  assert.equal(series.requiresTabRender, false);
+  assert.equal(usedAutoSpa, false);
+  assert.equal(createdTabs, 0, 'Normal SSR WordPress site must never open background tabs');
+  assert.ok(!calls.includes(ch2Url), 'Must not crawl chapter rel=next link during index loading');
+});
+
+test('ScribbleHub direct chapter URL resolves matching series ID without opening tab loops', async () => {
+  const chUrl = 'https://www.scribblehub.com/read/88811-ember-protocol/chapter/3001/';
+  const seriesUrl = 'https://www.scribblehub.com/series/88811/ember-protocol/';
+
+  const chWithNoiseHtml = `<html><head><title>Chapter 1</title></head><body>
+    <header>
+      <a href="https://www.scribblehub.com/series-finder/">Series Finder</a>
+      <a href="https://www.scribblehub.com/series/99999/unrelated-book/">Unrelated</a>
+    </header>
+    <div class="wi_breadcrumb">
+      <a href="https://www.scribblehub.com/">Home</a>
+      <a href="${seriesUrl}">Ember Protocol</a>
+    </div>
+    <div id="chp_raw"><p>Chapter prose body.</p></div>
+  </body></html>`;
+
+  // Series page with hash pagination link & failed AJAX to verify no tab loop occurs
+  const seriesCyclicHtml = `<html><head><title>Ember Protocol</title></head><body>
+    <div class="fic_title">Ember Protocol</div>
+    <input type="hidden" id="mypostid" value="88811" />
+    <ol class="toc_ol">
+      <li class="toc_w" order="2"><a class="toc_a" href="https://www.scribblehub.com/read/88811-ember-protocol/chapter/3002/">Ch 2</a></li>
+      <li class="toc_w" order="1"><a class="toc_a" href="${chUrl}">Ch 1</a></li>
+    </ol>
+    <ul id="pagination-mesh-toc">
+      <li><a class="page-link next" href="#page-2">Next</a></li>
+    </ul>
+  </body></html>`;
+
+  mockFetchRoutes({
+    [chUrl]: () => new Response('Forbidden', { status: 403 }),
+    [seriesUrl]: () => new Response('Forbidden', { status: 403 }),
+    'https://www.scribblehub.com/wp-admin/admin-ajax.php': () => new Response('Forbidden', { status: 403 })
+  });
+
+  const createdUrls = [];
+  globalThis.chrome = {
+    tabs: {
+      onUpdated: { addListener() {}, removeListener() {} },
+      // Simulate user already having the chapter tab open!
+      query: async () => [{ id: 77, status: 'complete', url: chUrl }],
+      create: async ({ url }) => {
+        createdUrls.push(url);
+        return { id: 78 + createdUrls.length, status: 'complete', url };
+      },
+      get: async (id) => ({ id, status: 'complete', url: seriesUrl }),
+      remove: async () => {}
+    },
+    scripting: {
+      executeScript: async ({ target, func }) => {
+        const src = String(func);
+        if (src.includes('wi_getreleases_pagination')) {
+          return [{ result: { ok: false, status: 403, html: '' } }];
+        }
+        if (target.tabId === 77) {
+          return [{ result: chWithNoiseHtml }];
+        }
+        return [{ result: seriesCyclicHtml }];
+      }
+    }
+  };
+
+  const { parser, series } = await loadSeriesWithParser(chUrl, { renderWaitMs: 0 });
+  assert.equal(parser.id, scribbleHubParser.id);
+  assert.equal(series.startingUrl, seriesUrl);
+  assert.equal(series.chapters.length, 2);
+  assert.ok(
+    !createdUrls.some((u) => u.includes('series-finder') || u.includes('99999')),
+    'Must ignore unrelated /series/ links'
+  );
+  assert.ok(createdUrls.length <= 2, `Expected bounded tab creation, got ${createdUrls.length}: ${createdUrls.join(', ')}`);
+});
+
+test('BaseParser.collectAllChapters stops immediately on zero-new-chapter pages instead of looping', async () => {
+  const p1 = 'https://loop.example.org/p1';
+  const p2 = 'https://loop.example.org/p2';
+  const p3 = 'https://loop.example.org/p3';
+  const calls = mockFetchRoutes({
+    [p1]: `<html><body><div class="list"><a href="/c1">Cap 1</a></div><a rel="next" href="${p2}">Next</a></body></html>`,
+    [p2]: `<html><body><div class="list"><a href="/c1">Cap 1</a></div><a rel="next" href="${p3}">Next</a></body></html>`,
+    [p3]: `<html><body><div class="list"><a href="/c2">Cap 2</a></div></body></html>`
+  });
+
+  class DummyPaginatedParser extends BaseParser {
+    constructor() {
+      super({ id: 'dummy-pag', name: 'Dummy', maxIndexPages: 20 });
+    }
+    collectChapterNodes(doc, url) {
+      return Array.from(doc.querySelectorAll('.list a')).map((a) => ({
+        url: new URL(a.getAttribute('href'), url).toString(),
+        displayTitle: a.textContent.trim(),
+        volume: 'Volume 01',
+        included: true
+      }));
+    }
+  }
+
+  const p = new DummyPaginatedParser();
+  const series = await p.loadSeries(p1);
+  assert.equal(series.chapters.length, 1);
+  assert.ok(!calls.includes(p3), 'Pagination must stop as soon as p2 adds 0 new chapters');
+});
+
+test('decodeHtmlBytes respects HTTP charset header and HTML meta charset without mojibake', () => {
+  // "Capítulo 1: Coração" encoded in Windows-1252 / ISO-8859-1 bytes
+  const latin1Bytes = Uint8Array.from([
+    0x3c, 0x70, 0x3e, 0x43, 0x61, 0x70, 0xed, 0x74, 0x75, 0x6c, 0x6f, 0x20, 0x31, 0x3a, 0x20,
+    0x43, 0x6f, 0x72, 0x61, 0xe7, 0xe3, 0x6f, 0x3c, 0x2f, 0x70, 0x3e
+  ]);
+  const fakeHeaders = new Headers({ 'content-type': 'text/html; charset=iso-8859-1' });
+  assert.equal(decodeHtmlBytes(latin1Bytes, fakeHeaders), '<p>Capítulo 1: Coração</p>');
+
+  const metaPrefix = new TextEncoder().encode('<meta charset="windows-1252">');
+  const combined = new Uint8Array(metaPrefix.length + latin1Bytes.length);
+  combined.set(metaPrefix, 0);
+  combined.set(latin1Bytes, metaPrefix.length);
+  assert.match(decodeHtmlBytes(combined, new Headers({ 'content-type': 'text/html' })), /Capítulo 1: Coração/);
+});
+
+test('fetchDocumentWithOptions reads live DOM directly from sourceTabId without network fetch or forced SPA flag', async () => {
+  const url = 'https://ssr.example.org/series/alpha';
+  let fetchCalled = false;
+  globalThis.fetch = async () => {
+    fetchCalled = true;
+    throw new Error('fetch should not be called when sourceTabId provides live DOM');
+  };
+  globalThis.chrome = {
+    tabs: {
+      create: async () => {
+        throw new Error('should not create background tab');
+      },
+      get: async (id) => ({ id, status: 'complete', url }),
+      query: async () => []
+    },
+    scripting: {
+      executeScript: async ({ target }) => {
+        assert.equal(target.tabId, 42);
+        return [{ result: '<html><head><title>Alpha</title></head><body><h1>Alpha</h1><p>Live DOM content</p></body></html>' }];
+      }
+    }
+  };
+
+  const doc = await fetchDocumentWithOptions(url, { sourceTabId: 42 });
+  assert.equal(fetchCalled, false);
+  assert.equal(doc._wpbFromSourceTab, true);
+  assert.equal(Boolean(doc._wpbRenderedByTab), false);
+  assert.match(doc.body.textContent, /Live DOM content/);
+});
+
+test('PageDomCache reuses preloaded 1st-page DOM and multi-chapter hash URLs without repeating fetch', async () => {
+  const chUrl = 'https://cache.example.org/single-page-story';
+  const html = '<html><body><h1>Single Story</h1><div class="entry-content"><p>Reusable prose paragraph with enough length for chapter extraction.</p></div></body></html>';
+  const preloadedDoc = new DOMParser().parseFromString(html, 'text/html');
+  const domCache = new PageDomCache();
+  domCache.set(chUrl, preloadedDoc);
+
+  let fetchCalled = false;
+  globalThis.fetch = async () => {
+    fetchCalled = true;
+    throw new Error('Should reuse cached DOM instead of calling fetch');
+  };
+
+  const parsed1 = await genericHtmlParser.downloadChapter(
+    { url: chUrl, displayTitle: 'Part 1' },
+    { pageDomCache: domCache }
+  );
+  const parsed2 = await genericHtmlParser.downloadChapter(
+    { url: `${chUrl}#part-2`, displayTitle: 'Part 2' },
+    { pageDomCache: domCache }
+  );
+  assert.equal(fetchCalled, false);
+  assert.match(parsed1.serialize('../styles/stylesheet.css', true), /Reusable prose paragraph/);
+  assert.match(parsed2.serialize('../styles/stylesheet.css', true), /Reusable prose paragraph/);
+});
+
+test('GenericHtmlParser fixes all 6 weaknesses: <br> prose, TOC vs chapter detection, TOC link resolution, innermost list, and ascending sort', async () => {
+  // 1. <br>-based chapter without <p> tags
+  const brDoc = new DOMParser().parseFromString(
+    `<html><body>
+      <div class="wrapper">
+        <div id="chapter-body" class="chapter-text">
+          Primeira linha da história com bastante texto narrativo.<br><br>
+          Segunda linha com diálogos, pausas e desenvolvimento de cena.<br><br>
+          Terceira linha continuando o enredo sem nenhuma tag de parágrafo.<br><br>
+          Quarta linha encerrando a cena dramática com sucesso!
+        </div>
+      </div>
+    </body></html>`,
+    'text/html'
+  );
+  const foundRoot = genericHtmlParser.findChapterContentRoot(brDoc);
+  assert.equal(foundRoot?.id, 'chapter-body', 'Must detect <br>-separated prose container without <p> tags');
+
+  // 2. Chapter page with long prose + recent chapters list resolves explicit TOC link instead of mistaking sidebar for TOC
+  const chUrl = 'https://indie.example.org/story/ch-1';
+  const tocUrl = 'https://indie.example.org/story/index';
+  const longProse = '<p>Este é um parágrafo longo de narrativa contínua no capítulo atual, cheio de detalhes e diálogos para caracterizar claramente uma página de leitura.</p>'.repeat(12);
+  const chapterHtml = `<html><body>
+    <main>
+      <h1>Capítulo 1</h1>
+      <article class="story-prose">${longProse}</article>
+      <div class="controls"><a href="${tocUrl}">Índice</a> | <a href="/story/ch-2">Próximo Capítulo</a></div>
+      <div class="recent-box">
+        <a href="/story/ch-98">Capítulo 98</a>
+        <a href="/story/ch-99">Capítulo 99</a>
+        <a href="/story/ch-100">Capítulo 100</a>
+      </div>
+    </main>
+  </body></html>`;
+  // 3. TOC page with outer wrapper + tighter inner <ul> in descending order (Cap 3 -> Cap 1)
+  const tocHtml = `<html><body>
+    <main>
+      <h1>Minha Obra</h1>
+      <section class="book-box">
+        <p>Sinopse breve.</p>
+        <ul class="cap-list">
+          <li><a href="/story/ch-3">Capítulo 3</a></li>
+          <li><a href="/story/ch-2">Capítulo 2</a></li>
+          <li><a href="/story/ch-1">Capítulo 1</a></li>
+        </ul>
+      </section>
+    </main>
+  </body></html>`;
+
+  mockFetchRoutes({
+    [chUrl]: chapterHtml,
+    [tocUrl]: tocHtml
+  });
+
+  const { series } = await loadSeriesWithParser(chUrl, { parserId: 'generic-html' });
+  assert.equal(series.startingUrl, tocUrl, 'Must resolve explicit TOC link from chapter page');
+  assert.deepEqual(
+    series.chapters.map((c) => c.displayTitle),
+    ['Capítulo 1', 'Capítulo 2', 'Capítulo 3'],
+    'Must sort descending generic chapter list into ascending order'
+  );
+
+  // Innermost list wins for selector suggestion
+  const tocDoc = new DOMParser().parseFromString(tocHtml, 'text/html');
+  const sug = genericHtmlParser.suggestSelectors({ indexDoc: tocDoc, targetUrl: tocUrl });
+  assert.match(sug.listSelector, /ul\.cap-list/);
+});
+
+test('resolveParserForChapterUrl selects host-appropriate parser for multi-domain chapters', () => {
+  const rr = resolveParserForChapterUrl(
+    'https://www.royalroad.com/fiction/12345/demo/chapter/99/ch-1',
+    genericHtmlParser,
+    'auto',
+    'https://hub.example.org/toc'
+  );
+  assert.equal(rr.id, royalRoadParser.id);
+
+  const sh = resolveParserForChapterUrl(
+    'https://www.scribblehub.com/read/12345-demo/chapter/99/',
+    genericHtmlParser,
+    'auto',
+    'https://hub.example.org/toc'
+  );
+  assert.equal(sh.id, scribbleHubParser.id);
+
+  const otherHost = resolveParserForChapterUrl(
+    'https://translator-b.example.net/cap-2',
+    royalRoadParser,
+    'auto',
+    'https://www.royalroad.com/fiction/12345/demo'
+  );
+  assert.equal(otherHost.id, genericHtmlParser.id);
+});
+
+test('TabRenderPool reuses a single background worker tab across multiple SPA chapters and closes it once', async () => {
+  let createCount = 0;
+  let updateCount = 0;
+  let removeCount = 0;
+  let currentUrl = '';
+
+  globalThis.chrome = {
+    tabs: {
+      onUpdated: { addListener() {}, removeListener() {} },
+      query: async () => [],
+      create: async ({ url }) => {
+        createCount++;
+        currentUrl = url;
+        return { id: 700, status: 'complete', url };
+      },
+      update: async (id, { url }) => {
+        updateCount++;
+        currentUrl = url;
+        return { id, status: 'complete', url };
+      },
+      get: async (id) => ({ id, status: 'complete', url: currentUrl }),
+      remove: async () => {
+        removeCount++;
+      }
+    },
+    scripting: {
+      executeScript: async () => [
+        { result: `<html><body><article><p>Rendered content for ${currentUrl}</p></article></body></html>` }
+      ]
+    }
+  };
+
+  const pool = new TabRenderPool();
+  const d1 = await fetchRenderedTabDocument('https://spa.example.org/ch-1', { waitMs: 0, tabPool: pool });
+  const d2 = await fetchRenderedTabDocument('https://spa.example.org/ch-2', { waitMs: 0, tabPool: pool });
+  const d3 = await fetchRenderedTabDocument('https://spa.example.org/ch-3', { waitMs: 0, tabPool: pool });
+  await pool.close();
+
+  assert.equal(createCount, 1, 'Should create only ONE worker tab for all 3 chapters');
+  assert.equal(updateCount, 2, 'Chapters 2 and 3 should reuse the worker tab via tabs.update');
+  assert.equal(removeCount, 1, 'Should close the single worker tab once on pool.close()');
+  assert.match(d1.body.textContent, /ch-1/);
+  assert.match(d2.body.textContent, /ch-2/);
+  assert.match(d3.body.textContent, /ch-3/);
+});
+
+test('AdaptiveRateLimiter adapts concurrency, Retry-After, latency backoff, and exits cooperative wait when Safe Mode is unchecked', async () => {
+  const rl = new AdaptiveRateLimiter();
+  assert.equal(rl.getEffectiveBatchWidth({ safeMode: false, requiresTab: false, configuredConcurrency: 4 }), 4);
+  assert.equal(rl.getEffectiveBatchWidth({ safeMode: true, requiresTab: false, configuredConcurrency: 4 }), 1);
+  assert.equal(rl.getEffectiveBatchWidth({ safeMode: false, requiresTab: true, configuredConcurrency: 4 }), 1);
+
+  // Throttle + Retry-After steps up backoff and forces 1x concurrency
+  rl.recordThrottle({ retryAfterSec: 12 });
+  assert.ok(rl.backoffFactor >= 1.5);
+  assert.equal(rl.getEffectiveBatchWidth({ safeMode: false, requiresTab: false, configuredConcurrency: 4 }), 1);
+  const retryPlan = rl.computeNextWait({ safeMode: false, baseDelayMs: 200 });
+  assert.equal(retryPlan.reason, 'retry-after');
+  assert.ok(retryPlan.waitMs >= 11000 && retryPlan.waitMs <= 12500);
+
+  // 5 consecutive fast successes relax backoff smoothly
+  const beforeRelax = rl.backoffFactor;
+  for (let i = 0; i < 5; i++) rl.recordSuccess(250);
+  assert.ok(rl.backoffFactor < beforeRelax, 'Backoff should relax after 5 fast healthy responses');
+
+  // Cooperative wait wakes immediately if user unchecks Safe Mode mid-wait
+  let safeOn = true;
+  setTimeout(() => {
+    safeOn = false;
+  }, 60);
+  const t0 = Date.now();
+  await rl.waitCooperatively(5000, { isSafeModeActive: () => safeOn });
+  assert.ok(Date.now() - t0 < 1500, 'Cooperative wait should exit early when Safe Mode is disabled live');
+});
+
+test('SPA security blocks unsafe protocols and trips per-domain anti-bot circuit breaker to prevent tab loops', async () => {
+  assert.throws(() => assertSafeHttpUrl('javascript:alert(1)'), /Protocolo bloqueado/);
+  assert.throws(() => assertSafeHttpUrl('chrome://settings'), /Protocolo bloqueado/);
+  assert.throws(() => assertSafeHttpUrl('file:///etc/passwd'), /Protocolo bloqueado/);
+  assert.equal(assertSafeHttpUrl('https://safe.example.org/ch/1'), 'https://safe.example.org/ch/1');
+
+  const gatedUrl = 'https://cf-gated.example.org/chapter/1';
+  clearSpaDomainCircuit(gatedUrl);
+  let createCalls = 0;
+  globalThis.chrome = {
+    tabs: {
+      onUpdated: { addListener() {}, removeListener() {} },
+      query: async () => [],
+      create: async ({ url }) => {
+        createCalls++;
+        return { id: 801, status: 'complete', url };
+      },
+      get: async (id) => ({ id, status: 'complete', url: gatedUrl }),
+      remove: async () => {}
+    },
+    scripting: {
+      executeScript: async () => [
+        {
+          result: {
+            html: '<html><head><title>Just a moment...</title></head><body><div id="challenge-running">Checking your browser</div></body></html>',
+            finalUrl: gatedUrl
+          }
+        }
+      ]
+    }
+  };
+
+  // First attempt detects Cloudflare and trips circuit breaker
+  await assert.rejects(() => fetchRenderedTabDocument(gatedUrl, { waitMs: 0 }), (err) => Boolean(err.isAntiBotChallenge));
+  assert.equal(createCalls, 1);
+  assert.equal(isSpaDomainCircuitOpen(gatedUrl), true);
+
+  // Second attempt on same domain MUST NOT spawn another background tab while circuit is open
+  await assert.rejects(() => fetchRenderedTabDocument('https://cf-gated.example.org/chapter/2', { waitMs: 0 }), /Proteção SPA ativa/);
+  assert.equal(createCalls, 1, 'Circuit breaker must prevent spawning additional background tabs');
+
+  clearSpaDomainCircuit(gatedUrl);
+  assert.equal(isSpaDomainCircuitOpen(gatedUrl), false);
 });
