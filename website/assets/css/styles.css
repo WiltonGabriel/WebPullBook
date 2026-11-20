@@ -494,7 +494,24 @@ a:hover {
   }
 }
 
-@media (max-width: 370px) {
+@media (max-width: 390px) {
+  .brand-link {
+    font-size: 0.88rem;
+  }
+
+  .header-select {
+    padding: 0.25rem 0.25rem;
+    font-size: 0.72rem;
+    max-inline-size: 5.2rem;
+  }
+
+  .nav-toggle {
+    padding: 0.25rem 0.42rem;
+    font-size: 0.72rem;
+  }
+}
+
+@media (max-width: 330px) {
   .header-inner {
     flex-wrap: wrap;
     row-gap: 0.45rem;
