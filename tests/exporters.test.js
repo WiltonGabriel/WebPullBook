@@ -186,51 +186,60 @@ test('EpubExporter supports EPUB 2 mode without nav.xhtml or package xml:lang', 
   assert.ok(opf.indexOf('idref="toc-page"') > -1 && opf.indexOf('idref="toc-page"') < opf.indexOf('idref="ch_0001"'));
 });
 
-test('EpubExporter places Table of Contents at book start by default, supports end/disabled TOC and custom Info Page fields', async () => {
+test('EpubExporter places Table of Contents at book start, supports custom Info Page and customizable End-of-Book Page', async () => {
   globalThis.fetch = async () => new Response(PNG_1X1, { status: 200, headers: { 'content-type': 'image/png' } });
 
-  // 1. Default EPUB 3: nav.xhtml is in spine BEFORE ch_0001 with custom title and selective Info Page fields
+  // 1. Default EPUB 3: nav.xhtml is in spine BEFORE ch_0001 and end.xhtml is AFTER chapters, with custom fields
   const ctxStart = makeBookContext();
   ctxStart.options.tocTitle = 'Índice Personalizado';
   ctxStart.options.infoPageTitle = 'Ficha da Obra';
   ctxStart.options.infoShowSynopsis = false;
   ctxStart.options.infoShowGenres = false;
   ctxStart.options.infoShowSource = false;
+  ctxStart.options.endPageTitle = 'Fim do Volume';
+  ctxStart.options.endPageMessage = 'Até o próximo volume!\nBoa leitura.';
+  ctxStart.options.endShowSource = false;
+  ctxStart.options.endShowGenerator = false;
   const zipStart = await readZipArchive(await exporterRegistry.get('epub').exportBook(ctxStart));
   const opfStart = zipStart.files.get('OEBPS/content.opf').text();
   assert.ok(
     opfStart.indexOf('idref="nav"') > -1 && opfStart.indexOf('idref="nav"') < opfStart.indexOf('idref="ch_0001"'),
-    'TOC (nav) should appear before Chapter 1 in EPUB 3 spine by default'
+    'TOC (nav) should always appear before Chapter 1 in EPUB 3 spine'
+  );
+  assert.ok(
+    opfStart.indexOf('idref="end-page"') > opfStart.indexOf('idref="ch_0002"'),
+    'End-of-Book page should appear after the last chapter in spine'
   );
   assert.match(opfStart, /<reference type="toc" title="Índice Personalizado" href="nav\.xhtml"\/>/);
   const navStart = zipStart.files.get('OEBPS/nav.xhtml').text();
   assert.match(navStart, /<h1>Índice Personalizado<\/h1>/);
+  assert.match(navStart, /href="text\/end\.xhtml">Fim do Volume<\/a>/);
   const infoStart = zipStart.files.get('OEBPS/text/info.xhtml').text();
   assert.match(infoStart, /<h1>Ficha da Obra<\/h1>/);
   assert.doesNotMatch(infoStart, /Sinopse/);
   assert.doesNotMatch(infoStart, /Gêneros:/);
   assert.doesNotMatch(infoStart, /Fonte:/);
+  const endStart = zipStart.files.get('OEBPS/text/end.xhtml').text();
+  assert.match(endStart, /<h1>Fim do Volume<\/h1>/);
+  assert.match(endStart, /Até o próximo volume!/);
+  assert.match(endStart, /Boa leitura\./);
+  assert.match(endStart, /Crônica de Teste/);
+  assert.doesNotMatch(endStart, /Fonte:/);
+  assert.doesNotMatch(endStart, /WebPullBook/);
 
-  // 2. End TOC position puts nav after chapters
-  const ctxEnd = makeBookContext();
-  ctxEnd.options.tocPosition = 'end';
-  const zipEnd = await readZipArchive(await exporterRegistry.get('epub').exportBook(ctxEnd));
-  const opfEnd = zipEnd.files.get('OEBPS/content.opf').text();
-  assert.ok(
-    opfEnd.indexOf('idref="nav"') > opfEnd.indexOf('idref="ch_0002"'),
-    'TOC (nav) should appear after chapters when tocPosition="end"'
-  );
-
-  // 3. Disabling includeTocPage & addInfoPage removes them from spine (while keeping nav in EPUB 3 manifest)
+  // 2. Disabling includeTocPage, addInfoPage & addEndPage removes them from spine (while keeping nav in EPUB 3 manifest)
   const ctxMinimal = makeBookContext();
   ctxMinimal.options.includeTocPage = false;
   ctxMinimal.options.addInfoPage = false;
+  ctxMinimal.options.addEndPage = false;
   const zipMin = await readZipArchive(await exporterRegistry.get('epub').exportBook(ctxMinimal));
   const opfMin = zipMin.files.get('OEBPS/content.opf').text();
   assert.equal(zipMin.files.has('OEBPS/text/info.xhtml'), false);
+  assert.equal(zipMin.files.has('OEBPS/text/end.xhtml'), false);
   assert.ok(zipMin.files.has('OEBPS/nav.xhtml'), 'EPUB 3 manifest still keeps nav.xhtml for spec compliance');
   assert.doesNotMatch(opfMin, /idref="nav"/);
   assert.doesNotMatch(opfMin, /idref="info-page"/);
+  assert.doesNotMatch(opfMin, /idref="end-page"/);
 });
 
 test('HtmlExporter creates offline single-file HTML with embedded cover and TOC', async () => {

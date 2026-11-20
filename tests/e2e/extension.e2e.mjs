@@ -198,6 +198,20 @@ async function runE2E() {
       { timeout: 10000 }
     );
 
+    // Test volume toggle-all button (click once deselects all volumes, click again selects all volumes)
+    await page.click('#btn-toggle-all-volumes');
+    assert.match(await page.textContent('#chapter-count-badge'), /^0 \/ 2/);
+    await page.click('#btn-toggle-all-volumes');
+    assert.match(await page.textContent('#chapter-count-badge'), /^2 \/ 2/);
+
+    // Unselect all via #btn-unselect-all, then select row 0 with Ctrl+Click and row 1 with Shift+Click
+    await page.click('#btn-unselect-all');
+    assert.match(await page.textContent('#chapter-count-badge'), /^0 \/ 2/);
+    await page.click('#chapters-tbody tr[data-chap-idx="0"] td.col-idx', { modifiers: ['Control'] });
+    assert.match(await page.textContent('#chapter-count-badge'), /^1 \/ 2/);
+    await page.click('#chapters-tbody tr[data-chap-idx="1"] td.col-idx', { modifiers: ['Shift'] });
+    assert.match(await page.textContent('#chapter-count-badge'), /^2 \/ 2/);
+
     // 1. Test dry-run chapter preview modal
     await page.click('#btn-preview-chapter');
     await page.waitForSelector('#preview-modal[open]', { timeout: 10000 });
@@ -229,10 +243,9 @@ async function runE2E() {
     assert.equal(await page.isChecked('#opt-skip-images'), true, 'Text Only should skip images');
     assert.equal(await page.inputValue('#opt-line-height'), '1.55', 'Preset should reset line height');
     assert.equal(await page.inputValue('#opt-img-res'), '1080');
-    // Quick delay control on main sidebar syncs bidirectionally with Advanced #opt-delay
-    await page.fill('#opt-delay-quick', '1500');
-    await page.dispatchEvent('#opt-delay-quick', 'change');
-    assert.equal(await page.inputValue('#opt-delay'), '1500', 'Quick delay should sync to Advanced #opt-delay');
+    assert.equal(await page.locator('#opt-delay-quick').count(), 0, 'Manual latency control should live only in Advanced Options');
+    assert.equal(await page.locator('#opt-toc-position').count(), 0, 'TOC position selector should be removed (TOC always at start)');
+    assert.equal(await page.isChecked('#opt-add-end-page'), true, 'End-of-Book page should be enabled by default');
 
     await page.click('[data-tab="advanced"]');
     await page.selectOption('#adv-reader-preset', 'kindle');
@@ -291,7 +304,7 @@ async function runE2E() {
     assert.equal(await page.inputValue('#reader-preset'), 'kobo');
     await page.fill('#opt-delay', '123');
     await page.dispatchEvent('#opt-delay', 'change');
-    assert.equal(await page.inputValue('#opt-delay-quick'), '123', 'Advanced #opt-delay should sync back to #opt-delay-quick');
+    assert.equal(await page.inputValue('#opt-delay'), '123', 'Advanced #opt-delay should hold manual latency without Safe Mode');
     assert.equal(await page.inputValue('#adv-reader-preset'), 'custom', 'Editing delay must switch Advanced preset to custom');
     assert.equal(await page.inputValue('#reader-preset'), 'custom', 'Editing delay must switch Main preset to custom');
     await page.selectOption('#adv-reader-preset', 'kindle-modern');
@@ -589,11 +602,6 @@ async function runE2E() {
     );
 
     // 6. Remove saved 127.0.0.1 rule and test intelligent automatic selector prefill on unknown generic HTML site
-    // Quick delay control on main sidebar syncs bidirectionally with Advanced #opt-delay
-    await page.fill('#opt-delay-quick', '1500');
-    await page.dispatchEvent('#opt-delay-quick', 'change');
-    assert.equal(await page.inputValue('#opt-delay'), '1500', 'Quick delay should sync to Advanced #opt-delay');
-
     await page.click('[data-tab="advanced"]');
     await page.click('#domain-rules-list .domain-rule-chip button:last-child');
     await page.waitForFunction(() => document.querySelectorAll('#domain-rules-list .domain-rule-chip').length === 0);

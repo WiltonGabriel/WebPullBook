@@ -1322,3 +1322,46 @@ test('SPA security blocks unsafe protocols and trips per-domain anti-bot circuit
   clearSpaDomainCircuit(gatedUrl);
   assert.equal(isSpaDomainCircuitOpen(gatedUrl), false);
 });
+
+test('BaseParser falls back to native adapter when stale customListSelector returns 0 chapters and retries HTTP if sourceTab DOM is empty', async () => {
+  const seriesUrl = 'https://centralnovel.example.org/series/devourer/';
+  const fullHtml = `<html><head><title>Devourer</title></head><body>
+    <h1 class="entry-title">Devourer</h1>
+    <div class="spe"><span>Autor: CypherTails</span></div>
+    <span class="ts-chl-collapsible">Capítulos</span>
+    <div class="ts-chl-collapsible-content"><div class="eplister"><ul>
+      <li><a href="https://centralnovel.example.org/devourer-cap-2/"><div class="epl-num">Cap. 2</div><div class="epl-title">Dois</div></a></li>
+      <li><a href="https://centralnovel.example.org/devourer-cap-1/"><div class="epl-num">Cap. 1</div><div class="epl-title">Um</div></a></li>
+    </ul></div></div>
+  </body></html>`;
+  const emptyListHtml = `<html><head><title>Devourer</title></head><body>
+    <h1 class="entry-title">Devourer</h1>
+    <div class="spe"><span>Autor: CypherTails</span></div>
+    <span class="ts-chl-collapsible">Capítulos</span>
+    <div class="ts-chl-collapsible-content"><div class="eplister"><ul></ul></div></div>
+  </body></html>`;
+
+  const logs = [];
+  const doc = new DOMParser().parseFromString(fullHtml, 'text/html');
+  const series = await wpLightNovelParser.loadSeries(
+    seriesUrl,
+    {
+      customListSelector: '.unrelated-site-chapters a',
+      onLog: (msg, level) => logs.push({ msg, level })
+    },
+    undefined,
+    doc
+  );
+  assert.equal(series.chapters.length, 2, 'Stale customListSelector must fall back to native adapter extraction');
+  assert.ok(
+    logs.some((l) => l.level === 'warn' && /retornou 0 capítulos/i.test(l.msg)),
+    'Should warn when customListSelector matched 0 chapters and fell back'
+  );
+
+  // Half-loaded sourceTab DOM (0 chapters) should fall back cleanly to HTTP fetchWithRetry
+  mockFetchRoutes({ [seriesUrl]: fullHtml });
+  const partialDoc = new DOMParser().parseFromString(emptyListHtml, 'text/html');
+  partialDoc._wpbFromSourceTab = true;
+  const recovered = await wpLightNovelParser.loadSeries(seriesUrl, {}, undefined, partialDoc);
+  assert.equal(recovered.chapters.length, 2, 'Empty sourceTab DOM should recover via direct HTTP fetch');
+});
