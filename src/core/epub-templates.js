@@ -95,7 +95,87 @@ ${headingBlock}${metaBox}${synopsisBlock}${fallbackBlock}</body>
 </html>`;
 }
 
-export function buildEpub2TocXhtml({ bookTitle, tocHeading, hasCoverPage, hasInfoPage, infoLabel, tocGroups }) {
+export function buildEndXhtml({ metadata, bookTitle, chapterCount, epub3, options = {} }) {
+  const doctype = epub3
+    ? '<!DOCTYPE html>'
+    : '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">';
+
+  const isEn = /^en\b/i.test(metadata?.language || '');
+  const defaultHeading = isEn ? 'End of Book' : 'Fim do Livro';
+  const defaultMessage = isEn ? 'Thank you for reading!' : 'Obrigado por ler!';
+
+  const heading = String(options.endPageTitle || '').trim() || defaultHeading;
+  const rawMessage = String(options.endPageMessage ?? '').trim();
+  const messageText = rawMessage || defaultMessage;
+  const showSummary = options.endShowSummary !== false;
+  const showSource = options.endShowSource !== false;
+  const showGenerator = options.endShowGenerator !== false;
+
+  const messageParas = messageText
+    .split(/\n+/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => `      <p>${escapeXml(line)}</p>`)
+    .join('\n');
+
+  const metaLines = [];
+  if (showSummary) {
+    const capWord = isEn ? (chapterCount === 1 ? 'chapter' : 'chapters') : chapterCount === 1 ? 'capítulo' : 'capítulos';
+    const authorLabel = isEn ? 'Author' : 'Autor';
+    metaLines.push(`      <p><strong>${escapeXml(bookTitle)}</strong></p>`);
+    metaLines.push(
+      `      <p>${authorLabel}: ${escapeXml(metadata?.author || '<unknown>')} • ${chapterCount} ${capWord}</p>`
+    );
+  }
+  if (showSource && metadata?.startingUrl && /^https?:\/\//i.test(metadata.startingUrl)) {
+    const sourceLabel = isEn ? 'Source' : 'Fonte';
+    metaLines.push(
+      `      <p>${sourceLabel}: <a href="${escapeXml(metadata.startingUrl)}">${escapeXml(metadata.startingUrl)}</a></p>`
+    );
+  }
+
+  const metaBlock =
+    metaLines.length > 0 ? `    <div class="end-meta">\n${metaLines.join('\n')}\n    </div>\n` : '';
+  const dateStr = new Date().toISOString().slice(0, 10);
+  const colophonBlock = showGenerator
+    ? `    <p class="end-colophon">${isEn ? 'Generated with WebPullBook' : 'Gerado com WebPullBook'} • ${dateStr}</p>\n`
+    : '';
+
+  const metaTag = epub3
+    ? '<meta charset="utf-8" />'
+    : '<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=utf-8" />';
+
+  return `<?xml version="1.0" encoding="utf-8"?>
+${doctype}
+<html xmlns="http://www.w3.org/1999/xhtml"${epub3 ? ' xmlns:epub="http://www.idpf.org/2007/ops"' : ''}>
+<head>
+  ${metaTag}
+  <title>${escapeXml(heading)} — ${escapeXml(bookTitle)}</title>
+  <link rel="stylesheet" type="text/css" href="../styles/stylesheet.css" />
+</head>
+<body>
+  <div class="end-page">
+    <hr class="end-divider" />
+    <h1>${escapeXml(heading)}</h1>
+    <div class="end-message">
+${messageParas}
+    </div>
+${metaBlock}${colophonBlock}    <hr class="end-divider" />
+  </div>
+</body>
+</html>`;
+}
+
+export function buildEpub2TocXhtml({
+  bookTitle,
+  tocHeading,
+  hasCoverPage,
+  hasInfoPage,
+  infoLabel,
+  hasEndPage = false,
+  endLabel = 'Fim do Livro',
+  tocGroups
+}) {
   const items = [];
   if (hasCoverPage) {
     items.push('    <li><a href="cover.xhtml">Capa</a></li>');
@@ -120,6 +200,9 @@ export function buildEpub2TocXhtml({ bookTitle, tocHeading, hasCoverPage, hasInf
         items.push(`    <li><a href="${escapeXml(relHref(rec.href))}">${escapeXml(rec.navTitle)}</a></li>`);
       }
     }
+  }
+  if (hasEndPage) {
+    items.push(`    <li><a href="end.xhtml">${escapeXml(endLabel)}</a></li>`);
   }
 
   return `<?xml version="1.0" encoding="utf-8"?>
@@ -161,6 +244,8 @@ export function buildNavXhtml({
   lang,
   tocHeading = 'Sumário',
   infoLabel = 'Informações',
+  hasEndPage = false,
+  endLabel = 'Fim do Livro',
   includeTocPage = true,
   hasCoverPage,
   hasInfoPage,
@@ -189,6 +274,9 @@ export function buildNavXhtml({
         items.push(`      <li><a href="${escapeXml(rec.href)}">${escapeXml(rec.navTitle)}</a></li>`);
       }
     }
+  }
+  if (hasEndPage) {
+    items.push(`      <li><a href="text/end.xhtml">${escapeXml(endLabel)}</a></li>`);
   }
 
   const landmarkItems = [];
@@ -226,7 +314,16 @@ ${landmarkItems.join('\n')}
 </html>`;
 }
 
-export function buildTocNcx({ uuid, bookTitle, hasCoverPage, hasInfoPage, infoLabel = 'Informações', tocGroups }) {
+export function buildTocNcx({
+  uuid,
+  bookTitle,
+  hasCoverPage,
+  hasInfoPage,
+  infoLabel = 'Informações',
+  hasEndPage = false,
+  endLabel = 'Fim do Livro',
+  tocGroups
+}) {
   let playOrder = 1;
   const navPoints = [];
   let maxDepth = 1;
@@ -277,6 +374,12 @@ ${children}
       }
     }
   }
+  if (hasEndPage) {
+    navPoints.push(`    <navPoint id="nav-end" playOrder="${playOrder++}">
+      <navLabel><text>${escapeXml(endLabel)}</text></navLabel>
+      <content src="text/end.xhtml"/>
+    </navPoint>`);
+  }
 
   return `<?xml version="1.0" encoding="utf-8"?>
 <ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1">
@@ -308,8 +411,8 @@ export function buildContentOpf({
   hasCoverPage,
   coverUsesSvg = false,
   hasInfoPage,
+  hasEndPage = false,
   includeTocPage = true,
-  tocPosition = 'start',
   tocHeading = 'Sumário',
   chapterRecords,
   imageRecords
@@ -343,19 +446,22 @@ export function buildContentOpf({
   for (const ch of chapterRecords) {
     manifestItems.push(`    <item id="${escapeXml(ch.id)}" href="${escapeXml(ch.href)}" media-type="application/xhtml+xml"/>`);
   }
+  if (hasEndPage) {
+    manifestItems.push('    <item id="end-page" href="text/end.xhtml" media-type="application/xhtml+xml"/>');
+  }
 
   const tocSpineId = epub3 ? 'nav' : 'toc-page';
   const spineItems = [];
   if (hasCoverPage) spineItems.push('    <itemref idref="cover-page"/>');
   if (hasInfoPage) spineItems.push('    <itemref idref="info-page"/>');
-  if (includeTocPage && tocPosition !== 'end') {
+  if (includeTocPage) {
     spineItems.push(`    <itemref idref="${tocSpineId}"/>`);
   }
   for (const ch of chapterRecords) {
     spineItems.push(`    <itemref idref="${escapeXml(ch.id)}"/>`);
   }
-  if (includeTocPage && tocPosition === 'end') {
-    spineItems.push(`    <itemref idref="${tocSpineId}"/>`);
+  if (hasEndPage) {
+    spineItems.push('    <itemref idref="end-page"/>');
   }
 
   const epub3SeriesMeta = epub3 && seriesName

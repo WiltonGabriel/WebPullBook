@@ -61,6 +61,34 @@ export class HtmlExporter extends BaseExporter {
       ? `<div class="cover-wrap"><img src="${escapeXml(coverDataUri)}" alt="Cover"/></div>`
       : '';
 
+    const isEn = /^en\b/i.test(metadata.language || '');
+    let endBlock = '';
+    if (options.addEndPage !== false) {
+      const endHeading = String(options.endPageTitle || '').trim() || (isEn ? 'End of Book' : 'Fim do Livro');
+      const endMsg = String(options.endPageMessage ?? '').trim() || (isEn ? 'Thank you for reading!' : 'Obrigado por ler!');
+      const msgHtml = endMsg
+        .split(/\n+/)
+        .map((l) => l.trim())
+        .filter(Boolean)
+        .map((l) => `<p>${escapeXml(l)}</p>`)
+        .join('');
+      const metaParts = [];
+      if (options.endShowSummary !== false) {
+        const capWord = isEn
+          ? parsedChapters.length === 1 ? 'chapter' : 'chapters'
+          : parsedChapters.length === 1 ? 'capítulo' : 'capítulos';
+        metaParts.push(`<p><strong>${escapeXml(bookTitle)}</strong> — ${escapeXml(metadata.author || '<unknown>')} (${parsedChapters.length} ${capWord})</p>`);
+      }
+      if (options.endShowSource !== false && metadata.startingUrl && /^https?:\/\//i.test(metadata.startingUrl)) {
+        metaParts.push(`<p>${isEn ? 'Source' : 'Fonte'}: <a href="${escapeXml(metadata.startingUrl)}">${escapeXml(metadata.startingUrl)}</a></p>`);
+      }
+      const dateStr = new Date().toISOString().slice(0, 10);
+      const genHtml = options.endShowGenerator !== false
+        ? `<p class="end-colophon">${isEn ? 'Generated with WebPullBook' : 'Gerado com WebPullBook'} • ${dateStr}</p>`
+        : '';
+      endBlock = `\n  <footer class="end-page">\n    <hr class="end-divider" />\n    <h2>${escapeXml(endHeading)}</h2>\n    <div class="end-message">${msgHtml}</div>\n    ${metaParts.length ? `<div class="end-meta">${metaParts.join('')}</div>` : ''}\n    ${genHtml}\n  </footer>`;
+    }
+
     const html = `<!DOCTYPE html>
 <html lang="${escapeXml(metadata.language || 'pt')}">
 <head>
@@ -93,7 +121,7 @@ export class HtmlExporter extends BaseExporter {
   </nav>
   <main>
     ${sections}
-  </main>
+  </main>${endBlock}
 </body>
 </html>`;
 

@@ -11,6 +11,7 @@ import {
 import {
   buildContentOpf,
   buildCoverXhtml,
+  buildEndXhtml,
   buildEpub2TocXhtml,
   buildInfoXhtml,
   buildNavXhtml,
@@ -132,13 +133,15 @@ export async function buildEpubBlob({
     }
   }
 
-  // Information page
+  // Information page, TOC, and End-of-Book page
   const hasInfoPage = options.addInfoPage !== false;
+  const hasEndPage = options.addEndPage !== false;
   const includeTocPage = options.includeTocPage !== false;
-  const tocPosition = options.tocPosition === 'end' ? 'end' : 'start';
-  const defaultTocLabel = /^en\b/i.test(metadata.language || '') ? 'Table of Contents' : 'Sumário';
+  const isEnLang = /^en\b/i.test(metadata.language || '');
+  const defaultTocLabel = isEnLang ? 'Table of Contents' : 'Sumário';
   const tocHeading = String(options.tocTitle || '').trim() || defaultTocLabel;
-  const infoLabel = String(options.infoPageTitle || '').trim() || (/^en\b/i.test(metadata.language || '') ? 'Information' : 'Informações');
+  const infoLabel = String(options.infoPageTitle || '').trim() || (isEnLang ? 'Information' : 'Informações');
+  const endLabel = String(options.endPageTitle || '').trim() || (isEnLang ? 'End of Book' : 'Fim do Livro');
 
   if (hasInfoPage) {
     entries.push({
@@ -331,11 +334,25 @@ export async function buildEpubBlob({
     });
   }
 
+  // End-of-Book page (Colophon / Closing)
+  if (hasEndPage) {
+    entries.push({
+      name: 'OEBPS/text/end.xhtml',
+      data: buildEndXhtml({
+        metadata,
+        bookTitle,
+        chapterCount: parsedChapters.length,
+        epub3,
+        options
+      })
+    });
+  }
+
   // Navigation & package manifest
   const tocGroups = groupTocByVolume(chapterRecords, groupNestedVolumes);
   entries.push({
     name: 'OEBPS/toc.ncx',
-    data: buildTocNcx({ uuid, bookTitle, hasCoverPage, hasInfoPage, infoLabel, tocGroups })
+    data: buildTocNcx({ uuid, bookTitle, hasCoverPage, hasInfoPage, infoLabel, hasEndPage, endLabel, tocGroups })
   });
   if (epub3) {
     entries.push({
@@ -345,6 +362,8 @@ export async function buildEpubBlob({
         lang: metadata.language || 'pt',
         tocHeading,
         infoLabel,
+        hasEndPage,
+        endLabel,
         includeTocPage,
         hasCoverPage,
         hasInfoPage,
@@ -360,6 +379,8 @@ export async function buildEpubBlob({
         hasCoverPage,
         hasInfoPage,
         infoLabel,
+        hasEndPage,
+        endLabel,
         tocGroups
       })
     });
@@ -381,8 +402,8 @@ export async function buildEpubBlob({
       hasCoverPage,
       coverUsesSvg: Boolean(options.useSvgForImages),
       hasInfoPage,
+      hasEndPage,
       includeTocPage,
-      tocPosition,
       tocHeading,
       chapterRecords,
       imageRecords

@@ -113,6 +113,42 @@ img {
   text-indent: 0;
   margin: 0.3em 0;
 }
+.end-page {
+  text-align: center;
+  margin: 2.5em auto 1.5em;
+  padding: 1.2em 1em;
+}
+.end-divider {
+  width: 35%;
+  margin: 1.2em auto;
+  border: none;
+  border-top: 1px solid #888;
+}
+.end-message p {
+  text-align: center;
+  text-indent: 0;
+  font-style: italic;
+  margin: 0.6em 0;
+}
+.end-meta {
+  border-top: 1px solid #999;
+  border-bottom: 1px solid #999;
+  padding: 0.75em 0.8em;
+  margin: 1.4em auto;
+}
+.end-meta p {
+  text-align: center;
+  text-indent: 0;
+  margin: 0.3em 0;
+  font-size: 0.92em;
+}
+.end-colophon {
+  text-align: center;
+  text-indent: 0;
+  font-size: 0.82em;
+  opacity: 0.78;
+  margin-top: 1.6em;
+}
 div.svg_outer {
   display: block;
   margin: 0;
