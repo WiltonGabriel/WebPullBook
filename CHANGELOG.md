@@ -2,7 +2,7 @@
 
 Todas as mudanças notáveis do **WebPullBook** serão documentadas neste arquivo.
 
-## [Não lançado / Unreleased]
+## [1.4.0] - 2026-11-20 (Beta)
 
 ### Novidades / New Features
 - **Perfis de Leitor reformulados:** novos perfis **Kindle (Antigo)** (EPUB 2, ideal para *Send to Kindle*) e **Kindle (Moderno)** (EPUB 3 para Calibre/KFX), além de Padrão Moderno, Kobo, Somente Texto e Padrão Antigo. Todos preservam as cores (removida a conversão forçada para escala de cinza e o selo E-Ink). Ordem do seletor atualizada (`Padrão Antigo` acima de `Personalizado`, sem emoji no nome). Guia completo em `docs/READER_PRESETS.md` / `docs/READER_PRESETS.pt.md`.
@@ -17,11 +17,12 @@ Todas as mudanças notáveis do **WebPullBook** serão documentadas neste arquiv
 - **Pausar / Cancelar sempre visíveis**; **Cancelar** pede confirmação e fechar a aba durante exportação exibe aviso do navegador (Chrome e Firefox).
 - **Logs de diagnóstico:** telemetria `[NET]`, `[TAB]`, `[SPA]`, `[IMG]`, `[SAFE]`, `[PARSER]`, `[BUILD]`, `[AUTO]`, `[CFG]`, `[DONE]` com filtros Todos/Avisos/Erros e botão **Copiar Log**.
 
-### Arquitetura / Architecture
+### Arquitetura & Qualidade / Architecture & Testing
 - Refatoração completa seguindo o princípio de **Responsabilidade Única (SRP)**:
   - `src/core/` dividido em módulos coesos (`base-parser.js`, `net-fetcher.js`, `rate-limiter.js`, `dnr-rules.js`, `image-processor.js`, `epub-templates.js`, `epub-css.js`, `text-utils.js`, `selector-utils.js`, `xhtml-serializer.js`, mantendo `parser-engine.js` como fachada compatível).
   - `src/workspace/` dividido em módulos focados (`state.js`, `i18n.js` + `locales/`, `logger.js`, `options-storage.js`, `directory-handle.js`, `domain-rules-ui.js`, `chapters-ui.js`, `cover-ui.js`, `chapter-modals.js`, `volume-modals.js`, `series-loader.js`, `export-runner.js`, `download-storage.js`, `library-ui.js`, `library-view.js`, `cache-sessions-ui.js`, `settings-io.js`, `tab-picker.js`, `workspace.js`).
 - Suporte a resolução de parser por domínio do capítulo (`resolveParserForChapterUrl`) para obras multi-domínio e *Juntar Abas*.
+- Suíte expandida para `54` testes unitários/integração (incluindo pipeline de imagens, Modo Seguro adaptativo, segurança SPA, extrator universal, presets e paridade i18n de 405 chaves) + validação E2E real via Playwright e W3C `EPUBCheck` no CI.
 
 ## [1.3.0] - 2026-11-15 (Beta)
 
