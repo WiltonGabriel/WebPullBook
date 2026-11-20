@@ -1,6 +1,6 @@
 # Reader Profiles Guide
 
-**🇺🇸 English** | [🇧🇷 Português](READER_PRESETS.pt.md)
+**English** | [Português](READER_PRESETS.pt.md)
 
 **WebPullBook** includes **Reader Profiles** (available both in the main **Series** tab and at the top of **Advanced Options**). Each profile configures multiple technical settings at once—everything a profile changes can also be inspected and adjusted individually under **Advanced Options**.
 

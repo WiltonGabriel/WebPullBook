@@ -1,6 +1,6 @@
 # Guia de Perfis de Leitor
 
-[🇺🇸 English](READER_PRESETS.md) | **🇧🇷 Português**
+[English](READER_PRESETS.md) | **Português**
 
 O **WebPullBook** inclui **Perfis de Leitor** (disponíveis tanto na aba principal **Obra** quanto no topo de **Opções Avançadas**). Cada perfil ajusta várias configurações técnicas de uma vez — tudo o que um perfil altera também pode ser conferido e modificado individualmente nas **Opções Avançadas**.
 

@@ -1,6 +1,6 @@
 # <img src="icons/icon.svg" width="32" height="32" align="absmiddle" alt="WebPullBook"> WebPullBook
 
-[🇺🇸 English](README.md) | **🇧🇷 Português**
+[English](README.md) | **Português**
 
 [![Manifest V3](https://img.shields.io/badge/Manifest-V3-4338ca?style=flat-square)](manifest.json)
 [![Chrome & Firefox](https://img.shields.io/badge/Navegadores-Chrome%20%7C%20Edge%20%7C%20Firefox%20128%2B-2563eb?style=flat-square)](#-primeiros-passos)
@@ -215,7 +215,7 @@ WebPullBook/
 
 ## Autoria, Manutenção e Contribuições
 
-O WebPullBook foi criado e é mantido por **Wilton Gabriel** ([@WiltonGabriel](https://github.com/WiltonGabriel)), contando com a colaboração de contribuidores da comunidade open source. O projeto é distribuído sob a [Licença MIT](LICENSE) e segue nosso [Código de Conduta](.github/CODE_OF_CONDUCT.md).
+O WebPullBook foi criado e é mantido por **Wilton Gabriel** ([@WiltonGabriel](https://github.com/WiltonGabriel)), contando com a colaboração de contribuidores da comunidade open source. O projeto é distribuído sob a [Licença MIT](LICENSE) e segue nosso [Código de Conduta](docs/pt/CODE_OF_CONDUCT.pt.md).
 
 ### Formas de Contribuir — Destaque para Desenvolvimento e Adição de Parsers
 
