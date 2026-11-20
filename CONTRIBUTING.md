@@ -18,15 +18,14 @@ WebPullBook uses native ES modules and browser APIs with **zero build steps or n
 ## Project Architecture
 
 - [manifest.json](manifest.json) — Manifest V3 extension configuration.
-- [src/background/service-worker.js](src/background/service-worker.js) — Toolbar click handler opening the workspace tab.
-- [src/core/parser-engine.js](src/core/parser-engine.js) — `BaseParser` base class, JSON-LD/OpenGraph metadata, pagination loop, retry logic, and typography CSS builder.
-- [src/core/sanitizer.js](src/core/sanitizer.js) — `HtmlSanitizer` converting untrusted chapter HTML to valid XHTML with semantic formatting preservation.
-- [src/core/zip.js](src/core/zip.js) — Zero-dependency ZIP builder using `CompressionStream('deflate-raw')`.
-- [src/core/epub-builder.js](src/core/epub-builder.js) — EPUB 2/3 packaging (`content.opf`, `toc.ncx`, `nav.xhtml`, cover conversion).
-- [docs/READER_PRESETS.md](docs/READER_PRESETS.md) — Reader profile guide. Presets live in `READER_PRESETS` ([src/workspace/state.js](src/workspace/state.js)); when adding or changing one, update the guide in both languages and the `preset*` keys in [i18n.js](src/workspace/i18n.js).
+- [src/background/service-worker.js](src/background/service-worker.js) — Toolbar click handler opening the workspace tab with `url` and `sourceTabId`.
+- [src/core/](src/core/parser-engine.js) — Single-responsibility core modules:
+  - `parser-engine.js` (public facade), `base-parser.js` (`BaseParser` + `downloadAndParseChapter`), `net-fetcher.js` (charset-aware HTTP fetch, retries, `PageDomCache`, active-tab live DOM capture & SPA fallback), `dnr-rules.js` (session navigation headers), `text-utils.js`, `selector-utils.js`, `epub-css.js`.
+  - `sanitizer.js` (`HtmlSanitizer`), `xhtml-serializer.js` (`serializeChapterXhtml`, EPUB 3 pop-up footnotes), `image-processor.js` (magic-byte MIME sniffing, content-hash dedup, animated image detection, safe canvas fallback), `epub-templates.js`, `epub-builder.js`, `zip.js`, `cache-store.js`.
+- [docs/READER_PRESETS.md](docs/READER_PRESETS.md) — Reader profile guide. Presets live in `READER_PRESETS` ([src/workspace/state.js](src/workspace/state.js)); when adding or changing one, update the guide in both languages and the `preset*` keys in [locales/pt.js](src/workspace/locales/pt.js) and [locales/en.js](src/workspace/locales/en.js).
 - [src/exporters/](src/exporters/index.js) — `BaseExporter` and `ExporterRegistry` (`epub`, `html`, `md`, `txt`).
-- [src/parsers/](src/parsers/index.js) — `ParserRegistry` and `BaseParser` subclasses.
-- [src/workspace/](src/workspace/workspace.html) — Modular MV3 workspace (`state.js`, `logger.js`, `options-storage.js`, `chapters-ui.js`, `series-loader.js`, `export-runner.js`, `library-ui.js`, `tab-picker.js`, and `workspace.js`) with adaptive themes, volume/chapter editor, and download manager.
+- [src/parsers/](src/parsers/index.js) — `ParserRegistry`, multi-domain chapter parser resolution, and `BaseParser` subclasses.
+- [src/workspace/](src/workspace/workspace.html) — Modular MV3 workspace (`state.js`, `i18n.js` + `locales/`, `logger.js`, `options-storage.js`, `directory-handle.js`, `domain-rules-ui.js`, `chapters-ui.js`, `cover-ui.js`, `chapter-modals.js`, `volume-modals.js`, `series-loader.js`, `export-runner.js`, `download-storage.js`, `library-ui.js`, `library-view.js`, `cache-sessions-ui.js`, `settings-io.js`, `tab-picker.js`, and `workspace.js`).
 
 ## Adding a Parser Adapter
 

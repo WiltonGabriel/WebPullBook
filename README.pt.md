@@ -27,14 +27,14 @@ Ler obras longas, artigos ou séries com centenas de capítulos no navegador dif
 
 ### Principais Funcionalidades
 
-- **Fallback SPA Automático, Auto-detecção Inteligente & Captura Visual (`🎯 Apontar`):** Extrai séries automaticamente a partir de padrões universais (JSON-LD/Schema.org, Open Graph, listas semânticas, densidade de texto no estilo Readability e rastreamento de *"Próximo Capítulo"*). Se a página carregar vazia em JS (`#root`, `#app`, `#__next`) ou com zero capítulos no HTML estático, o **Modo SPA / JavaScript** é ativado automaticamente e os **seletores CSS** são preenchidos sem esforço manual. Para ajuste fino, clique em **🎯 Apontar** na página real, use **filtros / Regex** e **regras salvas por domínio**.
-- **Pré-visualização, Edição Rápida, Mesclagem de Capítulos & Capa Flexível:** Pré-visualize capítulos limpos antes de baixar, clique em **Editar Capítulo** dentro da prévia para corrigir texto/título direto no cache (com selo `Editado`), use **Mesclar Selecionados** para unir capítulos, envie uma **capa local** (`.jpg`/`.png`/`.webp`/`.avif` com conversão automática para JPEG) ou gere capa automaticamente.
-- **Perfis Coloridos de Leitor, Notas Pop-up EPUB 3 & Volumes:** Aplique perfis em 1 clique (**Padrão Moderno**, **Kindle (Antigo)**, **Kindle (Moderno)**, **Kobo e Leitores Digitais**, **Somente Texto**, **Padrão Antigo** e **Personalizado** — também disponível no topo de **Opções Avançadas**). Os perfis são predefinições fixas: alterar qualquer opção avançada muda o seletor para **Personalizado** automaticamente). Todos os perfis mantêm cores nativas para E-Ink P&B e colorido. Veja a comparação completa em [docs/READER_PRESETS.pt.md](docs/READER_PRESETS.pt.md). Ative **Notas Pop-up EPUB 3** (`epub:type="noteref"` + `<aside>`) e ajuste volumes automaticamente ou por faixas/lotes.
+- **Captura Direta da Aba Ativa, Pool SPA Seguro, Auto-detecção & `🎯 Apontar`:** Captura o DOM vivo diretamente da aba de origem (`sourceTabId`) ao clicar no ícone da extensão — evitando requisições frias em SPAs e sessões autenticadas —, reutilizando uma única aba trabalhadora (`TabRenderPool`), aguardando estabilização do DOM e protegendo domínios com *circuit breaker* anti-bot. Extrai séries por padrões universais (JSON-LD/Schema.org, Open Graph, pontuação de `<p>` e `<br>`, detecção Índice vs. Capítulo, resolução de link de Sumário, ordenação ascendente e *"Próximo Capítulo"*), além de resolução de parser por domínio de capítulo.
+- **Pré-visualização, Edição Rápida, Mesclagem de Capítulos & Imagens Resilientes:** Pré-visualize capítulos limpos antes de baixar, edite texto/título direto no cache (`Editado`), mescle capítulos selecionados, envie capa local ou gere capa automaticamente. Imagens contam com detecção de MIME por *magic bytes*, deduplicação por hash de conteúdo, preservação de GIF/APNG/WebP animados, fallback para bytes originais se o canvas falhar, resolução de `srcset`/`<picture>`/`data-orig-file` e reescrita de links internos entre capítulos no EPUB.
+- **Perfis de Leitor, Sumário/Info Personalizáveis & Volumes:** Aplique perfis em 1 clique (**Padrão Moderno**, **Kobo e Leitores Digitais**, **Kindle (Moderno)**, **Kindle (Antigo)**, **Somente Texto**, **Padrão Antigo** e **Personalizado** — também no topo de **Opções Avançadas**). Alterar qualquer opção avançada muda para **Personalizado** automaticamente. Escolha a posição do **Sumário** (`início` por padrão, `fim` ou desativado) e seu título, ative/desative itens da **Página de Informações** e use **Notas Pop-up EPUB 3** (`epub:type="noteref"` + `<aside>`). Veja [docs/READER_PRESETS.pt.md](docs/READER_PRESETS.pt.md).
 - **Juntar Abas Abertas Interativo:** Ao clicar em **Juntar Abas**, um modal lista as abas HTTP/HTTPS detectadas já selecionadas, com **pré-visualização (👁️)**, reordenação, alternância entre janela atual ou todas as janelas e escolha entre **Mesmo livro**, **Mesmo livro dividido em Volumes** ou **Livros diferentes (1 EPUB separado por aba)**.
-- **Pausa/Cancelamento Sempre Visíveis, Cache (`IndexedDB`) & Modo Seguro:** Ajuste **downloads simultâneos (1x a 6x)** ou ative o **Modo Seguro** a qualquer momento (limite de RPM, *jitter* e pausa automática em `HTTP 429`/`503`). Pause, retome ou cancele exportações simples ou em lote pelo painel principal (o **Cancelar** pede confirmação e fechar a aba durante a exportação exibe um aviso do navegador); capítulos baixados ficam em cache (**7 dias** padrão).
+- **Modo Seguro Adaptativo, Latência ao Vivo & Cache (`IndexedDB`):** Ajuste **downloads simultâneos (1x–6x)**, defina a **latência entre capítulos (0–30.000 ms)** direto na barra lateral mesmo sem Modo Seguro, ou ligue/desligue o **Modo Seguro adaptativo** ao vivo (ajusta ritmo por latência/erros, respeita `Retry-After` e sai de esperas na hora ao desmarcar). **Cancelar** pede confirmação, fechar a aba durante exportação exibe aviso, pausas anti-bot oferecem botão **"Abrir página para verificar ↗"** e capítulos ficam em cache (**7 dias** padrão).
 - **Destino Personalizado & Organização de Pastas:** Salve na pasta **Downloads** ou escolha **qualquer pasta do computador** (`File System Access API`), defina o **nome da pasta principal**, escolha layouts prontos (`Pasta / Título`, `Pasta / Autor / Título`, `Autor / Título`, `Formato`, sem subpastas ou modelo `%Root%/%Author%/%Title%`) e veja a **prévia ao vivo do caminho**.
-- **Logs de Diagnóstico Detalhados & Tipografia ao Vivo:** Acompanhe logs técnicos `[NET]`, `[SPA]`, `[PARSER]`, `[BUILD]` e `[AUTO]` com filtros (**Todos**, **Avisos**, **Erros**), **Copiar Log** e **Baixar Log**. Personalize tipografia e CSS com prévia ao vivo e restauração confirmada por seção ou global.
-- **Biblioteca & Download Automático de Atualizações:** Salve obras na aba **Biblioteca** (`chrome.storage.local`), escaneie todas com **Verificar Todas**, selecione só lançamentos novos com **Checar Novos** ou baixe automaticamente todas as obras com capítulos novos em **Baixar Todas as Atualizações**.
+- **Logs de Diagnóstico Detalhados & Tipografia ao Vivo:** Acompanhe logs técnicos `[NET]`, `[TAB]`, `[SPA]`, `[IMG]`, `[SAFE]`, `[PARSER]`, `[BUILD]` e `[AUTO]` com filtros (**Todos**, **Avisos**, **Erros**), **Copiar Log** e **Baixar Log**. Personalize tipografia e CSS com prévia ao vivo e restauração confirmada por seção ou global.
+- **Biblioteca, Organização por Site & Atualizações em Lote:** Salve obras na aba **Biblioteca** (`chrome.storage.local`), escolha entre manter biblioteca e histórico **Unificados (todos os sites)** ou **Separados por site** (sempre preservando o selo de origem e o filtro por domínio), escaneie todas com **Verificar Todas**, selecione só lançamentos novos com **Checar Novos** ou baixe todas as novidades em lote com **Baixar Todas as Atualizações**.
 - **Multi-Navegador, Layout em 2 Colunas & 4 Temas:** Funciona em **Chrome/Chromium** e **Mozilla Firefox 128+** em Manifest V3 puro, com layout responsivo em 2 colunas, abas acessíveis via teclado, interface bilíngue (**pt-BR** / **en**) e seletor direto no topo (**Auto**, **Claro**, **Escuro**, **Sépia** e **Meia-noite**).
 
 ---
@@ -111,10 +111,20 @@ WebPullBook/
     ├── background/
     │   └── service-worker.js     # Abre o workspace ao clicar no ícone da barra
     ├── core/
+    │   ├── base-parser.js        # BaseParser (OOP) e pipeline de capítulos
     │   ├── cache-store.js        # Cache persistente em IndexedDB com expiração (TTL)
-    │   ├── epub-builder.js       # Geração de OPF, NCX, NAV, capa e capítulos XHTML
-    │   ├── parser-engine.js      # BaseParser (OOP), modo SPA em aba, CSS e retries
-    │   ├── sanitizer.js          # HtmlSanitizer -> XHTML válido com estilos semânticos
+    │   ├── dnr-rules.js          # Regras temporárias declarativeNetRequest de navegação
+    │   ├── epub-builder.js       # Orquestração EPUB 2/3 e reescrita de links internos
+    │   ├── epub-css.js           # Gerador de CSS otimizado para e-readers
+    │   ├── epub-templates.js     # Templates OPF, NCX, NAV, Capa, Info e Sumário
+    │   ├── image-processor.js    # Sniffing por magic bytes, hash dedup e fallback canvas
+    │   ├── net-fetcher.js        # HTTP com charset, captura da aba ativa, TabRenderPool e segurança SPA
+    │   ├── parser-engine.js      # Fachada de re-export dos módulos centrais
+    │   ├── rate-limiter.js       # AdaptiveRateLimiter (Modo Seguro adaptativo e Retry-After)
+    │   ├── sanitizer.js          # HtmlSanitizer -> XHTML válido, __cf_email__, nextPrevUrls
+    │   ├── selector-utils.js     # Gerador de seletores CSS para captura visual
+    │   ├── text-utils.js         # Normalização, volumes, caminhos e capas
+    │   ├── xhtml-serializer.js   # Serializador XHTML estrito e notas pop-up EPUB 3
     │   └── zip.js                # Empacotador ZIP nativo via CompressionStream
     ├── exporters/
     │   ├── index.js              # ExporterRegistry (EPUB, HTML, Markdown, TXT)
