@@ -34,11 +34,13 @@ WebPullBook/
 │   ├── COMPATIBILITY.md      # 4-tier site & pattern compatibility table (no URLs/domains)
 │   ├── READER_PRESETS.md     # Reader profile reference (English)
 │   ├── READER_PRESETS.pt.md  # Reader profile reference (Portuguese)
-│   └── SEO_AND_GITHUB_PAGES.md # GitHub Pages, SEO & Google Search Console operational guide
+│   ├── SEO_AND_GITHUB_PAGES.md # GitHub Pages, SEO & Google Search Console operational guide
+│   └── pt/                   # Optional Brazilian Portuguese mirrors (README, CHANGELOG, CONTRIBUTING, SECURITY, CoC)
 ├── icons/                    # Extension icons (icon.svg, icon-16.png, icon-32.png, icon-48.png, icon-128.png)
 ├── scripts/
 │   ├── check.mjs             # Static linter (manifest parity, JS syntax, MV3 CSP, links, i18n/DOM IDs, formatting)
 │   ├── extract-release-notes.mjs # Extracts version notes from CHANGELOG.md for GitHub Releases
+│   ├── sync-website.mjs      # Syncs website/ tables & version metadata from docs/ and manifest.json
 │   └── verify-website.mjs    # Validates website/ HTML semantics, links, canonicals, hreflang, sitemap & robots.txt
 ├── src/
 │   ├── background/           # MV3 background service worker / event page
@@ -63,7 +65,7 @@ WebPullBook/
    - If the static response is an HTTP 403/503 or an unhydrated SPA shell (`looksLikeSpaShell`), it automatically falls back to `fetchRenderedTabDocument()`.
    - `parserRegistry.detect()` ranks all registered adapters via `matchScore(doc, url)` and selects the highest-scoring adapter (or `GenericHtmlParser` fallback).
 4. **Series & Chapter Discovery (`src/core/base-parser.js`):** `BaseParser.loadSeries()` resolves the index document, extracts metadata (JSON-LD `@graph`, Open Graph, `<dl>` pairs, and site-specific overrides), paginates chapter lists (`collectAllChapters()`), and normalizes volume labels (`extractVolumeLabel()`).
-5. **User Curation (`src/workspace/`):** The user can filter/select chapters and volumes (`Ctrl+Click` / `Shift+Click`), preview and quick-edit chapter HTML (`chapter-modals.js`), merge chapters, merge open browser tabs (`tab-picker.js`), pick CSS selectors visually (`🎯 Point`), or choose a fixed **Reader Profile** (`READER_PRESETS` in `state.js`).
+5. **User Curation (`src/workspace/`):** The user can filter/select chapters and volumes (`Ctrl+Click` / `Shift+Click`), preview and quick-edit chapter HTML (`chapter-modals.js`), merge chapters, merge open browser tabs (`tab-picker.js`), pick CSS selectors visually (`🎯 Pick`), or choose a fixed **Reader Profile** (`READER_PRESETS` in `state.js`).
 6. **Export Pipeline (`src/workspace/export-runner.js`):**
    - Paces chapter downloads using `AdaptiveRateLimiter` (Smart Safe Mode, `Retry-After` compliance, or manual latency `0–30000 ms`) and reuses a single background worker tab via `TabRenderPool` when SPA mode is active.
    - Resolves per-chapter parsers across multi-domain works via `resolveParserForChapterUrl()`.
@@ -190,9 +192,10 @@ WebPullBook separates zero-dependency checks from browser/Java integration tools
 
 | Command | Dependencies Required | What It Validates |
 | :--- | :--- | :--- |
-| `npm run lint` | **None** (Node.js stdlib only) | Manifest/package version parity, Firefox MV3 manifest keys, JS syntax (`node --check`), MV3 CSP (no inline scripts/handlers), EPUB container media-type, relative Markdown links, PT/EN i18n key parity (410+ keys), workspace DOM ID references, and LF/whitespace/hygiene rules. |
-| `npm test` | **None** (Node.js `node:test` stdlib) | 56 unit and regression tests covering `CacheStore`, `ExporterRegistry` (EPUB 2/3, HTML, MD, TXT), `ImageProcessor` (magic-byte MIME sniffing, canvas fallback, content-hash dedup, animated images), `ParserRegistry`, all parser fixture snapshots (`tests/fixtures/snapshots.json`), `AdaptiveRateLimiter`, `TabRenderPool`, SPA circuit breaker, `HtmlSanitizer`, and `createZipBlob`. (Automatically runs EPUBCheck test if Java + EPUBCheck are present, or skips that single test cleanly if absent.) |
+| `npm run lint` | **None** (Node.js stdlib only) | Manifest/package version parity, Firefox MV3 manifest keys, JS syntax (`node --check`), MV3 CSP (no inline scripts/handlers), EPUB container media-type, relative Markdown links, PT/EN i18n key parity (410 keys), workspace DOM ID references, LF/whitespace/hygiene rules, and `verify-website.mjs`. |
+| `npm test` | **None** (Node.js `node:test` stdlib) | 58 unit and regression tests covering `CacheStore`, `ExporterRegistry` (EPUB 2/3, HTML, MD, TXT), `ImageProcessor` (magic-byte MIME sniffing, canvas fallback, content-hash dedup, animated images), `ParserRegistry`, all parser fixture snapshots (`tests/fixtures/snapshots.json`), `AdaptiveRateLimiter`, `TabRenderPool`, SPA circuit breaker, `HtmlSanitizer`, and `createZipBlob`. (Automatically runs EPUBCheck test if Java + EPUBCheck are present, or skips that single test cleanly if absent.) |
 | `npm run check` | **None** (Node.js stdlib only) | Runs `npm run lint && npm test`. Mandatory before completing any code or documentation task. |
+| `npm run sync:website` | **None** (Node.js stdlib only) | Synchronizes `website/` compatibility/preset tables, version strings, and `site.config.json` from `manifest.json`, `docs/COMPATIBILITY.md`, `docs/READER_PRESETS.md`, and `docs/READER_PRESETS.pt.md`. |
 | `node scripts/verify-website.mjs` | **None** (Node.js stdlib only) | Validates `website/` HTML pages, bilingual parity, internal links, image paths, canonical URLs, `hreflang` tags, Open Graph/social tags, `sitemap.xml`, `robots.txt`, and verifies `website/` is not bundled in extension packaging. |
 | `npm run test:epubcheck` | **Java 21+** + **W3C EPUBCheck** (`.tools/epubcheck/` or `EPUBCHECK_JAR`) | Validates generated EPUB 2 and EPUB 3 archives against W3C `EPUBCheck` (set `REQUIRE_EPUBCHECK=1` in CI to fail if EPUBCheck is missing). |
 | `npm run test:e2e` | **Playwright + Chromium** (`devDependencies`) | Launches Chromium with the unpacked extension loaded, testing series extraction, volume/chapter selection (`Ctrl`/`Shift`), preview & quick-edit, chapter merge, Reader Profiles, Library & batch updates, Domain Rules, JSON settings I/O, custom output folders, real EPUB download, diagnostic logs, and Merge Open Tabs. |

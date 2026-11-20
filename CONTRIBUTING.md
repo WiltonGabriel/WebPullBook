@@ -8,29 +8,69 @@ Thank you for your interest in contributing to **WebPullBook**, created and main
 
 ## Development Setup
 
-WebPullBook uses native ES modules and browser APIs with no build step or runtime npm dependencies.
+WebPullBook uses native ES modules and browser APIs with **no build step and zero runtime npm dependencies** (`dependencies: {}`). Editing any file under `src/` takes effect immediately when you reload the extension.
 
 1. Clone the repository:
    ```bash
    git clone https://github.com/WiltonGabriel/WebPullBook.git
    cd WebPullBook
    ```
-2. **Chrome / Chromium:** Open `chrome://extensions/`, enable **Developer mode**, click **Load unpacked**, and select the `WebPullBook/` root folder.
+2. **Chrome / Chromium / Edge / Brave:** Open `chrome://extensions/`, enable **Developer mode**, click **Load unpacked**, and select the `WebPullBook/` root folder.
 3. **Firefox (128+):** Open `about:debugging#/runtime/this-firefox`, click **Load Temporary Add-on...**, and select [manifest.json](manifest.json).
-4. After editing any file under `src/`, reload the extension on the respective extensions page (and reload open workspace tabs).
+4. After editing any file under `src/`, reload the extension on the extensions page (and reload open workspace tabs).
 
-## Project Architecture
+## How WebPullBook Works (End-to-End)
 
-- [manifest.json](manifest.json) — Manifest V3 extension configuration.
+Understanding the 5-stage pipeline makes it easy to locate where any change belongs:
+
+1. **Toolbar Trigger ([service-worker.js](src/background/service-worker.js)):** Clicking the extension icon opens `src/workspace/workspace.html?url=<activeTabUrl>&sourceTabId=<tabId>`. On Firefox (`moz-extension://`), it also adds a session `declarativeNetRequest` rule (ID `1`) to clean cross-origin `Origin` headers.
+2. **Workspace Bootstrap ([workspace.js](src/workspace/workspace.js)):** [theme-init.js](src/workspace/theme-init.js) applies the saved theme without flash; options, library items, and per-domain rules load from `chrome.storage.local`, expired cache entries in `IndexedDB` are pruned, and `handleLoadSeries()` starts extraction.
+3. **DOM Acquisition & Parser Selection ([net-fetcher.js](src/core/net-fetcher.js) & [parsers/index.js](src/parsers/index.js)):** WebPullBook first reads the live DOM directly from `sourceTabId` (`readOpenTabDocument`), falling back to charset-aware `fetchWithRetry()` and, for SPAs or JS-rendered pages, a reusable background tab (`TabRenderPool`). `parserRegistry.detect()` scores all adapters via `matchScore(doc, url)` and picks the best match (or `GenericHtmlParser`).
+4. **Curation & Reader Profiles ([src/workspace/](src/workspace/workspace.html)):** Users filter/select chapters and volumes (`Ctrl+Click` / `Shift+Click`), preview and inline-edit chapter HTML, merge chapters or open browser tabs, pick selectors visually (`🎯 Pick`), or apply fixed presets from `READER_PRESETS` in [state.js](src/workspace/state.js).
+5. **Sanitization & Book Packaging ([sanitizer.js](src/core/sanitizer.js), [xhtml-serializer.js](src/core/xhtml-serializer.js), [src/exporters/](src/exporters/index.js)):** `AdaptiveRateLimiter` paces downloads; each chapter is sanitized into strict XML/XHTML (stripping scripts, ads, unsafe URIs, and tracking watermarks) and cached in `IndexedDB`; finally `exporterRegistry` builds **EPUB 2/3** (`epub-builder.js` + `zip.js`), **Single-File HTML**, **Markdown**, or **TXT**, saving via `chrome.downloads` or `showDirectoryPicker()`.
+
+## Repository Structure & Modules
+
+```text
+WebPullBook/
+├── .github/                  # CI, Release, GitHub Pages, CodeQL workflows, Issue/PR templates, SECURITY, Code of Conduct
+├── AGENTS.md                 # Authoritative rules & architecture guide for AI coding agents
+├── CHANGELOG.md              # Release history (also used by scripts/extract-release-notes.mjs)
+├── CONTRIBUTING.md           # This contributor guide
+├── manifest.json             # Cross-browser Manifest V3 declaration (Chrome + Firefox gecko)
+├── package.json              # Scripts and devDependencies (playwright only for E2E)
+├── docs/                     # Compatibility matrix, Reader Presets guide, SEO guide & docs/pt/ mirrors
+├── icons/                    # Extension icons (SVG + PNG sizes)
+├── scripts/                  # check.mjs (lint/CSP/i18n), sync-website.mjs, verify-website.mjs, extract-release-notes.mjs
+├── src/                      # Extension runtime code (no build step)
+│   ├── background/           # MV3 background service worker / event script
+│   ├── core/                 # Core engine modules
+│   ├── exporters/            # Polymorphic exporters (epub, html, md, txt)
+│   ├── parsers/              # ParserRegistry, GenericHtmlParser & site/CMS adapters
+│   └── workspace/            # Extension tab UI, 4 themes, modular controllers & PT/EN locales
+├── tests/                    # Native node:test unit/snapshot tests, fixtures/, helpers/ & Playwright E2E
+└── website/                  # Static bilingual GitHub Pages site (never bundled into extension ZIP)
+```
+
+Key module files:
+
+- [manifest.json](manifest.json) — Manifest V3 extension configuration (`service_worker` + Firefox `background.scripts` & `gecko` settings).
 - [src/background/service-worker.js](src/background/service-worker.js) — Toolbar click handler opening the workspace tab with `url` and `sourceTabId`.
 - [src/core/](src/core/parser-engine.js) — Single-responsibility core modules:
-  - `parser-engine.js` (public facade), `base-parser.js` (`BaseParser` + `downloadAndParseChapter`), `net-fetcher.js` (charset-aware HTTP fetch, retries, `PageDomCache`, active-tab live DOM capture & SPA fallback), `dnr-rules.js` (session navigation headers), `text-utils.js`, `selector-utils.js`, `epub-css.js`.
+  - `parser-engine.js` (public facade), `base-parser.js` (`BaseParser` + `downloadAndParseChapter`), `net-fetcher.js` (charset-aware HTTP fetch, retries, `PageDomCache`, active-tab live DOM capture & SPA `TabRenderPool`), `rate-limiter.js` (`AdaptiveRateLimiter`), `dnr-rules.js` (session navigation headers), `text-utils.js`, `selector-utils.js`, `epub-css.js`.
   - `sanitizer.js` (`HtmlSanitizer`), `xhtml-serializer.js` (`serializeChapterXhtml`, EPUB 3 pop-up footnotes), `image-processor.js` (magic-byte MIME sniffing, content-hash dedup, animated image detection, safe canvas fallback), `epub-templates.js`, `epub-builder.js`, `zip.js`, `cache-store.js`.
-- [docs/READER_PRESETS.md](docs/READER_PRESETS.md) — Reader profile guide. Presets live in `READER_PRESETS` ([src/workspace/state.js](src/workspace/state.js)); when adding or changing one, update the guide in both languages and the `preset*` keys in [locales/pt.js](src/workspace/locales/pt.js) and [locales/en.js](src/workspace/locales/en.js).
 - [src/exporters/](src/exporters/index.js) — `BaseExporter` and `ExporterRegistry` (`epub`, `html`, `md`, `txt`).
-- [src/parsers/](src/parsers/index.js) — `ParserRegistry`, multi-domain chapter parser resolution, and `BaseParser` subclasses.
-- [src/workspace/](src/workspace/workspace.html) — Modular MV3 workspace (`state.js`, `i18n.js` + `locales/`, `logger.js`, `options-storage.js`, `directory-handle.js`, `domain-rules-ui.js`, `chapters-ui.js`, `cover-ui.js`, `chapter-modals.js`, `volume-modals.js`, `series-loader.js`, `export-runner.js`, `download-storage.js`, `library-ui.js`, `library-view.js`, `cache-sessions-ui.js`, `settings-io.js`, `tab-picker.js`, and `workspace.js`).
-- `website/` — Static bilingual website deployed via GitHub Pages (never bundled in extension releases; validated with `node scripts/verify-website.mjs`).
+- [src/parsers/](src/parsers/index.js) — `ParserRegistry`, multi-domain chapter parser resolution, `GenericHtmlParser`, and `BaseParser` subclasses (`wp-lightnovel`, `madara-theme`, `royalroad`, `scribblehub`, `novelmania`).
+- [src/workspace/](src/workspace/workspace.html) — Modular MV3 workspace (`theme-init.js`, `state.js`, `i18n.js` + `locales/`, `logger.js`, `options-storage.js`, `directory-handle.js`, `domain-rules-ui.js`, `chapters-ui.js`, `cover-ui.js`, `chapter-modals.js`, `volume-modals.js`, `series-loader.js`, `export-runner.js`, `download-storage.js`, `library-ui.js`, `library-view.js`, `cache-sessions-ui.js`, `settings-io.js`, `tab-picker.js`, and `workspace.js`).
+- [docs/READER_PRESETS.md](docs/READER_PRESETS.md) — Reader profile guide. Presets live in `READER_PRESETS` ([src/workspace/state.js](src/workspace/state.js)); when adding or changing one, update the guide in both languages (`READER_PRESETS.md` and `READER_PRESETS.pt.md`), `preset*` keys in [locales/pt.js](src/workspace/locales/pt.js) and [locales/en.js](src/workspace/locales/en.js), and run `npm run sync:website`.
+- `website/` — Static bilingual website deployed via GitHub Pages (excluded from extension `.zip`; synchronized via `npm run sync:website` and validated by `npm run lint`).
+
+## Language, Style & Security Conventions
+
+- **English Default:** Issues, Pull Requests, commit messages, code comments, and primary documentation (`README.md`, `CHANGELOG.md`, `CONTRIBUTING.md`, `docs/*.md`) must be written in **English**.
+- **Portuguese Mirrors:** Dedicated Brazilian Portuguese mirrors live in `README.pt.md`, `docs/READER_PRESETS.pt.md`, `docs/pt/`, and `website/pt/`. UI strings in `src/workspace/locales/pt.js` & `en.js` and website pages under `website/pt/` require strict PT/EN parity (enforced by `npm run lint`); updating `docs/pt/` mirrors alongside doc edits is appreciated.
+- **Manifest V3 CSP & Hygiene:** Never add inline `<script>` tags or `on*` event attributes in `src/**/*.html`, never use `console.log()` or `debugger` in `src/` (use the workspace logger or `console.error` for fatal errors), and keep LF line endings without trailing whitespace.
+- **Untrusted Content:** All extracted chapter HTML must pass through `HtmlSanitizer` and `serializeChapterXhtml`. Never bypass protocol validation (`assertSafeHttpUrl`) or anti-bot/DRM restrictions.
 
 ## Adding a Parser Adapter
 
@@ -40,89 +80,70 @@ WebPullBook aims to be **as un-specific as possible**, prioritizing **general co
 
 Before writing a new site-specific parser (or adding site-specific logic to an existing one), always prefer improving the shared generic layer first:
 
-1. **Extend shared helpers & generic heuristics first:** Check [src/core/parser-engine.js](src/core/parser-engine.js) (`BaseParser`), [src/parsers/generic-html.js](src/parsers/generic-html.js) (`GenericHtmlParser`), and [src/core/sanitizer.js](src/core/sanitizer.js) (`HtmlSanitizer`) for standard web patterns (Schema.org/JSON-LD, Open Graph, `<dl>` metadata, `data-testid`/`itemprop` semantics, `<time>` stripping, container scoring, `.sr-only` cleanup, safe intra-chapter anchors).
-2. **Only add a dedicated adapter when generic DOM parsing cannot succeed:** E.g., paginated JSON APIs that omit chapters from initial HTML, custom encrypted/obfuscated content payloads, non-standard SPA hydration, or interactive tab fetching.
-3. **Keep adapters structural and minimal:**
-   - Detect pages primarily via **structural DOM signals** (e.g., `#reader-chapter-title`, `data-testid`, theme classes) rather than relying heavily on hostnames or fixed URL paths, so mirror domains and URL migrations keep working.
-   - Inherit from `BaseParser` and reuse its extraction/cleaning methods instead of reimplementing them.
-   - Avoid hardcoding third-party brand names or domains unless explicitly required.
+- **Extend shared helpers & generic heuristics first:** Check [src/core/parser-engine.js](src/core/parser-engine.js) (`BaseParser`), [src/parsers/generic-html.js](src/parsers/generic-html.js) (`GenericHtmlParser`), and [src/core/sanitizer.js](src/core/sanitizer.js) (`HtmlSanitizer`) for standard web patterns (Schema.org/JSON-LD, Open Graph, `<dl>` metadata, `data-testid`/`itemprop` semantics, `<time>` stripping, container scoring, `.sr-only` cleanup, safe intra-chapter anchors).
+- **Only add a dedicated adapter when generic DOM parsing cannot succeed:** E.g., paginated JSON APIs that omit chapters from initial HTML, custom encrypted/obfuscated content payloads, non-standard SPA hydration, or interactive tab fetching.
+- **Keep adapters structural and minimal:** Detect pages primarily via **structural DOM signals** (e.g., `#reader-chapter-title`, `data-testid`, theme classes) rather than hostnames or fixed URL paths, inherit from `BaseParser`, and avoid hardcoding third-party brand names or domains unless explicitly required.
 
-1. Create a module in `src/parsers/<adapter-name>.js` extending `BaseParser` from [src/core/parser-engine.js](src/core/parser-engine.js):
+### Step-by-Step Guide
 
-```js
-import { BaseParser } from '../core/parser-engine.js';
+1. **Create the adapter module** at `src/parsers/<adapter-name>.js` extending `BaseParser` from [src/core/parser-engine.js](src/core/parser-engine.js):
 
-export class CustomAdapter extends BaseParser {
-  constructor() {
-    super({ id: 'custom-adapter', name: 'Descriptive Adapter Name' });
-  }
+   ```js
+   import { BaseParser } from '../core/parser-engine.js';
 
-  matchScore(doc, _url) {
-    return doc.querySelector('.my-chapter-list') ? 80 : 0;
-  }
+   export class CustomAdapter extends BaseParser {
+     constructor() {
+       super({ id: 'custom-adapter', name: 'Descriptive Adapter Name' });
+     }
 
-  extractSiteMetadata(doc, targetUrl) {
-    return {};
-  }
+     matchScore(doc, _url) {
+       return doc.querySelector('.my-chapter-list') ? 80 : 0;
+     }
 
-  collectChapterNodes(doc, targetUrl, _options, _context) {
-    return [];
-  }
+     extractSiteMetadata(doc, targetUrl) {
+       return {};
+     }
 
-  findChapterContentRoot(doc) {
-    return doc.querySelector('.my-chapter-body');
-  }
-}
-```
+     collectChapterNodes(doc, targetUrl, _options, _context) {
+       return [];
+     }
 
-2. Register an instance inside `parserRegistry` in [src/parsers/index.js](src/parsers/index.js) **before** `genericHtmlParser`. The options dropdown in `workspace.html` populates automatically from `parserRegistry.list()`.
+     findChapterContentRoot(doc) {
+       return doc.querySelector('.my-chapter-body');
+     }
+   }
+   ```
 
-## Pull Request & Release Checklist
-
-- Run `npm run lint` and `npm test` cleanly (both must pass before opening a PR).
-- When running tests with `EPUBCheck` (`REQUIRE_EPUBCHECK=1 npm run test:epubcheck`) and Playwright E2E (`npm run test:e2e`), ensure all generated EPUB 2 and EPUB 3 files report 0 errors and 0 warnings.
-- Ensure all generated EPUB XML (`content.opf`, `toc.ncx`, `nav.xhtml`, chapter `.xhtml`) parses cleanly without XML errors.
-- Avoid inline `<script>` tags or inline event handlers in extension HTML (strict MV3 CSP).
-- Verify both light and dark color schemes render cleanly.
-- Before tagging a release (`v*`), verify:
-  1. All unit, regression, lint, and E2E tests are green in CI.
-  2. `EPUBCheck` passes with 0 errors/warnings on EPUB 2 and EPUB 3 outputs.
-  3. [manifest.json](manifest.json) `version` matches the release tag (`vX.Y.Z`) and [package.json](package.json) `version`.
-  4. [CHANGELOG.md](CHANGELOG.md) contains a `## [X.Y.Z]` section (used automatically by the release workflow to populate GitHub Release notes).
-  5. Generated release `.zip` contains only extension runtime/doc assets (`manifest.json`, `icons/`, `src/`, `LICENSE`, `README*.md`, `docs/`).
+2. **Register an instance** inside `parserRegistry` in [src/parsers/index.js](src/parsers/index.js) **before** `genericHtmlParser`. The parser dropdown in `workspace.html` populates automatically from `parserRegistry.list()`.
+3. **Add anonymized fixtures & regression snapshots:**
+   - Save anonymized HTML fixtures (using fictional domains like `example.org`) under `tests/fixtures/<adapter>-index.html` and `tests/fixtures/<adapter>-chapter.html`.
+   - Add expected metadata and chapter output (`url`, `displayTitle`, `volume`) to [tests/fixtures/snapshots.json](tests/fixtures/snapshots.json).
+   - Add a regression test in [tests/parsers.test.js](tests/parsers.test.js) and document the pattern in [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md) (remembering to respect the 4 compatibility tiers and never include real URLs or raw domain names).
+4. **Validate everything** with `npm run check` (and `npm run sync:website` if you updated `docs/COMPATIBILITY.md`).
 
 ## Automated Testing & Quality Checks
 
-The extension runtime has **zero npm dependencies and zero build steps** (`node --test` unit/regression tests and lint checks also run with zero `npm install` needed). Only the optional Chromium browser E2E test uses Playwright (`devDependencies`).
+The extension runtime has **zero npm dependencies and zero build steps** (`npm run lint`, `npm test`, and `npm run check` also run with zero `npm install` needed). Only the optional Chromium browser E2E test uses Playwright (`devDependencies`).
 
-1. **Lint, syntax, CSP, i18n, and formatting check:**
-   ```bash
-   npm run lint        # checks manifest, syntax, MV3 CSP, links, i18n/DOM parity, LF/whitespace
-   npm run lint:fix    # auto-fixes LF line endings and trailing whitespace
-   ```
-2. **Unit & parser regression tests (native `node:test`, zero dependencies):**
-   ```bash
-   npm test
-   ```
-   Covers [`HtmlSanitizer`](src/core/sanitizer.js), [`createZipBlob`](src/core/zip.js), [`ParserRegistry`](src/parsers/index.js) / [`BaseParser`](src/core/parser-engine.js), [`ExporterRegistry`](src/exporters/index.js), [`CacheStore`](src/core/cache-store.js), and HTML fixture snapshots in [tests/fixtures/](tests/fixtures/snapshots.json).
-3. **EPUBCheck validation (requires Java + `epubcheck` in `.tools/epubcheck` or `EPUBCHECK_JAR`):**
-   ```bash
-   REQUIRE_EPUBCHECK=1 npm run test:epubcheck
-   ```
-4. **End-to-End Chromium extension test (requires Playwright Chromium):**
-   ```bash
-   npm install
-   npx playwright install chromium
-   npm run test:e2e
-   ```
-   > **Note on Browser E2E Coverage:** Automated unpacked-extension E2E runs on Chromium via Playwright (`--load-extension`). Firefox MV3 manifest compatibility (`background.scripts` + `browser_specific_settings.gecko`) is statically verified by `npm run lint`, while interactive Firefox runtime testing is performed manually via `about:debugging#/runtime/this-firefox`.
-5. **Static Website & SEO Verification (zero dependencies):**
-   ```bash
-   node scripts/verify-website.mjs
-   ```
+| Command | Requirements | What It Validates |
+| :--- | :--- | :--- |
+| `npm run check` | Node.js only | Runs `npm run lint && npm test` (recommended before every commit/PR). |
+| `npm run lint` | Node.js only | Manifest/package parity, Firefox MV3 keys, JS syntax, MV3 CSP, EPUB media-type, relative Markdown links, PT/EN i18n key parity, DOM IDs, LF/whitespace hygiene, and `verify-website.mjs`. |
+| `npm run lint:fix` | Node.js only | Auto-fixes LF line endings and trailing whitespace. |
+| `npm test` | Node.js only | 58 native `node:test` unit & snapshot tests (`HtmlSanitizer`, `createZipBlob`, `ParserRegistry`, `ExporterRegistry`, `CacheStore`, `ImageProcessor`, `AdaptiveRateLimiter`, `TabRenderPool`, plus W3C EPUBCheck when available). |
+| `npm run sync:website` | Node.js only | Updates `website/` compatibility/preset tables and version strings from `docs/` and `manifest.json`. |
+| `REQUIRE_EPUBCHECK=1 npm run test:epubcheck` | Java 21+ & EPUBCheck (`.tools/epubcheck` or `EPUBCHECK_JAR`) | Strictly validates generated EPUB 2 & EPUB 3 outputs (0 errors, 0 warnings). |
+| `npm run test:e2e` | `npm install` + `npx playwright install chromium` | Loads the unpacked extension in headless Chromium and exercises series loading, selection, profiles, library updates, domains, settings I/O, downloads, and tab merging. |
 
-### Adding Parser Fixtures & Regression Snapshots
+> **Note on Browser Coverage:** Automated unpacked-extension E2E runs on Chromium via Playwright (`--load-extension`). Firefox MV3 manifest compatibility (`background.scripts` + `browser_specific_settings.gecko`) is statically verified by `npm run lint`, while interactive Firefox runtime testing is performed manually via `about:debugging#/runtime/this-firefox`.
 
-1. Save anonymized HTML fixtures (using fictional domains like `example.org`) under `tests/fixtures/<adapter>-index.html` and `tests/fixtures/<adapter>-chapter.html`.
-2. Add the expected metadata and ordered chapter list (`url`, `displayTitle`, `volume`) to [tests/fixtures/snapshots.json](tests/fixtures/snapshots.json).
-3. Add or update the corresponding regression test in [tests/parsers.test.js](tests/parsers.test.js) and reference the fixture in [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md).
+## Pull Request & Release Checklist
+
+- Run `npm run check` cleanly before opening a PR (both lint and unit/snapshot tests must pass).
+- If modifying UI strings or HTML, keep PT/EN parity in `src/workspace/locales/`, avoid inline `<script>` / `on*` handlers, and verify light, dark, sepia, and midnight themes render cleanly.
+- If modifying `docs/COMPATIBILITY.md`, `docs/READER_PRESETS*.md`, or `manifest.json` version, run `npm run sync:website`.
+- Before tagging a release (`v*`):
+  1. Verify all unit, regression, lint, EPUBCheck, and E2E tests are green in CI.
+  2. Ensure [manifest.json](manifest.json) `version` matches the release tag (`vX.Y.Z`) and [package.json](package.json) `version`.
+  3. Add a `## [X.Y.Z]` section in [CHANGELOG.md](CHANGELOG.md) (parsed automatically by [extract-release-notes.mjs](scripts/extract-release-notes.mjs) for GitHub Release notes).
+  4. Verify the release archive builds cleanly with `manifest.json`, `icons/`, `src/`, `LICENSE`, `README.md`, `README.pt.md`, and `docs/` (excluding `website/`, `tests/`, and `node_modules/`) plus its `.sha256` checksum.

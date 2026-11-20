@@ -6,11 +6,12 @@ on:
       - main
     paths:
       - "website/**"
-      - "docs/**"
+      - "docs/COMPATIBILITY.md"
+      - "docs/READER_PRESETS.md"
+      - "docs/READER_PRESETS.pt.md"
       - "manifest.json"
-      - "package.json"
-      - "CHANGELOG.md"
-      - "scripts/**"
+      - "scripts/sync-website.mjs"
+      - "scripts/verify-website.mjs"
       - ".github/workflows/pages.yml"
   release:
     types: [published, edited]
