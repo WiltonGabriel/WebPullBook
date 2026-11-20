@@ -1,6 +1,6 @@
 # Contributor Covenant Code of Conduct
 
-**English** | [Português](../docs/pt/CODE_OF_CONDUCT.pt.md)
+**English** | [Português](https://github.com/WiltonGabriel/WebPullBook/blob/main/docs/pt/CODE_OF_CONDUCT.pt.md)
 
 ## Our Pledge
 

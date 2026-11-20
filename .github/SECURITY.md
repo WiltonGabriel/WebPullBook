@@ -1,6 +1,6 @@
 # Security Policy
 
-**English** | [Português](../docs/pt/SECURITY.pt.md)
+**English** | [Português](https://github.com/WiltonGabriel/WebPullBook/blob/main/docs/pt/SECURITY.pt.md)
 
 ## Supported Versions
 
@@ -15,7 +15,7 @@ Only the latest released version of **WebPullBook** on the `main` branch receive
 
 **WebPullBook** is a Manifest V3 browser extension that runs locally inside the user's browser with no external backend servers:
 
-- **Untrusted HTML & XHTML Sanitization:** All extracted chapter HTML is treated as untrusted, sanitized via [`HtmlSanitizer`](../src/core/sanitizer.js), and serialized into strict XML/XHTML via [`serializeChapterXhtml`](../src/core/xhtml-serializer.js) before packaging EPUB or offline HTML files (`<script>`, `<iframe>`, `<object>`, `<embed>`, event attributes `on*`, and unsafe URIs are stripped).
+- **Untrusted HTML & XHTML Sanitization:** All extracted chapter HTML is treated as untrusted, sanitized via [`HtmlSanitizer`](https://github.com/WiltonGabriel/WebPullBook/blob/main/src/core/sanitizer.js), and serialized into strict XML/XHTML via [`serializeChapterXhtml`](https://github.com/WiltonGabriel/WebPullBook/blob/main/src/core/xhtml-serializer.js) before packaging EPUB or offline HTML files (`<script>`, `<iframe>`, `<object>`, `<embed>`, event attributes `on*`, and unsafe URIs are stripped).
 - **Strict Protocol & Redirect Validation:** Extracted chapter links, banner actions, cover previews, and SPA background tabs are validated via positive HTTP/HTTPS allowlists (`assertSafeHttpUrl`, `resolveSafeHttpUrl`, `sanitizeCoverPreviewUrl`, and `data:image/*` raster allowlists for local/generated covers), rejecting `javascript:`, `data:text/html`, `vbscript:`, and `file:` URIs.
 - **Manifest V3 CSP:** Extension UI pages (`src/workspace/workspace.html`) enforce Manifest V3 Content Security Policy with zero inline `<script>` tags or `on*` event handlers (enforced on every CI run by `scripts/check.mjs`).
 - **SPA & Anti-Bot Guardrails:** Background tab rendering (`TabRenderPool`) uses a per-domain circuit breaker and pauses automatically on Cloudflare/CAPTCHA challenges or HTTP 429 rate limits. WebPullBook never circumvents DRM, locked paywalls, or anti-bot challenges.
