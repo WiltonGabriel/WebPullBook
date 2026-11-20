@@ -1,0 +1,38 @@
+name: Compatibility Update
+description: Report a site you tested (working, partially working, or broken) to update the Compatibility Matrix
+labels: ["compatibility"]
+body:
+  - type: input
+    id: site_name
+    attributes:
+      label: Site Name & Domain
+      placeholder: e.g. Example Site (example.com)
+    validations:
+      required: true
+  - type: dropdown
+    id: status
+    attributes:
+      label: Test Result
+      options:
+        - Working
+        - Partially working
+        - Broken
+    validations:
+      required: true
+  - type: input
+    id: parser_used
+    attributes:
+      label: Parser / Adapter Used
+      placeholder: e.g. Generic HTML, Madara Theme, WP LightNovel
+    validations:
+      required: true
+  - type: input
+    id: tested_url
+    attributes:
+      label: Tested URL (optional)
+      placeholder: https://example.com/book/123
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes
+      description: Mention any quirks, missing metadata, image issues, or special settings needed.

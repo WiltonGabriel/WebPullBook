@@ -3,3 +3,6 @@ contact_links:
   - name: Compatibility Matrix
     url: https://github.com/WiltonGabriel/WebPullBook/blob/main/docs/COMPATIBILITY.md
     about: Check verified sites, supported layouts, and known limitations before opening an issue.
+  - name: Submit a Private Security Report
+    url: https://github.com/WiltonGabriel/WebPullBook/security/advisories/new
+    about: Open the private form directly to report a security vulnerability.
