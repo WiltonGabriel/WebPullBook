@@ -1,8 +1,9 @@
 import {
-  buildOutputPath,
+  AdaptiveRateLimiter,
+  TabRenderPool,
+  clearSpaDomainCircuit,
   downloadAndParseChapter,
-  extractVolumeNumber,
-  sleep
+  extractVolumeNumber
 } from '../core/parser-engine.js';
 import {
   cacheStore,
@@ -10,196 +11,21 @@ import {
   serializeNodesForCache
 } from '../core/cache-store.js';
 import { exporterRegistry } from '../exporters/index.js';
+import { resolveParserForChapterUrl } from '../parsers/index.js';
 import { $, getCacheKey, getCurrentSeriesKey, state, t } from './state.js';
 import { appendLog, hideBanner, renderExportReport, showBanner } from './logger.js';
-import {
-  checkCustomDirStatus,
-  clearSavedDirectoryHandle,
-  loadSavedDirectoryHandle,
-  persistDirectoryHandle,
-  readMetadataFromUi,
-  readOptionsFromUi,
-  saveOptions,
-  updatePathPreview,
-  updateSaveLocationUi
-} from './options-storage.js';
+import { readMetadataFromUi, readOptionsFromUi, saveOptions } from './options-storage.js';
 import { getChapterFromCaches, persistSessionSnapshot, renderChaptersTable } from './chapters-ui.js';
+import {
+  downloadBlobToChrome,
+  ensureCustomDirWritable,
+  formatOutputFilename,
+  handlePickSaveFolder,
+  handleUseDownloadsFolder,
+  saveBookOutput
+} from './download-storage.js';
 
-export function formatOutputFilename({ baseFilename, title, author, volumeLabel, suffix, extension = 'epub' }) {
-  return buildOutputPath({
-    baseFilename,
-    title,
-    author: author || t('authorUnknownPlaceholder'),
-    volumeLabel,
-    suffix,
-    extension,
-    language: state.metadata.language,
-    options: state.options
-  });
-}
-
-async function resolveUniqueFileNameInDir(dirHandle, filename) {
-  const dotIdx = filename.lastIndexOf('.');
-  const stem = dotIdx > 0 ? filename.slice(0, dotIdx) : filename;
-  const ext = dotIdx > 0 ? filename.slice(dotIdx) : '';
-
-  for (let attempt = 0; attempt < 50; attempt++) {
-    const candidate = attempt === 0 ? filename : `${stem} (${attempt})${ext}`;
-    try {
-      await dirHandle.getFileHandle(candidate, { create: false });
-    } catch (err) {
-      if (err?.name === 'NotFoundError') {
-        return candidate;
-      }
-      return filename;
-    }
-  }
-  return `${stem} (${Date.now()})${ext}`;
-}
-
-async function writeBlobToDirectoryHandle(rootHandle, relativePath, blob) {
-  const parts = String(relativePath || '').split('/').filter(Boolean);
-  const rawName = parts.pop() || 'webpullbook-ebook.epub';
-  let dir = rootHandle;
-  for (const seg of parts) {
-    dir = await dir.getDirectoryHandle(seg, { create: true });
-  }
-  const uniqueName = await resolveUniqueFileNameInDir(dir, rawName);
-  const fileHandle = await dir.getFileHandle(uniqueName, { create: true });
-  const writable = await fileHandle.createWritable();
-  await writable.write(blob);
-  await writable.close();
-  return parts.length > 0 ? `${parts.join('/')}/${uniqueName}` : uniqueName;
-}
-
-async function ensureCustomDirWritable() {
-  if (state.options.saveTargetMode !== 'custom-dir') {
-    return null;
-  }
-  if (!state.customDirHandle) {
-    state.customDirHandle = await loadSavedDirectoryHandle();
-  }
-  if (!state.customDirHandle) {
-    await checkCustomDirStatus();
-    updateSaveLocationUi();
-    return null;
-  }
-  try {
-    let perm = await checkCustomDirStatus();
-    if (perm !== 'granted' && typeof state.customDirHandle.requestPermission === 'function') {
-      perm = await state.customDirHandle.requestPermission({ mode: 'readwrite' });
-      state.customDirPermission = perm;
-    }
-    updateSaveLocationUi();
-    if (perm === 'granted') {
-      return state.customDirHandle;
-    }
-  } catch (err) {
-    appendLog(`Permissão de pasta local falhou: ${err.message}`, 'warn');
-  }
-  const folderLabel = state.customDirHandle?.name || state.options.customDirName || 'WebPullBook';
-  appendLog(t('msgCustomFolderFallback', { name: folderLabel }), 'warn');
-  showBanner(t('msgCustomFolderFallback', { name: folderLabel }), 'info');
-  return null;
-}
-
-async function saveBookOutput(blob, relativePath, activeDirHandle = null) {
-  if (activeDirHandle) {
-    try {
-      const writtenPath = await writeBlobToDirectoryHandle(activeDirHandle, relativePath, blob);
-      return `${activeDirHandle.name}/${writtenPath}`;
-    } catch (err) {
-      appendLog(`Falha ao gravar na pasta personalizada (${err.message}); usando Downloads.`, 'warn');
-    }
-  }
-  await downloadBlobToChrome(blob, relativePath);
-  return `Downloads/${relativePath}`;
-}
-
-export async function handlePickSaveFolder() {
-  if (typeof window.showDirectoryPicker !== 'function') {
-    showBanner(t('saveTargetUnsupported'), 'error');
-    return;
-  }
-  try {
-    const handle = await window.showDirectoryPicker({
-      id: 'webpullbook-output',
-      mode: 'readwrite'
-    });
-    state.customDirHandle = handle;
-    state.customDirPermission = 'granted';
-    state.options.saveTargetMode = 'custom-dir';
-    state.options.customDirName = handle.name;
-    await persistDirectoryHandle(handle);
-    await saveOptions();
-    updateSaveLocationUi();
-    updatePathPreview();
-    showBanner(t('msgCustomFolderSaved', { name: handle.name }), 'success');
-  } catch (err) {
-    if (err?.name !== 'AbortError') {
-      showBanner(err.message, 'error');
-    }
-  }
-}
-
-export async function handleUseDownloadsFolder() {
-  state.options.saveTargetMode = 'downloads';
-  state.options.customDirName = '';
-  await clearSavedDirectoryHandle();
-  await saveOptions();
-  updateSaveLocationUi();
-  updatePathPreview();
-  showBanner(t('msgCustomFolderCleared'), 'info');
-}
-
-export async function downloadBlobToChrome(blob, filename) {
-  const url = URL.createObjectURL(blob);
-  try {
-    if (chrome?.downloads?.download) {
-      const downloadId = await chrome.downloads.download({
-        url,
-        filename,
-        saveAs: !state.options.noSaveAs,
-        conflictAction: 'uniquify'
-      });
-      await new Promise((resolve) => {
-        let done = false;
-        const finish = () => {
-          if (done) return;
-          done = true;
-          clearTimeout(timer);
-          chrome.downloads.onChanged.removeListener(listener);
-          resolve();
-        };
-        const listener = (delta) => {
-          if (
-            delta.id === downloadId &&
-            delta.state &&
-            (delta.state.current === 'complete' || delta.state.current === 'interrupted')
-          ) {
-            finish();
-          }
-        };
-        chrome.downloads.onChanged.addListener(listener);
-        const timer = setTimeout(finish, 3000);
-        if (chrome.downloads.search) {
-          chrome.downloads.search({ id: downloadId }).then((items) => {
-            if (items?.[0]?.state === 'complete' || items?.[0]?.state === 'interrupted') {
-              finish();
-            }
-          }).catch(() => {});
-        }
-      });
-    } else {
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename.split('/').pop();
-      a.click();
-    }
-  } finally {
-    setTimeout(() => URL.revokeObjectURL(url), 5000);
-  }
-}
+export { downloadBlobToChrome, formatOutputFilename, handlePickSaveFolder, handleUseDownloadsFolder };
 
 export async function waitWhilePaused(signal) {
   let announcedPause = false;
@@ -218,39 +44,28 @@ export async function waitWhilePaused(signal) {
   }
 }
 
-async function enforceSafeThrottle(networkTimestamps, networkFetchCount, signal) {
+async function enforceSafeThrottle(rateLimiter, networkFetchCount, signal) {
   readOptionsFromUi();
-  const effectiveBaseDelay = Math.max(
-    state.options.delayMs || 0,
-    state.activeParser?.minDelayMs || 0
-  );
-  if (!state.options.safeMode) {
-    if (effectiveBaseDelay > 0) {
-      await sleep(effectiveBaseDelay, signal);
+  const plan = rateLimiter.computeNextWait({
+    safeMode: Boolean(state.options.safeMode),
+    baseDelayMs: state.options.delayMs || 0,
+    minParserDelayMs: state.activeParser?.minDelayMs || 0,
+    safeRpm: state.options.safeRpm || 22,
+    safeBatchSize: state.options.safeBatchSize ?? 25,
+    networkFetchCount
+  });
+  if (!plan.waitMs || plan.waitMs <= 0) return;
+
+  if (plan.label) {
+    $('progress-detail').textContent = plan.label;
+    if (plan.reason === 'batch-rest' || plan.reason === 'rpm-window' || plan.reason === 'retry-after') {
+      appendLog(`[SAFE] ${plan.label}`, 'debug');
     }
-    return;
   }
-
-  const batchN = state.options.safeBatchSize ?? 25;
-  if (batchN > 0 && networkFetchCount > 0 && networkFetchCount % batchN === 0) {
-    $('progress-detail').textContent = `Modo Seguro: pausa curta de respiro (10s)...`;
-    await sleep(10000, signal);
-  }
-
-  const minDelay = Math.max(effectiveBaseDelay, 1800);
-  const jittered = minDelay + Math.round(Math.random() * 1400);
-  await sleep(jittered, signal);
-
-  const maxRpm = Math.max(5, state.options.safeRpm || 22);
-  const now = Date.now();
-  while (networkTimestamps.length > 0 && now - networkTimestamps[0] >= 60000) {
-    networkTimestamps.shift();
-  }
-  if (networkTimestamps.length >= maxRpm) {
-    const waitMs = Math.max(500, 60500 - (now - networkTimestamps[0]));
-    $('progress-detail').textContent = `Modo Seguro: aguardando janela RPM (${Math.ceil(waitMs / 1000)}s)...`;
-    await sleep(waitMs, signal);
-  }
+  await rateLimiter.waitCooperatively(plan.waitMs, {
+    isSafeModeActive: () => Boolean(state.options.safeMode),
+    signal
+  });
 }
 
 export async function handlePackEpub(arg = {}) {
@@ -344,7 +159,7 @@ export async function handlePackEpub(arg = {}) {
   let networkFetchCount = 0;
   let cacheHits = 0;
   const packStartedAt = Date.now();
-  const networkTimestamps = [];
+  const rateLimiter = new AdaptiveRateLimiter();
   const allPackagedChapters = [];
   const chapterErrors = [];
   const imageWarnings = [];
@@ -352,24 +167,34 @@ export async function handlePackEpub(arg = {}) {
   const extUpper = exporter.extension.toUpperCase();
   const seriesKey = getCurrentSeriesKey();
 
-  for (const ch of selected) {
+  const nextPrevMap = new Map();
+  for (let idx = 0; idx < selected.length; idx++) {
+    const ch = selected[idx];
     ch.warnings = [];
     if (ch.status === 'error') {
       ch.logId = '';
     }
+    const adjacent = [];
+    if (idx > 0 && selected[idx - 1]?.url) adjacent.push(selected[idx - 1].url);
+    if (idx < selected.length - 1 && selected[idx + 1]?.url) adjacent.push(selected[idx + 1].url);
+    nextPrevMap.set(ch, adjacent);
   }
 
+  const tabPool = new TabRenderPool();
+
   try {
-    const batchWidth = state.options.safeMode
-      ? 1
-      : Math.max(1, Math.min(6, Number(state.options.concurrency) || 1));
+    const initialBatchWidth = rateLimiter.getEffectiveBatchWidth({
+      safeMode: Boolean(state.options.safeMode),
+      requiresTab: Boolean(state.seriesRequiresTab || state.options.renderWithTab),
+      configuredConcurrency: state.options.concurrency
+    });
 
     appendLog(
-      `[CFG] Exportação ${exporter.name} (${extUpper}) | epub3=${Boolean(state.options.createEpub3)}, popupNotes=${state.options.popupFootnotes !== false}, compressImgs=${Boolean(state.options.compressImages)}, skipImgs=${Boolean(state.options.skipImages)}, spa=${Boolean(state.seriesRequiresTab || state.options.renderWithTab)}, safeMode=${Boolean(state.options.safeMode)}, concorrência=${batchWidth}x, destino=${activeDirHandle ? activeDirHandle.name : 'Downloads'}`,
+      `[CFG] Exportação ${exporter.name} (${extUpper}) | epub3=${Boolean(state.options.createEpub3)}, popupNotes=${state.options.popupFootnotes !== false}, compressImgs=${Boolean(state.options.compressImages)}, skipImgs=${Boolean(state.options.skipImages)}, spa=${Boolean(state.seriesRequiresTab || state.options.renderWithTab)}, safeMode=${Boolean(state.options.safeMode)}, concorrência=${initialBatchWidth}x, destino=${activeDirHandle ? activeDirHandle.name : 'Downloads'}`,
       'debug'
     );
     appendLog(
-      `Iniciando exportação (${exporter.name}): ${jobs.length} arquivo(s) ${extUpper}, ${totalChaptersAll} capítulos no total${state.options.safeMode ? ' [Modo Seguro]' : batchWidth > 1 ? ` [${batchWidth}x paralelo]` : ''}.`
+      `Iniciando exportação (${exporter.name}): ${jobs.length} arquivo(s) ${extUpper}, ${totalChaptersAll} capítulos no total${state.options.safeMode ? ' [Modo Seguro adaptativo]' : initialBatchWidth > 1 ? ` [${initialBatchWidth}x paralelo]` : ''}.`
     );
 
     const processSingleChapterFetch = async (ch) => {
@@ -386,13 +211,25 @@ export async function handlePackEpub(arg = {}) {
       ch.status = 'downloading';
       renderChaptersTable();
 
+      const fetchStartedAt = Date.now();
       try {
-        networkTimestamps.push(Date.now());
-        const chapterFetchOptions = state.seriesRequiresTab
-          ? { ...state.options, renderWithTab: true, onLog: appendLog }
-          : { ...state.options, onLog: appendLog };
-        const parsed = await downloadAndParseChapter(ch, state.activeParser, chapterFetchOptions, signal);
+        const chapterParser = resolveParserForChapterUrl(
+          ch.url,
+          state.activeParser,
+          state.options.parserId,
+          state.metadata.startingUrl
+        );
+        const chapterFetchOptions = {
+          ...state.options,
+          ...(state.seriesRequiresTab ? { renderWithTab: true } : {}),
+          pageDomCache: state.pageDomCache,
+          tabPool,
+          nextPrevUrls: nextPrevMap.get(ch) || [],
+          onLog: appendLog
+        };
+        const parsed = await downloadAndParseChapter(ch, chapterParser, chapterFetchOptions, signal);
         networkFetchCount++;
+        rateLimiter.recordSuccess(Date.now() - fetchStartedAt);
 
         const cacheRec = {
           chapterTitle: parsed.chapterTitle,
@@ -417,6 +254,7 @@ export async function handlePackEpub(arg = {}) {
       } catch (err) {
         if (err.name === 'AbortError') throw err;
         if ((err.isRateLimit || err.isAntiBotChallenge) && state.options.autoPauseOnRateLimit !== false) {
+          rateLimiter.recordThrottle({ retryAfterSec: err.retryAfterSec });
           ch.status = 'error';
           ch.errorMsg = err.message;
           ch.logId = appendLog(
@@ -431,7 +269,7 @@ export async function handlePackEpub(arg = {}) {
             fromNetwork: true,
             pauseTrigger: err.isAntiBotChallenge
               ? { kind: 'antibot', url: ch.url }
-              : { kind: 'ratelimit', status: err.status || 429 }
+              : { kind: 'ratelimit', status: err.status || 429, url: ch.url }
           };
         }
         if (err.status === 404 && state.options.skip404) {
@@ -439,6 +277,9 @@ export async function handlePackEpub(arg = {}) {
           ch.errorMsg = 'HTTP 404';
           ch.logId = appendLog(`404 pulado: ${ch.url}`, 'warn');
           return { kind: 'skipped', ch, fromNetwork: true };
+        }
+        if (!err.status || err.status >= 500) {
+          rateLimiter.recordThrottle();
         }
         ch.status = 'error';
         ch.errorMsg = err.message;
@@ -465,8 +306,13 @@ export async function handlePackEpub(arg = {}) {
         await waitWhilePaused(signal);
         if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
 
+        const waveWidth = rateLimiter.getEffectiveBatchWidth({
+          safeMode: Boolean(state.options.safeMode),
+          requiresTab: Boolean(state.seriesRequiresTab || state.options.renderWithTab),
+          configuredConcurrency: state.options.concurrency
+        });
         const waveStart = c;
-        const wave = job.chapters.slice(c, c + batchWidth);
+        const wave = job.chapters.slice(c, c + waveWidth);
         const firstCh = wave[0];
         $('progress-label').textContent = `(${j + 1}/${jobs.length}) ${job.volumeLabel || extUpper}`;
         $('progress-detail').textContent = `${firstCh.displayTitle} (${completedGlobal + 1}/${totalChaptersAll})`;
@@ -485,17 +331,21 @@ export async function handlePackEpub(arg = {}) {
             pausedAtOffset = k;
             renderChaptersTable();
             await persistSessionSnapshot();
-            networkTimestamps.length = 0;
+            rateLimiter.timestamps.length = 0;
             state.paused = true;
             $('btn-pause').textContent = t('btnResume');
             showBanner(
               res.pauseTrigger.kind === 'antibot'
                 ? t('msgAntiBotPaused', { url: res.pauseTrigger.url })
                 : t('msgRateLimitPaused', { status: res.pauseTrigger.status }),
-              'error'
+              'error',
+              res.pauseTrigger.url
+                ? { label: t('btnOpenVerifyPage'), url: res.pauseTrigger.url }
+                : null
             );
             await state.onCacheChanged?.();
             await waitWhilePaused(signal);
+            clearSpaDomainCircuit(res.pauseTrigger.url);
             hideBanner();
             break;
           }
@@ -517,7 +367,7 @@ export async function handlePackEpub(arg = {}) {
         }
         c += wave.length;
         if (waveHadNetwork && completedGlobal < totalChaptersAll) {
-          await enforceSafeThrottle(networkTimestamps, networkFetchCount, signal);
+          await enforceSafeThrottle(rateLimiter, networkFetchCount, signal);
         }
       }
 
@@ -616,6 +466,7 @@ export async function handlePackEpub(arg = {}) {
       showBanner(`Erro: ${err.message}`, 'error');
     }
   } finally {
+    await tabPool.close();
     state.running = false;
     $('btn-pack-epub').disabled = false;
     if (!state.batchRunning) {

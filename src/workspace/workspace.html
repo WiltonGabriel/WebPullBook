@@ -112,11 +112,11 @@
                 <option value="kindle-modern" data-i18n="presetKindleModern">Kindle (Moderno)</option>
                 <option value="kindle" data-i18n="presetKindle">Kindle (Antigo)</option>
                 <option value="textonly" data-i18n="presetTextOnly">Somente Texto</option>
+                <option value="legacy" data-i18n="presetLegacy" data-i18n-title="presetLegacyTitle" title="Recomendado apenas para aparelhos antigos ou leitores que não abrem livros modernos">Padrão Antigo</option>
                 <option value="custom" data-i18n="presetCustom">Personalizado</option>
-                <option value="legacy" data-i18n="presetLegacy" data-i18n-title="presetLegacyTitle" title="Recomendado apenas para aparelhos antigos ou leitores que não abrem livros modernos">⚠️ Padrão Antigo</option>
               </select>
               <p id="legacy-preset-warning" class="inline-warn-note hidden" role="note" data-i18n="presetLegacyWarning">
-                ⚠️ Atenção: Padrão Antigo gera EPUB 2 clássico (sem navegação moderna nav.xhtml e com recursos HTML5/CSS3 limitados). Use apenas em aparelhos antigos ou leitores que não abrem EPUB 3.
+                ⚠️ Gera EPUB 2 clássico (recursos modernos limitados). Use apenas em leitores antigos.
               </p>
             </div>
 
@@ -152,9 +152,17 @@
               <input type="checkbox" id="opt-safe-mode-quick">
               <span>
                 <strong data-i18n="safeModeQuickTitle">Modo Seguro</strong>
-                <small data-i18n="safeModeQuickDesc">Limita o ritmo (~22 págs/min) com pausa curta entre lotes. Ative e desative quando quiser.</small>
+                <small data-i18n="safeModeQuickDesc">Adapta o ritmo à saúde do servidor (1x sequencial, pausas naturais e Retry-After). Ative ou desative ao vivo.</small>
               </span>
             </label>
+
+            <div class="quick-delay-card">
+              <div class="quick-delay-head">
+                <label for="opt-delay-quick" data-i18n="labelQuickDelay">Latência entre capítulos (ms)</label>
+                <input id="opt-delay-quick" type="number" min="0" max="30000" step="100" value="350">
+              </div>
+              <small data-i18n="quickDelayHint">Funciona mesmo sem Modo Seguro (0 = sem espera, 1000 = 1s). Pode ajustar ao vivo.</small>
+            </div>
 
             <div class="pack-actions">
               <button type="button" id="btn-pack-epub" class="btn primary lg" disabled data-i18n="btnPackEpub">Empacotar EPUB</button>
@@ -317,7 +325,27 @@
 
     <!-- TAB 2: LIBRARY & CACHE -->
     <section id="tab-library" class="tab-panel hidden" role="tabpanel" aria-labelledby="tab-btn-library" hidden>
-      <section class="card">
+      <section class="card lib-toolbar-card">
+        <div class="card-header">
+          <div>
+            <h2 data-i18n="libraryOrgHeading">Organização da Biblioteca &amp; Histórico</h2>
+            <p class="muted sm mt-xs" data-i18n="libraryOrgSub">
+              Escolha entre unificar obras e históricos de todos os sites (mantendo o selo de origem) ou separar tudo por site.
+            </p>
+          </div>
+          <div class="row-gap">
+            <select id="opt-library-view-mode" class="lang-select" aria-label="Modo de organização da biblioteca">
+              <option value="unified" data-i18n="libraryViewUnified">Unificado (todos os sites)</option>
+              <option value="by-site" data-i18n="libraryViewBySite">Separado por site</option>
+            </select>
+            <select id="library-site-filter" class="lang-select" aria-label="Filtrar por site">
+              <option value="all" data-i18n="libraryFilterAllSites">Todos os sites</option>
+            </select>
+          </div>
+        </div>
+      </section>
+
+      <section class="card mt-md">
         <div class="card-header">
           <div>
             <h2 data-i18n="cacheSessionsHeading">Downloads Recentes &amp; Cache Local</h2>
@@ -377,11 +405,11 @@
                 <option value="kindle-modern" data-i18n="presetKindleModern">Kindle (Moderno)</option>
                 <option value="kindle" data-i18n="presetKindle">Kindle (Antigo)</option>
                 <option value="textonly" data-i18n="presetTextOnly">Somente Texto</option>
+                <option value="legacy" data-i18n="presetLegacy" data-i18n-title="presetLegacyTitle" title="Recomendado apenas para aparelhos antigos ou leitores que não abrem livros modernos">Padrão Antigo</option>
                 <option value="custom" data-i18n="presetCustom">Personalizado</option>
-                <option value="legacy" data-i18n="presetLegacy" data-i18n-title="presetLegacyTitle" title="Recomendado apenas para aparelhos antigos ou leitores que não abrem livros modernos">⚠️ Padrão Antigo</option>
               </select>
               <p id="adv-legacy-preset-warning" class="inline-warn-note hidden" role="note" data-i18n="presetLegacyWarning">
-                ⚠️ Atenção: Padrão Antigo gera EPUB 2 clássico (sem navegação moderna nav.xhtml e com recursos HTML5/CSS3 limitados). Use apenas em aparelhos antigos ou leitores que não abrem EPUB 3.
+                ⚠️ Gera EPUB 2 clássico (recursos modernos limitados). Use apenas em leitores antigos.
               </p>
             </div>
           </div>
@@ -464,10 +492,57 @@
               <span data-i18n="optAddInfo">Adicionar página de Informações (Metadados &amp; Sinopse)</span>
             </label>
             <label class="checkbox-row">
+              <input type="checkbox" id="opt-include-toc" checked>
+              <span data-i18n="optIncludeToc">Incluir página de Índice / Sumário no livro</span>
+            </label>
+            <label class="checkbox-row">
               <input type="checkbox" id="opt-remove-nav" checked>
               <span data-i18n="optRemoveNav">Remover links de Próximo / Capítulo Anterior do texto</span>
             </label>
           </div>
+
+          <details class="more-meta mt-sm">
+            <summary data-i18n="summaryFrontMatter">Personalizar Índice e Página de Informações</summary>
+            <div class="form-grid mt-sm">
+              <div class="field">
+                <label for="opt-toc-position" data-i18n="labelTocPosition">Posição do Índice no livro</label>
+                <select id="opt-toc-position">
+                  <option value="start" data-i18n="tocPosStart">Início do livro (antes do Cap. 1)</option>
+                  <option value="end" data-i18n="tocPosEnd">Final do livro (após os capítulos)</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="opt-toc-title" data-i18n="labelTocTitle">Título do Índice / Sumário</label>
+                <input id="opt-toc-title" type="text" data-i18n-placeholder="placeholderTocTitle" placeholder="Padrão: Sumário / Table of Contents">
+              </div>
+              <div class="field span-2">
+                <label for="opt-info-title" data-i18n="labelInfoTitle">Título da Página de Informações (vazio = título da obra)</label>
+                <input id="opt-info-title" type="text" data-i18n-placeholder="placeholderInfoTitle" placeholder="Ex.: Ficha Técnica (ou vazio para usar o título da obra)">
+              </div>
+            </div>
+            <div class="checks-col mt-sm">
+              <label class="checkbox-row">
+                <input type="checkbox" id="opt-info-show-title" checked>
+                <span data-i18n="optInfoShowTitle">Exibir título na página de Informações</span>
+              </label>
+              <label class="checkbox-row">
+                <input type="checkbox" id="opt-info-show-author" checked>
+                <span data-i18n="optInfoShowAuthor">Exibir autor, idioma e contagem de capítulos</span>
+              </label>
+              <label class="checkbox-row">
+                <input type="checkbox" id="opt-info-show-genres" checked>
+                <span data-i18n="optInfoShowGenres">Exibir gêneros / tags</span>
+              </label>
+              <label class="checkbox-row">
+                <input type="checkbox" id="opt-info-show-source" checked>
+                <span data-i18n="optInfoShowSource">Exibir link da fonte original</span>
+              </label>
+              <label class="checkbox-row">
+                <input type="checkbox" id="opt-info-show-synopsis" checked>
+                <span data-i18n="optInfoShowSynopsis">Exibir sinopse</span>
+              </label>
+            </div>
+          </details>
         </section>
 
         <section class="card">
@@ -536,7 +611,7 @@
           <div class="form-grid mt-sm">
             <div class="field">
               <label for="opt-delay" data-i18n="labelDelay">Delay entre capítulos (ms)</label>
-              <input id="opt-delay" type="number" min="0" max="10000" step="50" value="350">
+              <input id="opt-delay" type="number" min="0" max="30000" step="50" value="350">
             </div>
             <div class="field">
               <label for="opt-retries" data-i18n="labelMaxRetries">Retentativas automáticas (HTTP 5xx/rede)</label>
@@ -928,6 +1003,14 @@
       </form>
     </div>
   </dialog>
+
+  <div id="loading-overlay" class="loading-overlay hidden" role="status" aria-live="polite" aria-busy="false">
+    <div class="loading-card">
+      <div class="loading-spinner" aria-hidden="true"></div>
+      <strong id="loading-overlay-title" data-i18n="loadingOverlayTitle">Buscando conteúdo da obra...</strong>
+      <p id="loading-overlay-detail" class="muted sm" data-i18n="loadingOverlayDetail">Analisando a página e localizando capítulos...</p>
+    </div>
+  </div>
 
   <script type="module" src="workspace.js"></script>
 </body>

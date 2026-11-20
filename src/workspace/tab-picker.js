@@ -3,11 +3,8 @@ import { genericHtmlParser } from '../parsers/generic-html.js';
 import { $, normalizeRuleDomain, state, t } from './state.js';
 import { appendLog, hideBanner, showBanner } from './logger.js';
 import { readOptionsFromUi, saveOptions, syncMetadataToUi } from './options-storage.js';
-import {
-  openChapterPreviewForTarget,
-  populateRangeSelects,
-  renderAllChapterViews
-} from './chapters-ui.js';
+import { populateRangeSelects, renderAllChapterViews } from './chapters-ui.js';
+import { openChapterPreviewForTarget } from './chapter-modals.js';
 
 let mergeCandidates = [];
 

@@ -1,4 +1,4 @@
-import { DEFAULT_EPUB_CSS, normalizeUrl, sanitizeFilename } from '../core/parser-engine.js';
+import { DEFAULT_EPUB_CSS, PageDomCache, normalizeUrl, sanitizeFilename } from '../core/parser-engine.js';
 import { DEFAULT_CACHE_TTL_DAYS } from '../core/cache-store.js';
 import { genericHtmlParser } from '../parsers/generic-html.js';
 import { translate } from './i18n.js';
@@ -7,6 +7,7 @@ export const DEFAULT_OPTIONS = {
   uiLang: 'pt',
   theme: 'system',
   readerPreset: 'modern',
+  libraryViewMode: 'unified',
   outputFormat: 'epub',
   saveTargetMode: 'downloads',
   customDirName: '',
@@ -19,6 +20,15 @@ export const DEFAULT_OPTIONS = {
   createEpub3: true,
   popupFootnotes: true,
   addInfoPage: true,
+  infoPageTitle: '',
+  infoShowTitle: true,
+  infoShowAuthor: true,
+  infoShowGenres: true,
+  infoShowSource: true,
+  infoShowSynopsis: true,
+  includeTocPage: true,
+  tocPosition: 'start',
+  tocTitle: '',
   removeNavLinks: true,
   parserId: 'auto',
   customListSelector: '',
@@ -139,14 +149,15 @@ export const state = {
   seriesRequiresTab: false,
   chapters: [],
   chapterCache: new Map(),
+  pageDomCache: new PageDomCache(),
   library: [],
   domainRules: {},
   appliedRuleDomain: '',
   autoFilledSelectors: null,
-  autoSpaDomain: '',
   customDirHandle: null,
   customDirPermission: 'none',
   options: { ...DEFAULT_OPTIONS },
+  librarySiteFilter: 'all',
   volumeFilter: null,
   showUrls: false,
   lastClickedIdx: -1,
@@ -162,7 +173,8 @@ export const state = {
   logFilter: 'all',
   lastReport: null,
   onCacheChanged: null,
-  onLibraryUpdateAfterExport: null
+  onLibraryUpdateAfterExport: null,
+  onOpenChapterPreview: null
 };
 
 export const $ = (id) => document.getElementById(id);
@@ -201,6 +213,11 @@ export function normalizeRuleDomain(rawUrl) {
   } catch {
     return '';
   }
+}
+
+export function getOriginDomain(rawUrl) {
+  const host = normalizeRuleDomain(rawUrl);
+  return host || 'local';
 }
 
 export function getCacheKey(chapterUrl) {

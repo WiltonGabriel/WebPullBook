@@ -3,11 +3,32 @@ import { loadSeriesWithParser } from '../parsers/index.js';
 import { genericHtmlParser } from '../parsers/generic-html.js';
 import { $, normalizeRuleDomain, state, t } from './state.js';
 import { appendLog, hideBanner, showBanner } from './logger.js';
-import { applyDomainRuleForUrl, readOptionsFromUi, saveOptions, syncMetadataToUi } from './options-storage.js';
+import { readOptionsFromUi, saveOptions, syncMetadataToUi } from './options-storage.js';
+import { applyDomainRuleForUrl } from './domain-rules-ui.js';
 import { getVolumeGroups, hydrateChaptersFromCache, populateRangeSelects, renderAllChapterViews } from './chapters-ui.js';
 
-export async function handleLoadSeries(url) {
+export function setLoadingOverlay(visible, detailText = '') {
+  const overlay = $('loading-overlay');
+  if (!visible) {
+    delete document.documentElement.dataset.initialLoading;
+  }
+  if (!overlay) return;
+  const titleEl = $('loading-overlay-title');
+  const detailEl = $('loading-overlay-detail');
+  if (visible) {
+    if (titleEl) titleEl.textContent = t('loadingOverlayTitle');
+    if (detailEl) detailEl.textContent = detailText || t('loadingOverlayDetail');
+    overlay.classList.remove('hidden');
+    overlay.setAttribute('aria-busy', 'true');
+  } else {
+    overlay.classList.add('hidden');
+    overlay.setAttribute('aria-busy', 'false');
+  }
+}
+
+export async function handleLoadSeries(url, { sourceTabId = null } = {}) {
   hideBanner();
+  setLoadingOverlay(true, url);
   const loadStartedAt = Date.now();
   const currentDomain = normalizeRuleDomain(url);
   if (state.autoFilledSelectors && state.autoFilledSelectors.domain !== currentDomain) {
@@ -16,12 +37,6 @@ export async function handleLoadSeries(url) {
     if ($('opt-content-selector').value === prevAuto.contentSelector) $('opt-content-selector').value = '';
     if ($('opt-exclude-selector').value === prevAuto.excludeSelector) $('opt-exclude-selector').value = '';
     state.autoFilledSelectors = null;
-  }
-  if (state.autoSpaDomain && state.autoSpaDomain !== currentDomain) {
-    if (!state.domainRules[currentDomain]?.renderWithTab) {
-      $('opt-render-with-tab').checked = false;
-    }
-    state.autoSpaDomain = '';
   }
 
   applyDomainRuleForUrl(url);
@@ -38,16 +53,21 @@ export async function handleLoadSeries(url) {
   try {
     const { parser, series, initialDoc, usedAutoSpa } = await loadSeriesWithParser(url, {
       ...state.options,
+      sourceTabId,
       onLog: appendLog
     });
     state.activeParser = parser;
     state.seriesRequiresTab = Boolean(series.requiresTabRender || usedAutoSpa);
+    state.pageDomCache.clear();
+    if (initialDoc) {
+      state.pageDomCache.set(url, initialDoc);
+    }
 
     if (usedAutoSpa && !state.options.renderWithTab) {
-      $('opt-render-with-tab').checked = true;
-      state.autoSpaDomain = currentDomain;
-      readOptionsFromUi();
-      appendLog('[SPA] Modo SPA / JavaScript ativado automaticamente após detecção da página.', 'info');
+      appendLog(
+        '[SPA] Captura via aba usada automaticamente apenas para esta obra (opção global de Modo SPA preservada).',
+        'info'
+      );
     }
 
     if (parser.id === 'generic-html' && !state.appliedRuleDomain && initialDoc) {
@@ -146,8 +166,13 @@ export async function handleLoadSeries(url) {
     }
   } catch (err) {
     appendLog(`ERRO ao carregar obra (${url}): ${err.message}`, 'error');
-    showBanner(t('msgLoadError', { error: err.message }), 'error');
+    showBanner(
+      t('msgLoadError', { error: err.message }),
+      'error',
+      err.isAntiBotChallenge ? { label: t('btnOpenVerifyPage'), url } : null
+    );
   } finally {
+    setLoadingOverlay(false);
     btn.disabled = false;
     btn.textContent = t('btnLoadSeries');
   }

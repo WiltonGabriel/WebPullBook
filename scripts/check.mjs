@@ -111,25 +111,25 @@ console.log(`[OK] Markdown relative links (${mdFiles.length} files)`);
 
 // 6. i18n and DOM ID consistency check
 try {
-  const i18nSrc = fs.readFileSync(path.join('src', 'workspace', 'i18n.js'), 'utf8');
-  const ptMatch = i18nSrc.match(/\n  pt:\s*\{([\s\S]*?)\n  \},\n  en:\s*\{([\s\S]*?)\n  \}\n\};/);
-  if (!ptMatch) {
-    fail('Could not parse pt/en dictionaries in src/workspace/i18n.js');
+  const ptSrc = fs.readFileSync(path.join('src', 'workspace', 'locales', 'pt.js'), 'utf8');
+  const enSrc = fs.readFileSync(path.join('src', 'workspace', 'locales', 'en.js'), 'utf8');
+  const extractKeys = (src) => [...src.matchAll(/^  ([A-Za-z0-9_]+)\s*:/gm)].map((m) => m[1]);
+  const ptList = extractKeys(ptSrc);
+  const enList = extractKeys(enSrc);
+  if (ptList.length === 0 || enList.length === 0) {
+    fail('Could not parse pt/en dictionaries in src/workspace/locales/');
   } else {
-    const extractKeys = (block) => [...block.matchAll(/^\s{4}([A-Za-z0-9_]+)\s*:/gm)].map((m) => m[1]);
-    const ptList = extractKeys(ptMatch[1]);
-    const enList = extractKeys(ptMatch[2]);
     const findDupes = (arr) => arr.filter((k, i) => arr.indexOf(k) !== i);
     const ptDupes = findDupes(ptList);
     const enDupes = findDupes(enList);
-    if (ptDupes.length) fail(`i18n.js duplicate keys in pt: ${ptDupes.join(', ')}`);
-    if (enDupes.length) fail(`i18n.js duplicate keys in en: ${enDupes.join(', ')}`);
+    if (ptDupes.length) fail(`locales/pt.js duplicate keys: ${ptDupes.join(', ')}`);
+    if (enDupes.length) fail(`locales/en.js duplicate keys: ${enDupes.join(', ')}`);
     const ptKeys = new Set(ptList);
     const enKeys = new Set(enList);
     const missingInEn = [...ptKeys].filter((k) => !enKeys.has(k));
     const missingInPt = [...enKeys].filter((k) => !ptKeys.has(k));
-    if (missingInEn.length) fail(`i18n.js missing in en: ${missingInEn.join(', ')}`);
-    if (missingInPt.length) fail(`i18n.js missing in pt: ${missingInPt.join(', ')}`);
+    if (missingInEn.length) fail(`locales/en.js missing keys: ${missingInEn.join(', ')}`);
+    if (missingInPt.length) fail(`locales/pt.js missing keys: ${missingInPt.join(', ')}`);
 
     const wsHtml = fs.readFileSync(path.join('src', 'workspace', 'workspace.html'), 'utf8');
     const wsJsFiles = walk(path.join('src', 'workspace')).filter((f) => f.endsWith('.js'));

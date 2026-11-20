@@ -11,6 +11,10 @@ try {
     delete root.dataset.theme;
     if (meta) meta.content = 'light dark';
   }
+  const initialUrl = new URLSearchParams(window.location.search).get('url');
+  if (initialUrl && /^https?:\/\//i.test(initialUrl)) {
+    root.dataset.initialLoading = 'true';
+  }
 } catch {
   // Ignore storage access errors
 }

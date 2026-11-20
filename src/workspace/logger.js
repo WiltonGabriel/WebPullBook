@@ -152,10 +152,27 @@ export function jumpToLog(logId) {
   target.scrollIntoView({ block: 'center', behavior: 'smooth' });
 }
 
-export function showBanner(msg, type = 'info') {
+export function showBanner(msg, type = 'info', action = null) {
   const banner = $('status-banner');
-  banner.textContent = msg;
   banner.className = `banner ${type}`;
+  if (action?.label && action?.url) {
+    const textSpan = document.createElement('span');
+    textSpan.textContent = `${msg} `;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn secondary sm';
+    btn.textContent = action.label;
+    btn.addEventListener('click', () => {
+      if (chrome?.tabs?.create) {
+        chrome.tabs.create({ url: action.url, active: true });
+      } else {
+        window.open(action.url, '_blank', 'noopener,noreferrer');
+      }
+    });
+    banner.replaceChildren(textSpan, btn);
+  } else {
+    banner.textContent = msg;
+  }
   banner.classList.remove('hidden');
 }
 
