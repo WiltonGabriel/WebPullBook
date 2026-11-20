@@ -12,6 +12,7 @@ export {
   extractVolumeNumber,
   normalizeSpaces,
   normalizeUrl,
+  resolveSafeHttpUrl,
   sanitizeFilename,
   sanitizePathSegment,
   toHighResCoverUrl

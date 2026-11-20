@@ -7,6 +7,7 @@ import {
   extractVolumeLabel,
   normalizeSpaces,
   normalizeUrl,
+  resolveSafeHttpUrl,
   toHighResCoverUrl
 } from './text-utils.js';
 import {
@@ -255,14 +256,8 @@ export class BaseParser {
     for (const el of links) {
       const a = el.tagName.toLowerCase() === 'a' ? el : el.querySelector('a[href]');
       if (!a) continue;
-      const href = a.getAttribute('href') || '';
-      if (!href || href.startsWith('#') || href.startsWith('javascript:')) continue;
-      let absUrl;
-      try {
-        absUrl = normalizeUrl(new URL(href, targetUrl).toString());
-      } catch {
-        continue;
-      }
+      const absUrl = resolveSafeHttpUrl(a.getAttribute('href'), targetUrl);
+      if (!absUrl) continue;
       if (seen.has(absUrl)) continue;
       seen.add(absUrl);
       const text = normalizeSpaces(a.textContent) || absUrl;

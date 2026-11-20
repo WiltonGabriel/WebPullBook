@@ -5,6 +5,7 @@ import {
   fetchDocumentWithOptions,
   normalizeSpaces,
   normalizeUrl,
+  resolveSafeHttpUrl,
   sleep,
   toHighResCoverUrl,
   waitForTabComplete
@@ -365,15 +366,8 @@ export class ScribbleHubParser extends BaseParser {
     for (const li of items) {
       const a = li.querySelector('a.toc_a[href], a[href]');
       if (!a) continue;
-      const rawHref = a.getAttribute('href') || '';
-      if (!rawHref || rawHref.startsWith('#') || rawHref.startsWith('javascript:')) continue;
-
-      let absUrl;
-      try {
-        absUrl = normalizeUrl(new URL(rawHref, targetUrl).toString());
-      } catch {
-        continue;
-      }
+      const absUrl = resolveSafeHttpUrl(a.getAttribute('href'), targetUrl);
+      if (!absUrl) continue;
       if (seen.has(absUrl)) continue;
       seen.add(absUrl);
 

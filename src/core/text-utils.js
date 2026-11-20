@@ -16,6 +16,22 @@ export function normalizeUrl(url) {
   }
 }
 
+/**
+ * Resolve a relative or absolute URL against `baseUrl` and allow only HTTP(S) protocols.
+ */
+export function resolveSafeHttpUrl(rawHref, baseUrl = '') {
+  const trimmed = String(rawHref ?? '').trim();
+  if (!trimmed || trimmed.startsWith('#')) return null;
+  try {
+    const u = baseUrl ? new URL(trimmed, baseUrl) : new URL(trimmed);
+    if (u.protocol !== 'http:' && u.protocol !== 'https:') return null;
+    u.hash = '';
+    return u.toString();
+  } catch {
+    return null;
+  }
+}
+
 function parseChapterOrderNum(ch) {
   const candidates = [ch?.numText, ch?.displayTitle, ch?.titleText];
   for (const text of candidates) {

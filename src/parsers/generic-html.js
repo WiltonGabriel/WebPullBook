@@ -4,7 +4,8 @@ import {
   extractVolumeLabel,
   fetchDocumentWithOptions,
   normalizeSpaces,
-  normalizeUrl
+  normalizeUrl,
+  resolveSafeHttpUrl
 } from '../core/parser-engine.js';
 
 const EXCLUDED_CONTAINER_SELECTOR =
@@ -133,18 +134,15 @@ export class GenericHtmlParser extends BaseParser {
     const seen = new Set();
     for (const a of container.querySelectorAll('a[href]')) {
       if (this._isNoiseRegion(a)) continue;
-      const href = a.getAttribute('href') || '';
-      if (!href || href.startsWith('#') || href.startsWith('javascript:')) continue;
+      const absUrl = resolveSafeHttpUrl(a.getAttribute('href'), targetUrl);
+      if (!absUrl) continue;
 
-      let absUrl;
       let pathname = '';
       try {
-        const u = new URL(href, targetUrl);
+        const u = new URL(absUrl);
         if (u.origin !== baseOrigin) continue;
         pathname = u.pathname || '';
         if (TAXONOMY_PATH_RX.test(pathname)) continue;
-        u.hash = '';
-        absUrl = u.toString();
       } catch {
         continue;
       }
@@ -425,13 +423,12 @@ export class GenericHtmlParser extends BaseParser {
   _findNextChapterUrl(doc, currentUrl, baseOrigin) {
     const normCurrent = normalizeUrl(currentUrl);
     const validateHref = (href) => {
-      if (!href || href.startsWith('#') || href.startsWith('javascript:')) return null;
+      const abs = resolveSafeHttpUrl(href, currentUrl);
+      if (!abs) return null;
       try {
-        const u = new URL(href, currentUrl);
+        const u = new URL(abs);
         if (u.origin !== baseOrigin || TAXONOMY_PATH_RX.test(u.pathname || '')) return null;
-        u.hash = '';
-        const abs = normalizeUrl(u.toString());
-        return abs && abs !== normCurrent ? abs : null;
+        return abs !== normCurrent ? abs : null;
       } catch {
         return null;
       }

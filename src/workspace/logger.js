@@ -1,3 +1,4 @@
+import { resolveSafeHttpUrl } from '../core/parser-engine.js';
 import { $, state, switchTab, t } from './state.js';
 
 function detectLogLevel(msg, explicitLevel) {
@@ -155,7 +156,8 @@ export function jumpToLog(logId) {
 export function showBanner(msg, type = 'info', action = null) {
   const banner = $('status-banner');
   banner.className = `banner ${type}`;
-  if (action?.label && action?.url) {
+  const safeActionUrl = action?.url ? resolveSafeHttpUrl(action.url) : null;
+  if (action?.label && safeActionUrl) {
     const textSpan = document.createElement('span');
     textSpan.textContent = `${msg} `;
     const btn = document.createElement('button');
@@ -164,9 +166,9 @@ export function showBanner(msg, type = 'info', action = null) {
     btn.textContent = action.label;
     btn.addEventListener('click', () => {
       if (chrome?.tabs?.create) {
-        chrome.tabs.create({ url: action.url, active: true });
+        chrome.tabs.create({ url: safeActionUrl, active: true });
       } else {
-        window.open(action.url, '_blank', 'noopener,noreferrer');
+        window.open(safeActionUrl, '_blank', 'noopener,noreferrer');
       }
     });
     banner.replaceChildren(textSpan, btn);

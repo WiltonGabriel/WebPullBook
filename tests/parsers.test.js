@@ -17,6 +17,7 @@ import {
   generateCssSelector,
   isAntiBotChallengeDocument,
   isSpaDomainCircuitOpen,
+  resolveSafeHttpUrl,
   sanitizePathSegment
 } from '../src/core/parser-engine.js';
 import { applyNavigationHeaderRules, clearNavigationHeaderRules } from '../src/core/dnr-rules.js';
@@ -932,7 +933,7 @@ test('WP novel chapter/index with noscript and rel=next loads statically with ze
   assert.equal(series.requiresTabRender, false);
   assert.equal(usedAutoSpa, false);
   assert.equal(createdTabs, 0, 'Normal SSR WordPress site must never open background tabs');
-  assert.ok(!calls.includes(ch2Url), 'Must not crawl chapter rel=next link during index loading');
+  assert.ok(!calls.some((u) => u === ch2Url), 'Must not crawl chapter rel=next link during index loading');
 });
 
 test('ScribbleHub direct chapter URL resolves matching series ID without opening tab loops', async () => {
@@ -1035,7 +1036,7 @@ test('BaseParser.collectAllChapters stops immediately on zero-new-chapter pages 
   const p = new DummyPaginatedParser();
   const series = await p.loadSeries(p1);
   assert.equal(series.chapters.length, 1);
-  assert.ok(!calls.includes(p3), 'Pagination must stop as soon as p2 adds 0 new chapters');
+  assert.ok(!calls.some((u) => u === p3), 'Pagination must stop as soon as p2 adds 0 new chapters');
 });
 
 test('decodeHtmlBytes respects HTTP charset header and HTML meta charset without mojibake', () => {
@@ -1398,4 +1399,15 @@ test('Firefox moz-extension DNR rule ID 1 is preserved when applying and clearin
     [1],
     'Clearing navigation rules must remove IDs 100..119 while keeping Firefox rule ID 1'
   );
+});
+
+test('resolveSafeHttpUrl allows only HTTP/HTTPS and blocks javascript, data, and vbscript schemes', () => {
+  assert.equal(resolveSafeHttpUrl('/chapter/2#sec', 'https://fiction.example.org/series/'), 'https://fiction.example.org/chapter/2');
+  assert.equal(resolveSafeHttpUrl('http://local.example.org/test'), 'http://local.example.org/test');
+  assert.equal(resolveSafeHttpUrl('#anchor-only', 'https://fiction.example.org/'), null);
+  assert.equal(resolveSafeHttpUrl('javascript:alert(1)', 'https://fiction.example.org/'), null);
+  assert.equal(resolveSafeHttpUrl('  JaVaScRiPt:alert(1)', 'https://fiction.example.org/'), null);
+  assert.equal(resolveSafeHttpUrl('data:text/html,<script>alert(1)</script>', 'https://fiction.example.org/'), null);
+  assert.equal(resolveSafeHttpUrl('vbscript:msgbox(1)', 'https://fiction.example.org/'), null);
+  assert.equal(resolveSafeHttpUrl('file:///etc/passwd', 'https://fiction.example.org/'), null);
 });

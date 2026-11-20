@@ -379,13 +379,25 @@
     const langSelect = document.getElementById('lang-select');
     if (langSelect) {
       const currentVal = (root.lang || '').toLowerCase().startsWith('pt') ? 'pt-BR' : 'en';
+      const SAFE_LANG_ROUTES = new Map([
+        ['index.html', { en: 'index.html', 'pt-BR': 'pt/index.html', enFromPt: '../index.html' }],
+        ['features.html', { en: 'features.html', 'pt-BR': 'pt/features.html', enFromPt: '../features.html' }],
+        ['installation.html', { en: 'installation.html', 'pt-BR': 'pt/installation.html', enFromPt: '../installation.html' }],
+        ['compatibility.html', { en: 'compatibility.html', 'pt-BR': 'pt/compatibility.html', enFromPt: '../compatibility.html' }],
+        ['faq.html', { en: 'faq.html', 'pt-BR': 'pt/faq.html', enFromPt: '../faq.html' }],
+        ['privacy.html', { en: 'privacy.html', 'pt-BR': 'pt/privacy.html', enFromPt: '../privacy.html' }],
+        ['contributing.html', { en: 'contributing.html', 'pt-BR': 'pt/contributing.html', enFromPt: '../contributing.html' }]
+      ]);
       langSelect.value = currentVal;
       langSelect.addEventListener('change', () => {
-        const selectedOpt = langSelect.options[langSelect.selectedIndex];
-        const targetHref = selectedOpt?.getAttribute('data-href');
-        if (targetHref && selectedOpt.value !== currentVal) {
-          window.location.href = targetHref;
-        }
+        const nextLang = langSelect.value;
+        if (nextLang === currentVal || (nextLang !== 'en' && nextLang !== 'pt-BR')) return;
+        const segments = window.location.pathname.split('/').filter(Boolean);
+        const last = segments[segments.length - 1] || '';
+        const pageKey = SAFE_LANG_ROUTES.has(last) ? last : 'index.html';
+        const routes = SAFE_LANG_ROUTES.get(pageKey);
+        const dest = currentVal === 'pt-BR' ? routes.enFromPt : routes['pt-BR'];
+        if (dest) window.location.assign(dest);
       });
       window.addEventListener('pageshow', () => {
         langSelect.value = currentVal;

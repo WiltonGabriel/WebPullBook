@@ -221,19 +221,36 @@ export function updatePackButtonLabel() {
       : t('btnExportFmt', { ext: exporter.extension.toUpperCase() });
 }
 
+function sanitizeCoverPreviewUrl(rawUrl) {
+  const trimmed = String(rawUrl || '').trim();
+  if (!trimmed) return '';
+  if (/^data:image\/(?:png|jpeg|jpg|gif|webp|avif);base64,[a-z0-9+/=]+$/i.test(trimmed)) {
+    return trimmed;
+  }
+  try {
+    const parsed = new URL(trimmed);
+    if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+      return parsed.toString();
+    }
+  } catch {
+    return '';
+  }
+  return '';
+}
+
 export function updateCoverPreview() {
-  const url = $('meta-cover-url').value.trim();
+  const safeUrl = sanitizeCoverPreviewUrl($('meta-cover-url').value);
   const img = $('cover-preview');
   const placeholder = $('cover-placeholder');
   const formatNote = $('cover-format-note');
   const restrictJpeg = Boolean($('opt-cover-jpeg')?.checked ?? state.options.restrictCoverJpeg);
 
-  if (url) {
-    img.src = url;
+  if (safeUrl) {
+    img.src = safeUrl;
     img.hidden = false;
     placeholder.classList.add('hidden');
     const isWebpOrAvif =
-      /\.(?:webp|avif)(?:$|\?)/i.test(url) || /^data:image\/(?:webp|avif);/i.test(url);
+      /\.(?:webp|avif)(?:$|\?)/i.test(safeUrl) || /^data:image\/(?:webp|avif);/i.test(safeUrl);
     if (formatNote) formatNote.classList.toggle('hidden', !(isWebpOrAvif && !restrictJpeg));
   } else {
     img.removeAttribute('src');
