@@ -11,7 +11,10 @@
 
 **WebPullBook** é uma extensão de navegador open source (Chrome, Edge, Brave e Firefox 128+) sem dependências de runtime para **converter páginas web em EPUB** (**Web-to-EPUB**): extrai webnovels, light novels, ficções seriadas, fanfics, blogs, documentações e abas abertas para arquivos **EPUB 2 / EPUB 3** (além de **HTML**, **Markdown** e **TXT**) organizados por volume para leitura offline no **Kindle**, **Kobo**, **Calibre** e celulares.
 
-[Site Oficial](https://wiltongabriel.github.io/WebPullBook/pt/) • [Funcionalidades](#-principais-funcionalidades) • [Instalação](#-primeiros-passos) • [Compatibilidade](#-compatibilidade) • [Perguntas Frequentes](#-perguntas-frequentes-faq) • [Como Ajudar](#-mantenedores-e-contribuições)
+Repositório: https://github.com/WiltonGabriel/WebPullBook  
+Site oficial: https://wiltongabriel.github.io/WebPullBook/pt/
+
+[Funcionalidades](#-principais-funcionalidades) • [Instalação](#-primeiros-passos) • [Compatibilidade](#-compatibilidade) • [Perguntas Frequentes](#-perguntas-frequentes-faq) • [Como Ajudar](#-autoria-manutenção-e-contribuições)
 
 ---
 
