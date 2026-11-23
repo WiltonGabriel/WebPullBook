@@ -243,6 +243,39 @@ test('serializeChapterXhtml converts footnote targets to EPUB 3 pop-up aside ele
   assert.equal(fn1Matches.length, 1);
 });
 
+test('serializeChapterXhtml keeps <ol>/<ul> valid by nesting EPUB 3 footnote <aside> inside <li> without nested <p>', () => {
+  const root = parseHtmlBodyFragment(`
+    <p>Trecho com notas<sup><a id="fnref1" href="#fn1">1</a></sup> e<sup><a id="fnref2" href="#fn2">2</a></sup>.</p>
+    <ol>
+      <li id="fn1">Nota inline simples <a href="#fnref1">↩</a></li>
+      <li id="fn2"><p>Nota já embrulhada em parágrafo <a href="#fnref2">↩</a></p></li>
+    </ol>
+  `);
+
+  const { xmlDoc, nodes } = sanitizeChapterContent(root, 'https://example.com/cap-fn');
+  const xhtml = serializeChapterXhtml({
+    title: 'Notas em Lista',
+    xmlDoc,
+    nodes,
+    epub3: true,
+    popupFootnotes: true
+  });
+
+  const parsed = new DOMParser().parseFromString(xhtml, 'application/xhtml+xml');
+  assert.equal(parsed.querySelector('parsererror'), null);
+
+  // <ol> must contain only <li> children, never direct <aside> children
+  assert.equal(parsed.querySelector('ol > aside'), null);
+  const listItems = parsed.querySelectorAll('ol > li');
+  assert.equal(listItems.length, 2);
+  assert.equal(listItems[0].querySelector('aside[id="fn1"] > p') !== null, true);
+  assert.equal(listItems[1].querySelector('aside[id="fn2"] > p') !== null, true);
+  // Never nest <p> inside <p>
+  assert.equal(parsed.querySelector('p p'), null);
+  assert.equal((xhtml.match(/epub:type="noteref"/g) || []).length, 2);
+  assert.equal((xhtml.match(/epub:type="footnote"/g) || []).length, 2);
+});
+
 test('HtmlSanitizer resolves srcset, picture sources, skips 1x1 placeholders, and keeps lazy images with hidden classes', () => {
   const root = parseHtmlBodyFragment(`
     <p>
@@ -308,4 +341,27 @@ test('HtmlSanitizer strips adjacent nextPrevUrls, decodes __cf_email__, converts
   assert.equal(res.images.length, 1);
   assert.equal(res.images[0].originalUrl, 'https://cdn.example.com/full-art.jpg');
   assert.equal(res.images[0].fallbackUrl, 'https://cdn.example.com/thumb-art-300x200.jpg');
+});
+
+test('dom-shim evaluates :empty, CSS escapes, modern pseudo-classes, and rejects unknown pseudo-classes', () => {
+  const doc = new DOMParser().parseFromString(`
+    <html><body>
+      <div id="empty-root"><!-- comment only --></div>
+      <div id="filled-root"><p>Real SSR content</p></div>
+      <div id="text-root"> </div>
+      <section id="ns:panel" class="md:w-1/2 card"><span class="badge">A</span><em>B</em></section>
+    </body></html>`, 'text/html');
+
+  assert.ok(doc.querySelector('#empty-root:empty'));
+  assert.equal(doc.querySelector('#filled-root:empty'), null);
+  assert.equal(doc.querySelector('#text-root:empty'), null);
+
+  assert.equal(doc.querySelector('#ns\\:panel')?.tagName, 'SECTION');
+  assert.equal(doc.querySelector('.md\\:w-1\\/2.card')?.id, 'ns:panel');
+  assert.ok(doc.querySelector('section:has(> span.badge)'));
+  assert.equal(doc.querySelector('section:has(> p)'), null);
+  assert.ok(doc.querySelector(':is(section, article).card'));
+  assert.ok(doc.querySelector('em:first-of-type'));
+
+  assert.throws(() => doc.querySelector('div:nonexistent-pseudo'), SyntaxError);
 });

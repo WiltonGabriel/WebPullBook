@@ -9,6 +9,7 @@ import {
   hydrateCachedChapter,
   serializeNodesForCache
 } from '../src/core/cache-store.js';
+import { getCacheKey, state } from '../src/workspace/state.js';
 
 let restoreDom;
 let restoreIdb;
@@ -169,4 +170,77 @@ test('CacheStore.enforceStorageCap evicts oldest entries down to 85% threshold',
   assert.equal(await cacheStore.getChapter('k3'), null);
   assert.ok(await cacheStore.getChapter('k4'));
   assert.ok(await cacheStore.getChapter('k5'));
+});
+
+test('idb-shim sorts cursors by key/index, supports key ranges, and enforces readonly transactions', async () => {
+  const db = await cacheStore.open();
+  await new Promise((resolve) => {
+    const tx = db.transaction('chapters', 'readwrite');
+    const store = tx.objectStore('chapters');
+    store.put({ key: 'c', seriesKey: 's1', savedAt: 300, expiresAt: 900 });
+    store.put({ key: 'a', seriesKey: 's1', savedAt: 100, expiresAt: 700 });
+    store.put({ key: 'b', seriesKey: 's1', savedAt: 200, expiresAt: 800 });
+    tx.oncomplete = resolve;
+  });
+
+  // Primary key cursor iterates in ascending key order (a, b, c) despite insertion order (c, a, b)
+  const keys = [];
+  await new Promise((resolve) => {
+    const tx = db.transaction('chapters', 'readonly');
+    tx.objectStore('chapters').openCursor().onsuccess = (e) => {
+      const cur = e.target.result;
+      if (!cur) return;
+      keys.push(cur.key);
+      cur.continue();
+    };
+    tx.oncomplete = resolve;
+  });
+  assert.deepEqual(keys, ['a', 'b', 'c']);
+
+  // Index cursor iterates sorted by savedAt within IDBKeyRange.bound
+  const bounded = [];
+  await new Promise((resolve) => {
+    const tx = db.transaction('chapters', 'readonly');
+    tx.objectStore('chapters').index('savedAt').openCursor(IDBKeyRange.bound(100, 250)).onsuccess = (e) => {
+      const cur = e.target.result;
+      if (!cur) return;
+      bounded.push({ key: cur.primaryKey, savedAt: cur.key });
+      cur.continue();
+    };
+    tx.oncomplete = resolve;
+  });
+  assert.deepEqual(bounded, [
+    { key: 'a', savedAt: 100 },
+    { key: 'b', savedAt: 200 }
+  ]);
+
+  // Readonly transactions must reject mutating operations
+  const roTx = db.transaction('chapters', 'readonly');
+  assert.throws(
+    () => roTx.objectStore('chapters').put({ key: 'z', seriesKey: 's1', savedAt: 1, expiresAt: 2 }),
+    (err) => err?.name === 'ReadOnlyError'
+  );
+  assert.throws(
+    () => roTx.objectStore('chapters').delete('a'),
+    (err) => err?.name === 'ReadOnlyError'
+  );
+});
+
+test('getCacheKey includes customStripPatterns while keeping legacy key when empty', () => {
+  const prevStrip = state.options.customStripPatterns;
+  try {
+    state.options.customStripPatterns = '';
+    const base = getCacheKey('https://example.com/ch-1#top');
+    assert.equal(base.endsWith('|'), true);
+
+    state.options.customStripPatterns = 'Sponsored Ad';
+    const withPattern = getCacheKey('https://example.com/ch-1');
+    assert.notEqual(withPattern, base);
+
+    state.options.customStripPatterns = '/Read more at .*/gi';
+    const withOtherPattern = getCacheKey('https://example.com/ch-1');
+    assert.notEqual(withOtherPattern, withPattern);
+  } finally {
+    state.options.customStripPatterns = prevStrip;
+  }
 });

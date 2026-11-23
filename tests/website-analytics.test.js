@@ -94,10 +94,13 @@ test('syncGoatCounterScript is idempotent, deduplicates repeated tags, and updat
     scriptSrc: 'https://stats.example.org/count.js'
   });
   const replaced = syncGoatCounterScript(once, updatedConfig);
-  assert.equal(replaced.match(/data-goatcounter=/g)?.length, 1);
-  assert.equal(
-    replaced.includes('  <script data-goatcounter="https://stats.example.org/count" async src="https://stats.example.org/count.js"></script>'),
-    true
+  const expectedReplaced = EN_HEAD.replace(
+    '  <script src="assets/js/site.js" defer></script>',
+    '  <script src="assets/js/site.js" defer></script>\n  <script data-goatcounter="https://stats.example.org/count" async src="https://stats.example.org/count.js"></script>'
   );
-  assert.equal(replaced.includes('wiltongabriel.goatcounter.com'), false);
+  assert.equal(replaced.match(/data-goatcounter=/g)?.length, 1);
+  assert.equal(replaced, expectedReplaced);
+  const endpointMatch = replaced.match(/data-goatcounter="([^"]+)"/);
+  assert.ok(endpointMatch);
+  assert.equal(new URL(endpointMatch[1]).hostname, 'stats.example.org');
 });

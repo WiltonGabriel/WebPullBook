@@ -230,7 +230,9 @@ export function getOriginDomain(rawUrl) {
 }
 
 export function getCacheKey(chapterUrl) {
-  return `${normalizeUrl(chapterUrl)}|${state.activeParser?.id || 'auto'}|${Boolean(state.options.skipImages)}|${Boolean(state.options.removeNavLinks)}|${state.options.customContentSelector || ''}|${state.options.customExcludeSelector || ''}`;
+  const stripPatterns = String(state.options.customStripPatterns || '').trim();
+  const baseKey = `${normalizeUrl(chapterUrl)}|${state.activeParser?.id || 'auto'}|${Boolean(state.options.skipImages)}|${Boolean(state.options.removeNavLinks)}|${state.options.customContentSelector || ''}|${state.options.customExcludeSelector || ''}`;
+  return stripPatterns ? `${baseKey}|${stripPatterns}` : baseKey;
 }
 
 export function getCurrentSeriesKey() {

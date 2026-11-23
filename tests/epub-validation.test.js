@@ -8,6 +8,7 @@ import { resolveEpubCheckRunner, runEpubCheck } from './helpers/epubcheck.js';
 import { loadSeriesWithParser } from '../src/parsers/index.js';
 import { exporterRegistry } from '../src/exporters/index.js';
 import { buildEpubStylesheet } from '../src/core/parser-engine.js';
+import { sanitizeChapterContent, serializeChapterXhtml } from '../src/core/sanitizer.js';
 
 const FIXTURES_DIR = path.resolve('tests/fixtures');
 const PNG_1X1 = Uint8Array.from(
@@ -119,6 +120,65 @@ test('Generated EPUB 3 (nested volumes + SVG cover) and EPUB 2 pass W3C EPUBChec
       const result = runEpubCheck(epubFile);
       assert.equal(result.ok, true, `EPUBCheck failed for ${sc.name}:\n${result.output}`);
     }
+
+    // Validate EPUB 3 pop-up footnotes across both <p id="fn"> and <ol><li id="fn"> structures
+    const footnoteHtml = `
+      <html><body><div id="ch-root">
+        <p>Main narrative with paragraph note<sup><a id="ref-p" href="#fn-p">1</a></sup>,
+           inline list note<sup><a id="ref-li1" href="#fn-li1">2</a></sup>, and
+           block list note<sup><a id="ref-li2" href="#fn-li2">3</a></sup>.</p>
+        <p id="fn-p"><a href="#ref-p">1</a> — Standalone paragraph footnote.</p>
+        <ol>
+          <li id="fn-li1">Inline list footnote <a href="#ref-li1">↩</a></li>
+          <li id="fn-li2"><p>Block-wrapped list footnote <a href="#ref-li2">↩</a></p></li>
+        </ol>
+      </div></body></html>`;
+    const fnDoc = new DOMParser().parseFromString(footnoteHtml, 'text/html');
+    const fnSanitized = sanitizeChapterContent(fnDoc.querySelector('#ch-root'), 'https://novel.example.org/fn-ch');
+    const fnParsedChapter = {
+      chapter: {
+        id: 'ch_fn',
+        index: 1,
+        url: 'https://novel.example.org/fn-ch',
+        displayTitle: 'Chapter with Footnotes',
+        volume: 'Volume 01'
+      },
+      chapterTitle: 'Chapter with Footnotes',
+      subtitle: '',
+      ...fnSanitized,
+      serialize(stylesheetHref, epub3, { popupFootnotes = false } = {}) {
+        return serializeChapterXhtml({
+          title: 'Chapter with Footnotes',
+          subtitle: '',
+          xmlDoc: fnSanitized.xmlDoc,
+          nodes: fnSanitized.nodes,
+          stylesheetHref,
+          epub3,
+          popupFootnotes
+        });
+      }
+    };
+
+    const fnBlob = await exporterRegistry.get('epub').exportBook({
+      metadata: { ...series, coverUrl: '', coverThumbUrl: '' },
+      bookTitle: 'Footnote Validation Book',
+      seriesName: '',
+      seriesIndex: 1,
+      parsedChapters: [fnParsedChapter],
+      options: {
+        createEpub3: true,
+        popupFootnotes: true,
+        restrictCoverJpeg: false,
+        compressImages: false,
+        addInfoPage: true,
+        stylesheet: buildEpubStylesheet()
+      },
+      groupNestedVolumes: false
+    });
+    const fnEpubFile = path.join(outDir, 'epub3-popup-footnotes.epub');
+    fs.writeFileSync(fnEpubFile, Buffer.from(await fnBlob.arrayBuffer()));
+    const fnResult = runEpubCheck(fnEpubFile);
+    assert.equal(fnResult.ok, true, `EPUBCheck failed for epub3-popup-footnotes.epub:\n${fnResult.output}`);
   } finally {
     fs.rmSync(outDir, { recursive: true, force: true });
   }

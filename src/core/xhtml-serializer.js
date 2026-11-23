@@ -14,6 +14,14 @@ function enhancePopupFootnotesInDoc(xmlDoc, contentDiv) {
   if (idMap.size === 0) return;
 
   const isNoteContainerTag = (tag) => tag === 'p' || tag === 'div' || tag === 'li';
+  const BLOCK_CHILD_TAGS = new Set([
+    'p', 'div', 'blockquote', 'pre', 'ul', 'ol', 'dl', 'table',
+    'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'hr', 'figure', 'aside'
+  ]);
+  const hasBlockElementChild = (el) =>
+    Array.from(el.childNodes || []).some(
+      (child) => child.nodeType === 1 && BLOCK_CHILD_TAGS.has(child.tagName?.toLowerCase())
+    );
   const setEpubType = (el, val) => {
     if (typeof el.setAttributeNS === 'function') {
       el.setAttributeNS(EPUB_NS, 'epub:type', val);
@@ -78,17 +86,23 @@ function enhancePopupFootnotesInDoc(xmlDoc, contentDiv) {
       aside = xmlDoc.createElementNS(XHTML_NS, 'aside');
       setEpubType(aside, 'footnote');
       aside.setAttribute('id', targetId);
-      if (typeof container.replaceWith === 'function') {
-        container.replaceWith(aside);
-      } else {
-        container.parentNode.insertBefore(aside, container);
-        container.remove();
-      }
       if (containerTag === 'li') {
-        const p = xmlDoc.createElementNS(XHTML_NS, 'p');
-        while (container.firstChild) p.appendChild(container.firstChild);
-        aside.appendChild(p);
+        // Keep <li> in place inside <ol>/<ul> so EPUB 3 XHTML remains valid (never place <aside> directly inside <ol>/<ul>).
+        if (hasBlockElementChild(container)) {
+          while (container.firstChild) aside.appendChild(container.firstChild);
+        } else {
+          const p = xmlDoc.createElementNS(XHTML_NS, 'p');
+          while (container.firstChild) p.appendChild(container.firstChild);
+          aside.appendChild(p);
+        }
+        container.appendChild(aside);
       } else {
+        if (typeof container.replaceWith === 'function') {
+          container.replaceWith(aside);
+        } else {
+          container.parentNode.insertBefore(aside, container);
+          container.remove();
+        }
         aside.appendChild(container);
       }
     } else {

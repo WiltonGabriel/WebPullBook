@@ -567,6 +567,11 @@ function tokenizeComplexSelector(sel) {
         i++;
         continue;
       }
+      if (ch === '\\' && i + 1 < s.length) {
+        compound += ch + s[++i];
+        i++;
+        continue;
+      }
       if (ch === '"' || ch === "'") {
         q = ch;
         compound += ch;
@@ -588,6 +593,34 @@ function tokenizeComplexSelector(sel) {
   }
 
   return tokens;
+}
+
+function readCssIdentifier(str, startIdx) {
+  let i = startIdx;
+  let value = '';
+  while (i < str.length) {
+    const ch = str[i];
+    if (ch === '\\') {
+      if (i + 1 >= str.length) throw new SyntaxError(`Trailing escape in selector: ${str}`);
+      const hexMatch = str.slice(i + 1).match(/^([0-9a-fA-F]{1,6}) ?/);
+      if (hexMatch) {
+        const cp = parseInt(hexMatch[1], 16);
+        value += Number.isFinite(cp) && cp > 0 && cp <= 0x10ffff ? String.fromCodePoint(cp) : '\ufffd';
+        i += 1 + hexMatch[0].length;
+      } else {
+        value += str[i + 1];
+        i += 2;
+      }
+      continue;
+    }
+    if (/[a-zA-Z0-9_-]/.test(ch) || ch.charCodeAt(0) >= 0x80) {
+      value += ch;
+      i++;
+      continue;
+    }
+    break;
+  }
+  return { value, nextIndex: i };
 }
 
 function parseCompoundSelector(str) {
@@ -613,17 +646,15 @@ function parseCompoundSelector(str) {
   while (i < str.length) {
     const ch = str[i];
     if (ch === '#') {
-      i++;
-      const m = str.slice(i).match(/^[a-zA-Z0-9_-]+/);
-      if (!m) throw new SyntaxError(`Invalid #id in selector: ${str}`);
-      parts.id = m[0];
-      i += m[0].length;
+      const { value, nextIndex } = readCssIdentifier(str, i + 1);
+      if (!value) throw new SyntaxError(`Invalid #id in selector: ${str}`);
+      parts.id = value;
+      i = nextIndex;
     } else if (ch === '.') {
-      i++;
-      const m = str.slice(i).match(/^[a-zA-Z0-9_-]+/);
-      if (!m) throw new SyntaxError(`Invalid .class in selector: ${str}`);
-      parts.classes.push(m[0]);
-      i += m[0].length;
+      const { value, nextIndex } = readCssIdentifier(str, i + 1);
+      if (!value) throw new SyntaxError(`Invalid .class in selector: ${str}`);
+      parts.classes.push(value);
+      i = nextIndex;
     } else if (ch === '[') {
       const end = findMatchingDelimiter(str, i, '[', ']');
       const inner = str.slice(i + 1, end).trim();
@@ -719,22 +750,86 @@ function matchesCompound(el, compound, scopeNode) {
   for (const pseudo of compound.pseudos) {
     if (pseudo.name === 'scope') {
       if (el !== scopeNode) return false;
+    } else if (pseudo.name === 'root') {
+      if (!el.ownerDocument || el.ownerDocument.documentElement !== el) return false;
+    } else if (pseudo.name === 'empty') {
+      const isEmpty = el.childNodes.every(
+        (child) =>
+          child.nodeType === NODE_TYPES.COMMENT_NODE ||
+          (child.nodeType === NODE_TYPES.TEXT_NODE && child.nodeValue.length === 0)
+      );
+      if (!isEmpty) return false;
     } else if (pseudo.name === 'not') {
       if (matchesSelectorList(el, pseudo.arg || '', scopeNode)) return false;
+    } else if (pseudo.name === 'is' || pseudo.name === 'where') {
+      if (!matchesSelectorList(el, pseudo.arg || '', scopeNode)) return false;
+    } else if (pseudo.name === 'has') {
+      if (!matchesHasPseudo(el, pseudo.arg || '')) return false;
     } else if (pseudo.name === 'first-child') {
       if (!el.parentNode || el.parentNode.children[0] !== el) return false;
     } else if (pseudo.name === 'last-child') {
       const ch = el.parentNode?.children || [];
       if (ch[ch.length - 1] !== el) return false;
+    } else if (pseudo.name === 'only-child') {
+      const ch = el.parentNode?.children || [];
+      if (ch.length !== 1 || ch[0] !== el) return false;
     } else if (pseudo.name === 'nth-child' || pseudo.name === 'nth-last-child') {
       const ch = el.parentNode?.children || [];
       const idx = ch.indexOf(el);
       if (idx === -1) return false;
       const pos = pseudo.name === 'nth-child' ? idx + 1 : ch.length - idx;
       if (!matchesNth(pos, pseudo.arg)) return false;
+    } else if (
+      pseudo.name === 'first-of-type' ||
+      pseudo.name === 'last-of-type' ||
+      pseudo.name === 'only-of-type' ||
+      pseudo.name === 'nth-of-type' ||
+      pseudo.name === 'nth-last-of-type'
+    ) {
+      const sameType = (el.parentNode?.children || []).filter((c) => c._localName === el._localName);
+      const idx = sameType.indexOf(el);
+      if (idx === -1) return false;
+      if (pseudo.name === 'first-of-type' && idx !== 0) return false;
+      if (pseudo.name === 'last-of-type' && idx !== sameType.length - 1) return false;
+      if (pseudo.name === 'only-of-type' && sameType.length !== 1) return false;
+      if (pseudo.name === 'nth-of-type' && !matchesNth(idx + 1, pseudo.arg)) return false;
+      if (pseudo.name === 'nth-last-of-type' && !matchesNth(sameType.length - idx, pseudo.arg)) return false;
+    } else if (pseudo.name === 'checked') {
+      if (!el.hasAttribute('checked')) return false;
+    } else if (pseudo.name === 'disabled') {
+      if (!el.hasAttribute('disabled')) return false;
+    } else if (pseudo.name === 'enabled') {
+      if (el.hasAttribute('disabled')) return false;
+    } else {
+      throw new SyntaxError(`Unsupported pseudo-class ":${pseudo.name}" in dom-shim`);
     }
   }
   return true;
+}
+
+function matchesHasPseudo(el, rawArg) {
+  const parts = splitTopLevel(String(rawArg || ''), ',');
+  for (const part of parts) {
+    const trimmed = part.trim();
+    if (!trimmed) continue;
+    if (/^[+~]/.test(trimmed)) {
+      const comb = trimmed[0];
+      const rest = trimmed.slice(1).trim();
+      const compiled = compileSelectorList(rest);
+      let sib = el.nextElementSibling;
+      while (sib) {
+        if (matchesSelectorList(sib, compiled, el)) return true;
+        if (comb === '+') break;
+        sib = sib.nextElementSibling;
+      }
+      continue;
+    }
+    const relSelector = trimmed.startsWith('>') ? `:scope ${trimmed}` : trimmed;
+    if (querySelectorFirst(el, relSelector, el) !== null) {
+      return true;
+    }
+  }
+  return false;
 }
 
 function matchesNth(pos, expr) {
