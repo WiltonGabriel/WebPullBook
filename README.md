@@ -5,7 +5,7 @@
 [![Manifest V3](https://img.shields.io/badge/Manifest-V3-4338ca?style=flat-square)](manifest.json)
 [![Chrome & Firefox](https://img.shields.io/badge/Browsers-Chrome%20%7C%20Edge%20%7C%20Firefox%20128%2B-2563eb?style=flat-square)](#-getting-started)
 [![Firefox Add-ons](https://img.shields.io/badge/Firefox%20Add--ons-Available-FF7139?style=flat-square)](https://addons.mozilla.org/firefox/addon/webpullbook/)
-[![Version](https://img.shields.io/badge/Version-1.6.1--beta-0ea5e9?style=flat-square)](https://github.com/WiltonGabriel/WebPullBook/releases)
+[![Version](https://img.shields.io/badge/Version-1.7.0--beta-0ea5e9?style=flat-square)](https://github.com/WiltonGabriel/WebPullBook/releases)
 [![Dependencies](https://img.shields.io/badge/Dependencies-Zero-16a34a?style=flat-square)](src/core/zip.js)
 [![License: AGPLv3](https://img.shields.io/badge/License-AGPLv3-f59e0b?style=flat-square)](LICENSE)
 [![CI Validation](https://github.com/WiltonGabriel/WebPullBook/actions/workflows/ci.yml/badge.svg)](https://github.com/WiltonGabriel/WebPullBook/actions/workflows/ci.yml)
@@ -67,7 +67,7 @@ The four-tier compatibility table (**Verified & Tested**, **Added / Not Official
 
 ## Getting Started
 
-> **Release Status (`v1.6.1-beta`):** WebPullBook is officially published on [Firefox Add-ons (AMO)](https://addons.mozilla.org/firefox/addon/webpullbook/) for Firefox 128+. Chrome Web Store submission is planned next; meanwhile, Chrome, Edge, and Brave users can install the official signed release package from [GitHub Releases](https://github.com/WiltonGabriel/WebPullBook/releases).
+> **Release Status (`v1.7.0-beta`):** WebPullBook is officially published on [Firefox Add-ons (AMO)](https://addons.mozilla.org/firefox/addon/webpullbook/) for Firefox 128+. Chrome Web Store submission is planned next; meanwhile, Chrome, Edge, and Brave users can install the official signed release package from [GitHub Releases](https://github.com/WiltonGabriel/WebPullBook/releases).
 
 ### Installation (Mozilla Firefox)
 

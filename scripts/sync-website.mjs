@@ -379,7 +379,7 @@ function resolveGitLastmodDate(relRepoPath) {
 
 function syncSitemapLastmod(siteConfig) {
   const sitemapPath = path.join(WEBSITE_DIR, 'sitemap.xml');
-  if (!siteConfig || !fs.existsSync(sitemapPath)) return;
+  if (!siteConfig) return;
 
   try {
     const isShallow = execFileSync('git', ['rev-parse', '--is-shallow-repository'], {
@@ -392,6 +392,14 @@ function syncSitemapLastmod(siteConfig) {
     return;
   }
 
+  let original;
+  try {
+    original = fs.readFileSync(sitemapPath, 'utf8');
+  } catch (err) {
+    if (err.code === 'ENOENT') return;
+    throw err;
+  }
+
   const baseUrl = String(siteConfig.baseUrl || '').replace(/\/+$/, '');
   const locToFile = new Map();
   for (const p of siteConfig.pages || []) {
@@ -399,7 +407,6 @@ function syncSitemapLastmod(siteConfig) {
     locToFile.set(`${baseUrl}${p.pt}`, `website/${p.ptFile}`);
   }
 
-  const original = fs.readFileSync(sitemapPath, 'utf8');
   const updated = original.replace(/<url>[\s\S]*?<\/url>/g, (block) => {
     const locMatch = block.match(/<loc>([^<]+)<\/loc>/);
     const repoRel = locMatch ? locToFile.get(locMatch[1].trim()) : '';
@@ -513,12 +520,14 @@ export function syncWebsite() {
   }
 
   const notFoundPath = path.join(WEBSITE_DIR, '404.html');
-  if (fs.existsSync(notFoundPath)) {
+  try {
     const raw404 = fs.readFileSync(notFoundPath, 'utf8');
     const synced404 = syncConfiguredLinks(raw404, siteConfig);
     if (synced404 !== raw404) {
       fs.writeFileSync(notFoundPath, synced404, 'utf8');
     }
+  } catch (err) {
+    if (err.code !== 'ENOENT') throw err;
   }
 
   syncSitemapLastmod(siteConfig);

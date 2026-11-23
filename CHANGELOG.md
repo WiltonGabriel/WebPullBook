@@ -4,6 +4,21 @@
 
 All notable changes to **WebPullBook** are documented in this file.
 
+## [1.7.0] - 2026-11-23 (Beta)
+
+### Firefox MV3, Localization & Store Readiness
+- **Manifest Localization (`_locales/`):** Added native `default_locale: "en"` (`en`, `pt_BR`) manifest localization and wired CI validation (`addons-linter` on the release ZIP layout) in `.github/workflows/ci.yml`, `.github/workflows/release.yml`, and `scripts/check.mjs`.
+- **Firefox Permissions & Image Fetching (`src/workspace/`, `src/core/`):** Added the non-intrusive Firefox MV3 host-permissions banner in `workspace.html` (`chrome.permissions.request`), preserved Firefox `Origin`-removal rule ID `1` while adding temporary DNR `Referer` hotlink image fallback rules (`120..129`), extended `toHighResCoverUrl()` to strip `resize` and numeric `w`/`h` parameters, and DOM-mounted blob downloads for mobile/Firefox reliability.
+
+### Workspace Diagnostics, Parser Engine & Test Architecture
+- **Inline Test Selectors (`src/workspace/series-loader.js`):** Added `#btn-test-selectors` and `#selector-test-result` under **Advanced Options** to validate CSS selectors, report matched chapters/words/images, and support cache-bypassing previews (`openChapterPreviewForTarget(..., { bypassCache })`) without altering saved domain rules.
+- **Parser & Core Deduplication (`src/core/parser-helpers.js`, `src/core/selector-utils.js`, `src/parsers/`):** Shared URL, text-set, DOM descendant, selector-building, and inline JSON extraction helpers across `BaseParser` adapters and upgraded `loadSeriesWithParser()` to single-pass `ParserRegistry.detectWithScores()` scoring.
+- **Test Split & Real Chromium E2E (`tests/`):** Separated core networking/rate-limiter/path tests into `tests/net-fetcher.test.js`, `tests/rate-limiter.test.js`, and `tests/text-utils.test.js`, introduced `tests/helpers/parser-snapshot.js`, and expanded Playwright E2E coverage for `sourceTabId` live DOM capture, JavaScript-hydrated SPA `TabRenderPool` fallback, and inline selector diagnostics.
+
+### Website, Documentation & License Migration
+- **Official Website & Automation (`website/`, `scripts/`):** Removed stale client-side `syncDocsFromRepo()` overrides in `website/assets/js/site.js`, automated `[data-wpb-link]` store/repository links, Index JSON-LD metadata, and shallow-safe `sitemap.xml` `<lastmod>` synchronization in `scripts/sync-website.mjs`, updated SEO & distribution guidance, pointed release notes to AMO, added **Guardrails & Single Sources of Truth** to `AGENTS.md`, and resolved CodeQL scanning alerts.
+- **License Migration (`AGPL-3.0-or-later`):** Migrated WebPullBook from MIT to **GNU Affero General Public License v3.0 (`AGPL-3.0-or-later`)** starting with `v1.7.0-beta` (releases up to `v1.6.1-beta` remain historically under the MIT License).
+
 ## [1.6.1] - 2026-11-20 (Beta)
 
 ### UI & Cover Refinements

@@ -4,6 +4,21 @@
 
 Todas as mudanças notáveis do **WebPullBook** estão documentadas neste arquivo (espelho de referência de [CHANGELOG.md](../../CHANGELOG.md)).
 
+## [1.7.0] - 2026-11-23 (Beta)
+
+### Firefox MV3, Localização e Prontidão para Lojas
+- **Localização do Manifesto (`_locales/`):** adicionada localização nativa (`en` e `pt_BR` com `default_locale: "en"`) e validação automática no CI via `addons-linter` sobre o pacote `.zip` em `.github/workflows/ci.yml`, `.github/workflows/release.yml` e `scripts/check.mjs`.
+- **Permissões no Firefox & Imagens (`src/workspace/`, `src/core/`):** adicionado o banner contextual de permissão no Firefox MV3 em `workspace.html` (`chrome.permissions.request`), preservada a regra DNR ID `1` do Firefox junto ao fallback temporário de cabeçalho `Referer` (`120..129`) para imagens com hotlink protegido, expandida a limpeza de parâmetros `resize` e `w`/`h` numéricos em `toHighResCoverUrl()` e melhorado o disparo de downloads em blob no DOM.
+
+### Diagnóstico de Seletores, Engine de Parsers e Testes
+- **Botão Testar Seletores (`src/workspace/series-loader.js`):** adicionados `#btn-test-selectors` e `#selector-test-result` nas **Opções Avançadas** para validar sintaxe CSS, contar capítulos, palavras e imagens de amostra e oferecer pré-visualização ignorando cache (`{ bypassCache: true }`) sem alterar as regras salvas por domínio.
+- **Deduplicação nos Parsers (`src/core/parser-helpers.js`, `src/core/selector-utils.js`, `src/parsers/`):** consolidados helpers compartilhados de URL, gêneros, DOM e seletores CSS entre adaptadores, além de ranking em passada única via `ParserRegistry.detectWithScores()` em `loadSeriesWithParser()`.
+- **Separação de Testes e E2E no Chromium (`tests/`):** divididos os testes unitários do núcleo para `tests/net-fetcher.test.js`, `tests/rate-limiter.test.js` e `tests/text-utils.test.js` com `tests/helpers/parser-snapshot.js`, e adicionados testes E2E reais para captura viva via `sourceTabId`, hidratação SPA via `TabRenderPool` e diagnóstico de seletores.
+
+### Site Oficial, Documentação e Migração de Licença
+- **Site Oficial e Automação (`website/`, `scripts/`):** removido o `syncDocsFromRepo()` obsoleto em `website/assets/js/site.js`, automatizada a sincronização de links `[data-wpb-link]`, JSON-LD e `<lastmod>` em `website/sitemap.xml` via `scripts/sync-website.mjs`, adicionada a tabela de Guardrails em `AGENTS.md`, atualizado o link de instalação no Firefox (AMO) nas notas de release e corrigidos os alertas do CodeQL.
+- **Migração de Licença (`AGPL-3.0-or-later`):** licença atualizada de MIT para **GNU Affero General Public License v3.0 (`AGPL-3.0-or-later`)** a partir da versão `v1.7.0-beta` (versões até `v1.6.1-beta` permanecem historicamente sob a Licença MIT).
+
 ## [1.6.1] - 2026-11-20 (Beta)
 
 ### Ajustes de Interface & Capa

@@ -1,6 +1,6 @@
 {
   "siteName": "WebPullBook",
-  "version": "1.6.1",
+  "version": "1.7.0",
   "baseUrl": "https://wiltongabriel.github.io/WebPullBook",
   "repositoryUrl": "https://github.com/WiltonGabriel/WebPullBook",
   "firefoxAddonsUrl": "https://addons.mozilla.org/firefox/addon/webpullbook/",
@@ -70,5 +70,5 @@
       "ptFile": "pt/contributing.html"
     }
   ],
-  "versionName": "1.6.1-beta"
+  "versionName": "1.7.0-beta"
 }

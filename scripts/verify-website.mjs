@@ -29,13 +29,16 @@ if (!fs.existsSync(configPath)) {
 const siteConfig = JSON.parse(fs.readFileSync(configPath, 'utf8'));
 const BASE_URL = siteConfig.baseUrl.replace(/\/+$/, '');
 
+const BASIC_HTML_ENTITIES = new Map([
+  ['&amp;', '&'],
+  ['&quot;', '"'],
+  ['&#39;', "'"],
+  ['&lt;', '<'],
+  ['&gt;', '>']
+]);
+
 function decodeBasicHtmlEntities(str) {
-  return String(str || '')
-    .replace(/&amp;/g, '&')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>');
+  return String(str || '').replace(/&(?:amp|quot|#39|lt|gt);/g, (entity) => BASIC_HTML_ENTITIES.get(entity) || entity);
 }
 
 // Validate Firefox Add-ons canonical URL

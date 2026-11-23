@@ -1,7 +1,7 @@
 # Chrome Web Store & Mozilla Add-ons Listing Readiness — WebPullBook
 
 > Last Updated: 2026-11-23
-> Current Release Status: **Beta (`v1.6.1-beta`)** — published on [Firefox Add-ons (AMO)](https://addons.mozilla.org/firefox/addon/webpullbook/) and [GitHub Releases](https://github.com/WiltonGabriel/WebPullBook/releases); prepared for Chrome Web Store submission.
+> Current Release Status: **Beta (`v1.7.0-beta`)** — published on [Firefox Add-ons (AMO)](https://addons.mozilla.org/firefox/addon/webpullbook/) and [GitHub Releases](https://github.com/WiltonGabriel/WebPullBook/releases); prepared for Chrome Web Store submission.
 
 ## Store Listing
 
@@ -45,7 +45,7 @@ PERMISSIONS
 SUPPORT
 Found a bug or want to suggest an improvement? Open an issue at https://github.com/WiltonGabriel/WebPullBook/issues or visit https://wiltongabriel.github.io/WebPullBook/
 
-Version 1.6.1-beta — Reload Cover button restoring the original series cover in high resolution, vertical 2:3 cover preview, emoji-free language/theme selectors, plus the verified NovelBin React SPA adapter, generic SPA tab-pool & DOM-stability upgrades, and CodeQL security hardening.
+Version 1.7.0-beta — Firefox MV3 bilingual localization (`_locales/en` & `_locales/pt_BR`), optional Firefox website-access permission banner and hotlink-image DNR Referer fallback, inline Test Selectors diagnostic in Advanced Options, shared parser deduplication, expanded Chromium E2E checks, automated website sync, and GNU AGPLv3 (`AGPL-3.0-or-later`) licensing.
 
 **Category** [REQUIRED]
 Productivity
@@ -213,7 +213,8 @@ Encontrou algum problema ou deseja sugerir melhoria? Abra uma issue em https://g
 
 | Version | Date | Changes | Status |
 |---------|------|---------|--------|
-| `1.6.1` (`1.6.1-beta`) | 2026-11-20 | Reload Cover button (restores the original series cover in high resolution), vertical 2:3 cover preview, emoji-free language/theme selectors, versioning policy and Firefox for Android roadmap documentation. | Published (Firefox Add-ons & GitHub Release Beta) |
+| `1.7.0` (`1.7.0-beta`) | 2026-11-23 | Firefox MV3 localization (`_locales/`), optional Firefox website-access banner, DNR Referer image fallback, inline Test Selectors diagnostic, parser/helper deduplication, Chromium `sourceTabId`/SPA E2E coverage, automated website links/sitemap sync, `AGENTS.md` guardrails, and GNU AGPLv3 (`AGPL-3.0-or-later`) migration. | Released (GitHub Release Beta & Firefox Add-ons) |
+| `1.6.1` (`1.6.1-beta`) | 2026-11-20 | Reload Cover button (restores the original series cover in high resolution), vertical 2:3 cover preview, emoji-free language/theme selectors, versioning policy and Firefox for Android roadmap documentation. | Released (GitHub Release Beta & Firefox Add-ons, MIT historically) |
 | `1.6.0` (`1.6.0-beta`) | 2026-11-20 | Verified NovelBin React SPA adapter, generic SPA `TabRenderPool` & DOM stability upgrades, `.sr-only`/duplicate-heading sanitizer hardening, CodeQL security fixes, 5-theme website improvements, and updated policies/docs. | Released (GitHub Release Beta) |
 | `1.5.0` (`1.5.0-beta`) | 2026-11-20 | Automatic default cover fallback with WebPullBook logo, official bilingual GitHub Pages site with dynamic version detection and direct `.zip` download, `AGENTS.md`, `CHROMEWEBSTORE.md`, and quiet/minimalist documentation review. | Released (GitHub Release Beta) |
 | `1.4.0` (`1.4.0-beta`) | 2026-11-20 | Reader Profiles for Kindle (Legacy/Modern) & Kobo, Start-of-Book TOC, customizable Information & End-of-Book pages, active-tab live DOM capture, resilient image pipeline, Ctrl/Shift range selection, per-site selector isolation, Library batch updates, and SRP modularization. | Released (GitHub Release Beta) |
