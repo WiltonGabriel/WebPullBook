@@ -94,6 +94,61 @@ function createMockNovelServer() {
       return;
     }
 
+    if (reqUrl.pathname === '/spa-novel/') {
+      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
+      res.end(`<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <title>SPA Shell</title>
+  <script type="module" src="/spa-app.js"></script>
+</head>
+<body>
+  <div id="root">
+    <div class="skeleton"></div>
+    <div class="skeleton"></div>
+  </div>
+  <script>
+    setTimeout(() => {
+      const root = document.getElementById('root');
+      root.innerHTML = '<h1>Livro SPA E2E</h1><ul class="spa-toc"><li><a href="${origin}/spa-novel/ch-1">Capítulo 1 SPA</a></li></ul>';
+    }, 150);
+  </script>
+</body>
+</html>`);
+      return;
+    }
+
+    if (reqUrl.pathname === '/spa-novel/ch-1') {
+      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
+      res.end(`<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <title>SPA Chapter</title>
+  <script type="module" src="/spa-app.js"></script>
+</head>
+<body>
+  <div id="root">
+    <div class="skeleton"></div>
+  </div>
+  <script>
+    setTimeout(() => {
+      const root = document.getElementById('root');
+      root.innerHTML = '<article class="spa-chapter"><h2>Capítulo 1 SPA</h2><p>Prosa hidratada via JavaScript para validar o TabRenderPool e executeScript em E2E real no Chromium.</p><p>Segundo parágrafo narrativo hidratado dinamicamente no navegador.</p></article>';
+    }, 120);
+  </script>
+</body>
+</html>`);
+      return;
+    }
+
+    if (reqUrl.pathname === '/spa-app.js') {
+      res.writeHead(200, { 'content-type': 'application/javascript; charset=utf-8' });
+      res.end('/* mock spa entry */');
+      return;
+    }
+
     if (reqUrl.pathname === '/series/e2e-book/cap-01/') {
       res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
       res.end(`<!DOCTYPE html>
@@ -659,7 +714,54 @@ async function runE2E() {
       'Series without a detected cover should automatically receive the default WebPullBook cover'
     );
 
-    console.log('[OK] E2E extension flow passed end-to-end (load -> parse -> pack EPUB -> report -> jump to log -> merge tabs)');
+    // 7a. Test zero-network live DOM capture via sourceTabId against a real Chromium tab
+    const liveSrcTab = await context.newPage();
+    await liveSrcTab.goto(seriesUrl);
+    await liveSrcTab.waitForLoadState('load');
+    await liveSrcTab.evaluate(() => {
+      document.querySelector('h1.entry-title').textContent = 'Crônica Live Tab DOM';
+    });
+    const liveTabId = await page.evaluate(async (targetUrl) => {
+      const tabs = await chrome.tabs.query({});
+      return tabs.find((t) => t.url === targetUrl)?.id ?? null;
+    }, seriesUrl);
+    assert.ok(typeof liveTabId === 'number', 'Should resolve active tabId via chrome.tabs.query');
+
+    const srcTabWorkspace = await context.newPage();
+    await srcTabWorkspace.goto(
+      `chrome-extension://${extId}/src/workspace/workspace.html?url=${encodeURIComponent(seriesUrl)}&sourceTabId=${liveTabId}`
+    );
+    await srcTabWorkspace.waitForFunction(
+      () => document.querySelector('#meta-title')?.value === 'Crônica Live Tab DOM',
+      null,
+      { timeout: 15000 }
+    );
+    assert.equal(await srcTabWorkspace.locator('#chapters-tbody tr').count(), 2);
+    await srcTabWorkspace.close();
+    await liveSrcTab.close();
+
+    // 7b. Test automatic SPA tab-render fallback (TabRenderPool + executeScript) in a fresh workspace tab
+    const spaUrl = `http://127.0.0.1:${port}/spa-novel/`;
+    const spaPage = await context.newPage();
+    await spaPage.goto(`chrome-extension://${extId}/src/workspace/workspace.html?url=${encodeURIComponent(spaUrl)}`);
+    await spaPage.waitForFunction(
+      () => document.querySelector('#meta-title')?.value === 'Livro SPA E2E',
+      null,
+      { timeout: 20000 }
+    );
+    assert.equal(await spaPage.locator('#chapters-tbody tr').count(), 1);
+    await spaPage.click('#btn-preview-chapter');
+    await spaPage.waitForSelector('#preview-modal[open]', { timeout: 15000 });
+    await spaPage.waitForFunction(
+      () => /Prosa hidratada via JavaScript/i.test(document.querySelector('#preview-modal-content')?.textContent || ''),
+      null,
+      { timeout: 15000 }
+    );
+    await spaPage.click('#preview-modal .dialog-footer form[method="dialog"] button');
+    await spaPage.waitForSelector('#preview-modal[open]', { state: 'detached' });
+    await spaPage.close();
+
+    console.log('[OK] E2E extension flow passed end-to-end (load -> parse -> pack EPUB -> report -> merge tabs -> sourceTabId -> SPA)');
   } finally {
     if (context) await context.close();
     server.close();

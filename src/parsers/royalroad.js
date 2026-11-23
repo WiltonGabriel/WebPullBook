@@ -1,46 +1,18 @@
 import {
   BaseParser,
   extractCleanSynopsis,
+  extractUniqueTexts,
   extractVolumeLabel,
+  extractWindowJsonArray,
   fetchWithRetry,
   normalizeSpaces,
   normalizeUrl,
+  resolveAbsoluteUrl,
   toHighResCoverUrl
 } from '../core/parser-engine.js';
 
 const STATUS_RX = /^(ONGOING|COMPLETED|HIATUS|INACTIVE|STUB|DROPPED)$/i;
 const FICTION_PATH_RX = /^\/fiction\/\d+(?:\/[^/?#]+)?\/?$/i;
-
-function extractJsonArraySlice(text, startBracketIdx) {
-  let depth = 0;
-  let inString = false;
-  let escaped = false;
-
-  for (let i = startBracketIdx; i < text.length; i++) {
-    const ch = text[i];
-    if (inString) {
-      if (escaped) {
-        escaped = false;
-      } else if (ch === '\\') {
-        escaped = true;
-      } else if (ch === '"') {
-        inString = false;
-      }
-      continue;
-    }
-    if (ch === '"') {
-      inString = true;
-    } else if (ch === '[') {
-      depth++;
-    } else if (ch === ']') {
-      depth--;
-      if (depth === 0) {
-        return text.slice(startBracketIdx, i + 1);
-      }
-    }
-  }
-  return null;
-}
 
 function formatRoyalRoadVolume(vol) {
   const title = normalizeSpaces(vol?.title || '');
@@ -87,23 +59,7 @@ export class RoyalRoadParser extends BaseParser {
   }
 
   _extractWindowJsonArray(doc, varName) {
-    const pattern = new RegExp(`window\\.${varName}\\s*=\\s*\\[`);
-    for (const script of doc.querySelectorAll('script')) {
-      const text = script.textContent || '';
-      const match = pattern.exec(text);
-      if (!match) continue;
-      const bracketIdx = text.indexOf('[', match.index);
-      if (bracketIdx === -1) continue;
-      const slice = extractJsonArraySlice(text, bracketIdx);
-      if (!slice) continue;
-      try {
-        const parsed = JSON.parse(slice);
-        if (Array.isArray(parsed)) return parsed;
-      } catch {
-        // Ignore malformed inline JSON
-      }
-    }
-    return [];
+    return extractWindowJsonArray(doc, varName);
   }
 
   async resolveIndexDocument(inputUrl, doc, signal) {
@@ -171,15 +127,7 @@ export class RoyalRoadParser extends BaseParser {
       }
     }
 
-    const genres = [];
-    const seenGenres = new Set();
-    for (const tagEl of doc.querySelectorAll('.tags .fiction-tag, a.fiction-tag')) {
-      const tag = normalizeSpaces(tagEl.textContent);
-      if (tag && !seenGenres.has(tag)) {
-        seenGenres.add(tag);
-        genres.push(tag);
-      }
-    }
+    const genres = extractUniqueTexts(doc, '.tags .fiction-tag, a.fiction-tag');
     if (genres.length > 0) out.genres = genres;
 
     const hiddenDesc = doc.querySelector('.description .hidden-content');
@@ -198,16 +146,8 @@ export class RoyalRoadParser extends BaseParser {
       }
     }
 
-    const resolveAbs = (raw) => {
-      if (!raw) return '';
-      try {
-        return new URL(raw, targetUrl).toString();
-      } catch {
-        return '';
-      }
-    };
-    const ogCover = resolveAbs(doc.querySelector('meta[property="og:image"]')?.getAttribute('content'));
-    const domCover = resolveAbs(doc.querySelector('.cover-art-container img')?.getAttribute('src'));
+    const ogCover = resolveAbsoluteUrl(doc.querySelector('meta[property="og:image"]')?.getAttribute('content'), targetUrl);
+    const domCover = resolveAbsoluteUrl(doc.querySelector('.cover-art-container img')?.getAttribute('src'), targetUrl);
     const primaryCover = ogCover || domCover;
     const thumbCover = domCover || ogCover;
     if (primaryCover) {
@@ -304,10 +244,6 @@ export class RoyalRoadParser extends BaseParser {
     }
 
     return chapters;
-  }
-
-  findNextPageUrl() {
-    return null;
   }
 
   findChapterContentRoot(doc) {

@@ -1,10 +1,12 @@
 import {
   BaseParser,
   extractCleanSynopsis,
+  extractUniqueTexts,
   extractVolumeLabel,
   fetchDocumentWithOptions,
   normalizeSpaces,
   normalizeUrl,
+  resolveAbsoluteUrl,
   sleep
 } from '../core/parser-engine.js';
 
@@ -141,62 +143,26 @@ export class NovelManiaParser extends BaseParser {
 
     // Scope genre links to the novel header block to avoid picking up similar-novel cards
     const genreScope = h1El?.parentElement || doc;
-    const genres = [];
-    const seenGenres = new Set();
-    for (const a of genreScope.querySelectorAll('a[href^="/genero/"]')) {
-      const g = normalizeSpaces(a.textContent);
-      if (g && !seenGenres.has(g)) {
-        seenGenres.add(g);
-        genres.push(g);
-      }
-    }
+    const genres = extractUniqueTexts(genreScope, 'a[href^="/genero/"]');
     if (genres.length > 0) {
       out.genres = genres;
-    } else {
-      for (const script of doc.querySelectorAll('script[type="application/ld+json"]')) {
-        try {
-          const parsed = JSON.parse(script.textContent || '{}');
-          if (Array.isArray(parsed?.genre) && parsed.genre.length > 0) {
-            out.genres = parsed.genre.map((g) => normalizeSpaces(g)).filter(Boolean);
-            break;
-          }
-        } catch {
-          // Ignore malformed JSON-LD
-        }
-      }
+    } else if (Array.isArray(jsonLd.genres) && jsonLd.genres.length > 0) {
+      out.genres = jsonLd.genres;
     }
 
-    if (!out.status) {
-      for (const script of doc.querySelectorAll('script[type="application/ld+json"]')) {
-        try {
-          const parsed = JSON.parse(script.textContent || '{}');
-          if (parsed?.creativeWorkStatus) {
-            out.status = normalizeSpaces(parsed.creativeWorkStatus);
-            break;
-          }
-        } catch {
-          // Ignore
-        }
-      }
+    if (!out.status && jsonLd.status) {
+      out.status = jsonLd.status;
     }
 
     const synContainer = doc.querySelector('[data-testid="novel-synopsis"] .rich-text-content, [data-testid="novel-synopsis"]');
     const synopsis = extractCleanSynopsis(synContainer);
     if (synopsis) out.synopsis = synopsis;
 
-    const resolveAbs = (raw) => {
-      if (!raw) return '';
-      try {
-        return new URL(raw, targetUrl).toString();
-      } catch {
-        return '';
-      }
-    };
-
-    const ogCoverRaw = resolveAbs(doc.querySelector('meta[property="og:image"]')?.getAttribute('content'));
+    const ogCoverRaw = resolveAbsoluteUrl(doc.querySelector('meta[property="og:image"]')?.getAttribute('content'), targetUrl);
     const ogCover = /\/og-default\.png$/i.test(ogCoverRaw) ? '' : ogCoverRaw;
-    const domCover = resolveAbs(
-      doc.querySelector('aside img[src], img[src*="/uploads/novel/cover/"]')?.getAttribute('src')
+    const domCover = resolveAbsoluteUrl(
+      doc.querySelector('aside img[src], img[src*="/uploads/novel/cover/"]')?.getAttribute('src'),
+      targetUrl
     );
     const primary = ogCover || domCover;
     const thumb = domCover || ogCover;

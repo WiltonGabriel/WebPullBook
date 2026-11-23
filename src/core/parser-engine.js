@@ -38,4 +38,11 @@ export {
 } from './net-fetcher.js';
 export { AdaptiveRateLimiter } from './rate-limiter.js';
 export { BaseParser, downloadAndParseChapter } from './base-parser.js';
-export { generateCssSelector } from './selector-utils.js';
+export {
+  extractJsonArraySlice,
+  extractUniqueTexts,
+  extractWindowJsonArray,
+  isDescendantOf,
+  resolveAbsoluteUrl
+} from './parser-helpers.js';
+export { buildReadableSelector, generateCssSelector } from './selector-utils.js';

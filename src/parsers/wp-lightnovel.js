@@ -2,6 +2,7 @@ import {
   BaseParser,
   ensureAscendingChapterOrder,
   extractCleanSynopsis,
+  extractUniqueTexts,
   extractVolumeLabel,
   fetchWithRetry,
   normalizeSpaces,
@@ -93,9 +94,7 @@ export class WpNovelThemeParser extends BaseParser {
       }
     }
 
-    const genres = Array.from(doc.querySelectorAll('.genxed a, .mgen a'))
-      .map((a) => normalizeSpaces(a.textContent))
-      .filter(Boolean);
+    const genres = extractUniqueTexts(doc, '.genxed a, .mgen a');
     if (genres.length > 0) out.genres = genres;
 
     const synContainer = doc.querySelector(

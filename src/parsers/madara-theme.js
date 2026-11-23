@@ -2,6 +2,7 @@ import {
   BaseParser,
   ensureAscendingChapterOrder,
   extractCleanSynopsis,
+  extractUniqueTexts,
   extractVolumeLabel,
   fetchWithRetry,
   normalizeSpaces,
@@ -86,9 +87,7 @@ export class MadaraThemeParser extends BaseParser {
     const author = normalizeSpaces(doc.querySelector('.author-content')?.textContent);
     if (author) out.author = author;
 
-    const genres = Array.from(doc.querySelectorAll('.genres-content a'))
-      .map((a) => normalizeSpaces(a.textContent))
-      .filter(Boolean);
+    const genres = extractUniqueTexts(doc, '.genres-content a');
     if (genres.length > 0) out.genres = genres;
 
     const syn = extractCleanSynopsis(doc.querySelector('.summary__content, .description-summary .summary__content'));

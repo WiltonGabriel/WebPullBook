@@ -33,28 +33,27 @@ export class ParserRegistry {
     return this.parsers.map((p) => ({ id: p.id, name: p.name }));
   }
 
-  detect(doc, url, forcedId = 'auto') {
+  detectWithScores(doc, url, forcedId = 'auto') {
+    const ranked = this.parsers
+      .map((parser) => ({ parser, id: parser.id, name: parser.name, score: Number(parser.matchScore(doc, url)) || 0 }))
+      .sort((a, b) => b.score - a.score);
+    const scores = ranked.map(({ id, name, score }) => ({ id, name, score }));
+
     if (forcedId && forcedId !== 'auto') {
       const explicit = this.getById(forcedId);
-      if (explicit) return explicit;
+      if (explicit) return { parser: explicit, scores };
     }
 
-    let bestParser = genericHtmlParser;
-    let bestScore = -1;
-    for (const parser of this.parsers) {
-      const score = Number(parser.matchScore(doc, url)) || 0;
-      if (score > bestScore) {
-        bestScore = score;
-        bestParser = parser;
-      }
-    }
-    return bestParser;
+    const best = ranked.length > 0 && ranked[0].score > -1 ? ranked[0].parser : genericHtmlParser;
+    return { parser: best, scores };
+  }
+
+  detect(doc, url, forcedId = 'auto') {
+    return this.detectWithScores(doc, url, forcedId).parser;
   }
 
   scoreAll(doc, url) {
-    return this.parsers
-      .map((parser) => ({ id: parser.id, name: parser.name, score: Number(parser.matchScore(doc, url)) || 0 }))
-      .sort((a, b) => b.score - a.score);
+    return this.detectWithScores(doc, url).scores;
   }
 }
 
@@ -216,8 +215,8 @@ export async function loadSeriesWithParser(inputUrl, options = {}, signal) {
     }
   }
 
-  const initialScores = parserRegistry.scoreAll(initialDoc, initialUrl);
-  const topInitialScore = initialScores[0]?.score || 0;
+  let ranked = parserRegistry.detectWithScores(initialDoc, initialUrl, effectiveOptions.parserId || 'auto');
+  const topInitialScore = ranked.scores[0]?.score || 0;
 
   if (
     !effectiveOptions.renderWithTab &&
@@ -235,14 +234,14 @@ export async function loadSeriesWithParser(inputUrl, options = {}, signal) {
       });
       effectiveOptions = { ...effectiveOptions, renderWithTab: true, _usedTabFallback: true };
       usedAutoSpa = true;
+      ranked = parserRegistry.detectWithScores(initialDoc, initialUrl, effectiveOptions.parserId || 'auto');
     } catch {
       // Continue with static document if tab render fails
     }
   }
 
-  let parser = parserRegistry.detect(initialDoc, initialUrl, effectiveOptions.parserId || 'auto');
-  const scoreSummary = parserRegistry
-    .scoreAll(initialDoc, initialUrl)
+  let parser = ranked.parser;
+  const scoreSummary = ranked.scores
     .slice(0, 3)
     .map((s) => `${s.id}=${s.score}`)
     .join(', ');

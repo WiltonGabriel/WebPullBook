@@ -1,8 +1,10 @@
 import {
   BaseParser,
+  buildReadableSelector,
   ensureAscendingChapterOrder,
   extractVolumeLabel,
   fetchDocumentWithOptions,
+  isDescendantOf,
   normalizeSpaces,
   normalizeUrl,
   resolveSafeHttpUrl
@@ -22,88 +24,7 @@ const POSITIVE_PROSE_HINT_RX =
   /(?:^|[\s_-])(?:content|chapter|prose|reading|story|novel|texto|capitulo|article|entry|post-body|text-body|chapter-text|正文|章节|本文)(?:$|[\s_-])/i;
 const NEGATIVE_PROSE_HINT_RX =
   /(?:^|[\s_-])(?:comment|sidebar|footer|widget|recommend|related|share|meta|author-bio|nav|menu)(?:$|[\s_-])/i;
-const UTILITY_CLASS_RX = /^(?:flex|inline-flex|grid|block|inline-block|hidden|relative|absolute|fixed|sticky|prose|container|mx-auto|(?:m|p|px|py|pt|pb|pl|pr|mt|mb|ml|mr|gap|space-[xy]|w|h|min-w|min-h|max-w|max-h|text|bg|border|rounded|shadow|overflow|items|justify|self|col|row|z)-.+|_[a-zA-Z0-9_-]{4,}|[a-zA-Z0-9-]+_[a-zA-Z0-9]{5,})$/;
 const VOLUME_HEADING_RX = /\b(?:vol(?:ume)?\.?\s*\d+|book\s*\d+|livro\s*\d+|tome\s*\d+|ano\s*\d+|part(?:e)?\s*(?:\d+|[ivx]+))/i;
-
-function isDescendantOf(child, ancestor) {
-  let cur = child?.parentElement;
-  while (cur) {
-    if (cur === ancestor) return true;
-    cur = cur.parentElement;
-  }
-  return false;
-}
-
-function escapeCssIdent(ident) {
-  return String(ident).replace(/([^a-zA-Z0-9_-])/g, '\\$1');
-}
-
-function isStableId(id) {
-  return Boolean(id) && !/^\d/.test(id) && !/^:?r\d+:?$/i.test(id) && !/_[a-zA-Z0-9]{6,}$/.test(id);
-}
-
-function getElementSimpleSelector(el) {
-  if (!el || el.nodeType !== Node.ELEMENT_NODE) return '';
-  const tag = el.tagName.toLowerCase();
-  if (tag === 'body' || tag === 'main' || tag === 'article') {
-    const id = el.getAttribute('id') || '';
-    if (isStableId(id)) return `#${escapeCssIdent(id)}`;
-  }
-  const id = el.getAttribute('id') || '';
-  if (isStableId(id)) {
-    return `#${escapeCssIdent(id)}`;
-  }
-  const rawClass = typeof el.className === 'string' ? el.className : el.getAttribute('class') || '';
-  const stableClasses = rawClass
-    .trim()
-    .split(/\s+/)
-    .filter((c) => c && !UTILITY_CLASS_RX.test(c));
-  if (stableClasses.length > 0) {
-    return `${tag}.${stableClasses.slice(0, 2).map(escapeCssIdent).join('.')}`;
-  }
-  return tag;
-}
-
-function buildReadableSelector(el, doc, suffix = '') {
-  if (!el || !doc) return '';
-  const candidates = [];
-  const base = getElementSimpleSelector(el);
-  if (base) candidates.push(base);
-
-  let ancestor = el.parentElement;
-  let chain = base;
-  for (let depth = 0; depth < 3 && ancestor && ancestor.tagName.toLowerCase() !== 'html'; depth++) {
-    const part = getElementSimpleSelector(ancestor);
-    chain = `${part} > ${chain}`;
-    candidates.push(chain);
-    if (part.startsWith('#') || part.includes('.')) {
-      candidates.push(`${part} ${base}`);
-    }
-    if (ancestor.tagName.toLowerCase() === 'body') break;
-    ancestor = ancestor.parentElement;
-  }
-
-  for (const sel of candidates) {
-    const full = suffix ? `${sel} ${suffix}` : sel;
-    try {
-      const matched = doc.querySelectorAll(full);
-      if (suffix) {
-        if (matched.length > 0 && Array.from(matched).every((node) => node === el || isDescendantOf(node, el))) {
-          return full;
-        }
-      } else if (matched.length === 1 && matched[0] === el) {
-        return full;
-      } else if (matched.length > 0 && matched[0] === el && (sel.startsWith('#') || sel.includes('.'))) {
-        return full;
-      }
-    } catch {
-      // Skip invalid candidate selector
-    }
-  }
-
-  const fallback = candidates[candidates.length - 1] || base;
-  return suffix && fallback ? `${fallback} ${suffix}` : fallback;
-}
 
 /**
  * Intelligent fallback adapter using DOM cluster scoring for chapter indexes

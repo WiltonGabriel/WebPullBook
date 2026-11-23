@@ -1,32 +1,16 @@
 import test, { beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
-import path from 'node:path';
 import { installDomGlobals } from './helpers/dom-shim.js';
 import {
-  AdaptiveRateLimiter,
-  BaseParser,
-  PageDomCache,
-  TabRenderPool,
-  assertSafeHttpUrl,
-  buildOutputPath,
-  clearSpaDomainCircuit,
-  decodeHtmlBytes,
-  fetchDocumentWithOptions,
-  fetchRenderedTabDocument,
-  generateCssSelector,
-  isAntiBotChallengeDocument,
-  isSpaDomainCircuitOpen,
-  resolveSafeHttpUrl,
-  sanitizePathSegment,
-  toHighResCoverUrl
-} from '../src/core/parser-engine.js';
+  SNAPSHOTS,
+  assertParserSnapshot,
+  mockFetchRoutes,
+  readFixture
+} from './helpers/parser-snapshot.js';
 import {
-  applyImageRefererRule,
-  applyNavigationHeaderRules,
-  clearImageRefererRules,
-  clearNavigationHeaderRules
-} from '../src/core/dnr-rules.js';
+  BaseParser,
+  isAntiBotChallengeDocument
+} from '../src/core/parser-engine.js';
 import {
   ParserRegistry,
   loadSeriesWithParser,
@@ -40,34 +24,6 @@ import { novelManiaParser } from '../src/parsers/novelmania.js';
 import { scribbleHubParser } from '../src/parsers/scribblehub.js';
 import { novelBinParser } from '../src/parsers/novelbin.js';
 import { genericHtmlParser } from '../src/parsers/generic-html.js';
-
-const FIXTURES_DIR = path.resolve('tests/fixtures');
-const SNAPSHOTS = JSON.parse(fs.readFileSync(path.join(FIXTURES_DIR, 'snapshots.json'), 'utf8'));
-
-function readFixture(name) {
-  return fs.readFileSync(path.join(FIXTURES_DIR, name), 'utf8');
-}
-
-function mockFetchRoutes(routes) {
-  const calls = [];
-  globalThis.fetch = async (url) => {
-    const key = String(url);
-    calls.push(key);
-    const handler = routes[key];
-    if (!handler) {
-      return new Response('Not Found', { status: 404 });
-    }
-    const res = typeof handler === 'function' ? handler(calls.filter((u) => u === key).length) : handler;
-    if (typeof res === 'string') {
-      return new Response(res, { status: 200, headers: { 'content-type': 'text/html; charset=utf-8' } });
-    }
-    return new Response(res.body || '', {
-      status: res.status || 200,
-      headers: res.headers || { 'content-type': 'text/html; charset=utf-8' }
-    });
-  };
-  return calls;
-}
 
 let restoreDom;
 let origFetch;
@@ -124,19 +80,7 @@ test('Regression snapshot: wp-lightnovel index + chapter breadcrumb resolution +
 
   // Loading from a chapter URL resolves back to the series index via .ts-breadcrumb
   const { parser, series } = await loadSeriesWithParser(expected.chapters[0].url);
-  assert.equal(parser.id, expected.parserId);
-  assert.equal(series.startingUrl, expected.startingUrl);
-  assert.equal(series.title, expected.title);
-  assert.equal(series.author, expected.author);
-  assert.equal(series.language, expected.language);
-  assert.equal(series.status, expected.status);
-  assert.deepEqual(series.genres, expected.genres);
-  assert.equal(series.coverUrl, expected.coverUrl);
-  assert.equal(series.synopsis, expected.synopsis);
-  assert.deepEqual(
-    series.chapters.map((c) => ({ url: c.url, displayTitle: c.displayTitle, volume: c.volume })),
-    expected.chapters
-  );
+  assertParserSnapshot(expected, { parser, series });
 
   // Extract chapter 1 content, ensuring ad block & nav links are stripped and lazy image URL resolved
   const parsedCh = await parser.downloadChapter(series.chapters[0]);
@@ -158,18 +102,7 @@ test('Regression snapshot: madara-theme index + chapter breadcrumb resolution + 
   });
 
   const { parser, series } = await loadSeriesWithParser(expected.chapters[0].url);
-  assert.equal(parser.id, expected.parserId);
-  assert.equal(series.startingUrl, expected.startingUrl);
-  assert.equal(series.title, expected.title);
-  assert.equal(series.author, expected.author);
-  assert.equal(series.language, expected.language);
-  assert.deepEqual(series.genres, expected.genres);
-  assert.equal(series.coverUrl, expected.coverUrl);
-  assert.equal(series.synopsis, expected.synopsis);
-  assert.deepEqual(
-    series.chapters.map((c) => ({ url: c.url, displayTitle: c.displayTitle, volume: c.volume })),
-    expected.chapters
-  );
+  assertParserSnapshot(expected, { parser, series });
 
   const parsedCh = await parser.downloadChapter(series.chapters[0]);
   const chXhtml = parsedCh.serialize('../styles/stylesheet.css', true);
@@ -185,15 +118,7 @@ test('Regression snapshot: generic-html multi-page pagination + Readability pros
   });
 
   const { parser, series } = await loadSeriesWithParser(expected.startingUrl);
-  assert.equal(parser.id, expected.parserId);
-  assert.equal(series.title, expected.title);
-  assert.equal(series.author, expected.author);
-  assert.equal(series.language, expected.language);
-  assert.equal(series.synopsis, expected.synopsis);
-  assert.deepEqual(
-    series.chapters.map((c) => ({ url: c.url, displayTitle: c.displayTitle, volume: c.volume })),
-    expected.chapters
-  );
+  assertParserSnapshot(expected, { parser, series });
 
   const parsedCh = await parser.downloadChapter(series.chapters[0]);
   const chXhtml = parsedCh.serialize('../styles/stylesheet.css', true);
@@ -315,19 +240,7 @@ test('Regression snapshot: royalroad index + chapter back-link resolution + hidd
 
   // Loading from a chapter URL resolves back to the fiction index page
   const { parser, series } = await loadSeriesWithParser(expected.chapters[0].url);
-  assert.equal(parser.id, expected.parserId);
-  assert.equal(series.startingUrl, expected.startingUrl);
-  assert.equal(series.title, expected.title);
-  assert.equal(series.author, expected.author);
-  assert.equal(series.language, expected.language);
-  assert.equal(series.status, expected.status);
-  assert.deepEqual(series.genres, expected.genres);
-  assert.equal(series.coverUrl, expected.coverUrl);
-  assert.equal(series.synopsis, expected.synopsis);
-  assert.deepEqual(
-    series.chapters.map((c) => ({ url: c.url, displayTitle: c.displayTitle, volume: c.volume })),
-    expected.chapters
-  );
+  assertParserSnapshot(expected, { parser, series });
 
   const parsedCh = await parser.downloadChapter(series.chapters[0]);
   assert.equal(parsedCh.chapterTitle, 'Chapter 1: First Spark');
@@ -365,19 +278,7 @@ test('Regression snapshot: novelmania index + API pagination + chapter resolutio
 
   // 1. DOM fallback from a chapter URL resolves back to the novel index page
   const { parser, series } = await loadSeriesWithParser(expected.chapters[0].url);
-  assert.equal(parser.id, expected.parserId);
-  assert.equal(series.startingUrl, expected.startingUrl);
-  assert.equal(series.title, expected.title);
-  assert.equal(series.author, expected.author);
-  assert.equal(series.language, expected.language);
-  assert.equal(series.status, expected.status);
-  assert.deepEqual(series.genres, expected.genres);
-  assert.equal(series.coverUrl, expected.coverUrl);
-  assert.equal(series.synopsis, expected.synopsis);
-  assert.deepEqual(
-    series.chapters.map((c) => ({ url: c.url, displayTitle: c.displayTitle, volume: c.volume })),
-    expected.chapters
-  );
+  assertParserSnapshot(expected, { parser, series });
 
   // 2. Chapter extraction strips .sr-only suffix, preserves inline image and intra-chapter footnote anchors
   const parsedCh = await parser.downloadChapter(series.chapters[0]);
@@ -573,19 +474,7 @@ test('Regression snapshot: scribblehub index + pagination ordering + chapter res
 
   // 1. Loading from a chapter URL resolves back to the series page and collects paginated TOC in ascending order
   const { parser, series } = await loadSeriesWithParser(expected.chapters[0].url);
-  assert.equal(parser.id, scribbleHubParser.id);
-  assert.equal(series.startingUrl, expected.startingUrl);
-  assert.equal(series.title, expected.title);
-  assert.equal(series.author, expected.author);
-  assert.equal(series.language, expected.language);
-  assert.equal(series.status, expected.status);
-  assert.deepEqual(series.genres, expected.genres);
-  assert.equal(series.coverUrl, expected.coverUrl);
-  assert.equal(series.synopsis, expected.synopsis);
-  assert.deepEqual(
-    series.chapters.map((c) => ({ url: c.url, displayTitle: c.displayTitle, volume: c.volume })),
-    expected.chapters
-  );
+  assertParserSnapshot(expected, { parser, series });
 
   // 2. Chapter extraction deduplicates leading title heading, strips .p-avatar-wrap, separates author notes, keeps inline image
   const parsedCh = await parser.downloadChapter(series.chapters[0]);
@@ -719,147 +608,6 @@ test('WP ascending chapter lists stay ascending and standalone articles become 1
   const { series: essaySeries } = await loadSeriesWithParser('https://essay.example.org/post');
   assert.equal(essaySeries.chapters.length, 1);
   assert.equal(essaySeries.chapters[0].displayTitle, 'Ensaio Único');
-});
-
-test('buildOutputPath and sanitizePathSegment handle custom root folders, presets, tokens, and unsafe segments', () => {
-  assert.equal(sanitizePathSegment('..'), '');
-  assert.equal(sanitizePathSegment('  Nome.. '), 'Nome');
-  assert.equal(sanitizePathSegment('CON'), '_CON');
-
-  assert.equal(
-    buildOutputPath({
-      baseFilename: 'Crônica',
-      title: 'Crônica',
-      author: 'Ana',
-      extension: 'epub',
-      options: {}
-    }),
-    'WebPullBook/Crônica/Crônica.epub'
-  );
-
-  assert.equal(
-    buildOutputPath({
-      baseFilename: 'Crônica',
-      title: 'Fate/Stay Night',
-      author: 'Nasu',
-      extension: 'epub',
-      options: {
-        rootFolderName: 'Biblioteca/LightNovels',
-        folderLayout: 'root-author-title'
-      }
-    }),
-    'Biblioteca/LightNovels/Nasu/Fate_Stay Night/Crônica.epub'
-  );
-
-  assert.equal(
-    buildOutputPath({
-      baseFilename: 'Livro',
-      title: 'Livro',
-      author: 'Autor',
-      extension: 'html',
-      options: { rootFolderName: 'MeusLivros', folderLayout: 'root-format-title' }
-    }),
-    'MeusLivros/HTML/Livro/Livro.html'
-  );
-
-  assert.equal(
-    buildOutputPath({
-      baseFilename: 'Livro',
-      title: 'Livro',
-      extension: 'epub',
-      options: { rootFolderName: 'Leitura', folderLayout: 'root-only' }
-    }),
-    'Leitura/Livro.epub'
-  );
-
-  assert.equal(
-    buildOutputPath({
-      baseFilename: 'Livro',
-      title: 'Livro',
-      author: 'Autor',
-      extension: 'epub',
-      options: { folderLayout: 'title-only', rootFolderName: 'Ignored' }
-    }),
-    'Livro/Livro.epub'
-  );
-
-  assert.equal(
-    buildOutputPath({
-      baseFilename: 'Livro',
-      title: 'Livro',
-      extension: 'epub',
-      options: { subfolder: false }
-    }),
-    'Livro.epub'
-  );
-
-  assert.equal(
-    buildOutputPath({
-      baseFilename: 'Saga',
-      title: 'Saga',
-      author: 'João',
-      volumeLabel: 'Volume 02',
-      language: 'pt',
-      extension: 'epub',
-      options: {
-        rootFolderName: '../../Hacks',
-        folderLayout: 'custom',
-        customFolderTemplate: '%Language%/%Author%/%Title%/%Volume%'
-      }
-    }),
-    'pt/João/Saga/Volume 02/Saga - Volume 02.epub'
-  );
-
-  assert.equal(
-    buildOutputPath({
-      baseFilename: 'Saga',
-      title: 'Saga',
-      author: 'João',
-      volumeLabel: '',
-      language: 'pt',
-      extension: 'epub',
-      options: {
-        folderLayout: 'custom',
-        customFolderTemplate: '../%Author%/%Volume%/%Title%'
-      }
-    }),
-    'João/Saga/Saga.epub'
-  );
-});
-
-test('generateCssSelector produces reusable list, content, and exclude selectors', () => {
-  const doc = new DOMParser().parseFromString(
-    `<html><body>
-      <main id="reader-shell">
-        <ul class="chapters-nav">
-          <li><a href="/c1">Capítulo 1</a></li>
-          <li><a href="/c2">Capítulo 2</a></li>
-          <li><a href="/c3">Capítulo 3</a></li>
-        </ul>
-        <article class="chapter-body">
-          <div class="promo-banner active">Anúncio</div>
-          <p class="story-line">Era uma vez.</p>
-        </article>
-      </main>
-    </body></html>`,
-    'text/html'
-  );
-
-  const firstLink = doc.querySelector('.chapters-nav a');
-  const articleEl = doc.querySelector('.chapter-body');
-  const adBanner = doc.querySelector('.promo-banner');
-
-  const listSel = generateCssSelector(firstLink, 'list');
-  assert.equal(listSel, 'ul.chapters-nav a');
-  assert.equal(doc.querySelectorAll(listSel).length, 3);
-
-  const contentSel = generateCssSelector(articleEl, 'content');
-  assert.equal(contentSel, 'article.chapter-body');
-  assert.equal(doc.querySelectorAll(contentSel).length, 1);
-
-  const excludeSel = generateCssSelector(adBanner, 'exclude');
-  assert.equal(excludeSel, 'div.promo-banner');
-  assert.equal(doc.querySelectorAll(excludeSel).length, 1);
 });
 
 test('looksLikeSpaShell does not flag normal SSR WordPress pages with noscript or empty widget mounts', () => {
@@ -1047,78 +795,6 @@ test('BaseParser.collectAllChapters stops immediately on zero-new-chapter pages 
   assert.ok(!calls.some((u) => u === p3), 'Pagination must stop as soon as p2 adds 0 new chapters');
 });
 
-test('decodeHtmlBytes respects HTTP charset header and HTML meta charset without mojibake', () => {
-  // "Capítulo 1: Coração" encoded in Windows-1252 / ISO-8859-1 bytes
-  const latin1Bytes = Uint8Array.from([
-    0x3c, 0x70, 0x3e, 0x43, 0x61, 0x70, 0xed, 0x74, 0x75, 0x6c, 0x6f, 0x20, 0x31, 0x3a, 0x20,
-    0x43, 0x6f, 0x72, 0x61, 0xe7, 0xe3, 0x6f, 0x3c, 0x2f, 0x70, 0x3e
-  ]);
-  const fakeHeaders = new Headers({ 'content-type': 'text/html; charset=iso-8859-1' });
-  assert.equal(decodeHtmlBytes(latin1Bytes, fakeHeaders), '<p>Capítulo 1: Coração</p>');
-
-  const metaPrefix = new TextEncoder().encode('<meta charset="windows-1252">');
-  const combined = new Uint8Array(metaPrefix.length + latin1Bytes.length);
-  combined.set(metaPrefix, 0);
-  combined.set(latin1Bytes, metaPrefix.length);
-  assert.match(decodeHtmlBytes(combined, new Headers({ 'content-type': 'text/html' })), /Capítulo 1: Coração/);
-});
-
-test('fetchDocumentWithOptions reads live DOM directly from sourceTabId without network fetch or forced SPA flag', async () => {
-  const url = 'https://ssr.example.org/series/alpha';
-  let fetchCalled = false;
-  globalThis.fetch = async () => {
-    fetchCalled = true;
-    throw new Error('fetch should not be called when sourceTabId provides live DOM');
-  };
-  globalThis.chrome = {
-    tabs: {
-      create: async () => {
-        throw new Error('should not create background tab');
-      },
-      get: async (id) => ({ id, status: 'complete', url }),
-      query: async () => []
-    },
-    scripting: {
-      executeScript: async ({ target }) => {
-        assert.equal(target.tabId, 42);
-        return [{ result: '<html><head><title>Alpha</title></head><body><h1>Alpha</h1><p>Live DOM content</p></body></html>' }];
-      }
-    }
-  };
-
-  const doc = await fetchDocumentWithOptions(url, { sourceTabId: 42 });
-  assert.equal(fetchCalled, false);
-  assert.equal(doc._wpbFromSourceTab, true);
-  assert.equal(Boolean(doc._wpbRenderedByTab), false);
-  assert.match(doc.body.textContent, /Live DOM content/);
-});
-
-test('PageDomCache reuses preloaded 1st-page DOM and multi-chapter hash URLs without repeating fetch', async () => {
-  const chUrl = 'https://cache.example.org/single-page-story';
-  const html = '<html><body><h1>Single Story</h1><div class="entry-content"><p>Reusable prose paragraph with enough length for chapter extraction.</p></div></body></html>';
-  const preloadedDoc = new DOMParser().parseFromString(html, 'text/html');
-  const domCache = new PageDomCache();
-  domCache.set(chUrl, preloadedDoc);
-
-  let fetchCalled = false;
-  globalThis.fetch = async () => {
-    fetchCalled = true;
-    throw new Error('Should reuse cached DOM instead of calling fetch');
-  };
-
-  const parsed1 = await genericHtmlParser.downloadChapter(
-    { url: chUrl, displayTitle: 'Part 1' },
-    { pageDomCache: domCache }
-  );
-  const parsed2 = await genericHtmlParser.downloadChapter(
-    { url: `${chUrl}#part-2`, displayTitle: 'Part 2' },
-    { pageDomCache: domCache }
-  );
-  assert.equal(fetchCalled, false);
-  assert.match(parsed1.serialize('../styles/stylesheet.css', true), /Reusable prose paragraph/);
-  assert.match(parsed2.serialize('../styles/stylesheet.css', true), /Reusable prose paragraph/);
-});
-
 test('GenericHtmlParser fixes all 6 weaknesses: <br> prose, TOC vs chapter detection, TOC link resolution, innermost list, and ascending sort', async () => {
   // 1. <br>-based chapter without <p> tags
   const brDoc = new DOMParser().parseFromString(
@@ -1213,126 +889,6 @@ test('resolveParserForChapterUrl selects host-appropriate parser for multi-domai
   assert.equal(otherHost.id, genericHtmlParser.id);
 });
 
-test('TabRenderPool reuses a single background worker tab across multiple SPA chapters and closes it once', async () => {
-  let createCount = 0;
-  let updateCount = 0;
-  let removeCount = 0;
-  let currentUrl = '';
-
-  globalThis.chrome = {
-    tabs: {
-      onUpdated: { addListener() {}, removeListener() {} },
-      query: async () => [],
-      create: async ({ url }) => {
-        createCount++;
-        currentUrl = url;
-        return { id: 700, status: 'complete', url };
-      },
-      update: async (id, { url }) => {
-        updateCount++;
-        currentUrl = url;
-        return { id, status: 'complete', url };
-      },
-      get: async (id) => ({ id, status: 'complete', url: currentUrl }),
-      remove: async () => {
-        removeCount++;
-      }
-    },
-    scripting: {
-      executeScript: async () => [
-        { result: `<html><body><article><p>Rendered content for ${currentUrl}</p></article></body></html>` }
-      ]
-    }
-  };
-
-  const pool = new TabRenderPool();
-  const d1 = await fetchRenderedTabDocument('https://spa.example.org/ch-1', { waitMs: 0, tabPool: pool });
-  const d2 = await fetchRenderedTabDocument('https://spa.example.org/ch-2', { waitMs: 0, tabPool: pool });
-  const d3 = await fetchRenderedTabDocument('https://spa.example.org/ch-3', { waitMs: 0, tabPool: pool });
-  await pool.close();
-
-  assert.equal(createCount, 1, 'Should create only ONE worker tab for all 3 chapters');
-  assert.equal(updateCount, 2, 'Chapters 2 and 3 should reuse the worker tab via tabs.update');
-  assert.equal(removeCount, 1, 'Should close the single worker tab once on pool.close()');
-  assert.match(d1.body.textContent, /ch-1/);
-  assert.match(d2.body.textContent, /ch-2/);
-  assert.match(d3.body.textContent, /ch-3/);
-});
-
-test('AdaptiveRateLimiter adapts concurrency, Retry-After, latency backoff, and exits cooperative wait when Safe Mode is unchecked', async () => {
-  const rl = new AdaptiveRateLimiter();
-  assert.equal(rl.getEffectiveBatchWidth({ safeMode: false, requiresTab: false, configuredConcurrency: 4 }), 4);
-  assert.equal(rl.getEffectiveBatchWidth({ safeMode: true, requiresTab: false, configuredConcurrency: 4 }), 1);
-  assert.equal(rl.getEffectiveBatchWidth({ safeMode: false, requiresTab: true, configuredConcurrency: 4 }), 1);
-
-  // Throttle + Retry-After steps up backoff and forces 1x concurrency
-  rl.recordThrottle({ retryAfterSec: 12 });
-  assert.ok(rl.backoffFactor >= 1.5);
-  assert.equal(rl.getEffectiveBatchWidth({ safeMode: false, requiresTab: false, configuredConcurrency: 4 }), 1);
-  const retryPlan = rl.computeNextWait({ safeMode: false, baseDelayMs: 200 });
-  assert.equal(retryPlan.reason, 'retry-after');
-  assert.ok(retryPlan.waitMs >= 11000 && retryPlan.waitMs <= 12500);
-
-  // 5 consecutive fast successes relax backoff smoothly
-  const beforeRelax = rl.backoffFactor;
-  for (let i = 0; i < 5; i++) rl.recordSuccess(250);
-  assert.ok(rl.backoffFactor < beforeRelax, 'Backoff should relax after 5 fast healthy responses');
-
-  // Cooperative wait wakes immediately if user unchecks Safe Mode mid-wait
-  let safeOn = true;
-  setTimeout(() => {
-    safeOn = false;
-  }, 60);
-  const t0 = Date.now();
-  await rl.waitCooperatively(5000, { isSafeModeActive: () => safeOn });
-  assert.ok(Date.now() - t0 < 1500, 'Cooperative wait should exit early when Safe Mode is disabled live');
-});
-
-test('SPA security blocks unsafe protocols and trips per-domain anti-bot circuit breaker to prevent tab loops', async () => {
-  assert.throws(() => assertSafeHttpUrl('javascript:alert(1)'), /Protocolo bloqueado/);
-  assert.throws(() => assertSafeHttpUrl('chrome://settings'), /Protocolo bloqueado/);
-  assert.throws(() => assertSafeHttpUrl('file:///etc/passwd'), /Protocolo bloqueado/);
-  assert.equal(assertSafeHttpUrl('https://safe.example.org/ch/1'), 'https://safe.example.org/ch/1');
-
-  const gatedUrl = 'https://cf-gated.example.org/chapter/1';
-  clearSpaDomainCircuit(gatedUrl);
-  let createCalls = 0;
-  globalThis.chrome = {
-    tabs: {
-      onUpdated: { addListener() {}, removeListener() {} },
-      query: async () => [],
-      create: async ({ url }) => {
-        createCalls++;
-        return { id: 801, status: 'complete', url };
-      },
-      get: async (id) => ({ id, status: 'complete', url: gatedUrl }),
-      remove: async () => {}
-    },
-    scripting: {
-      executeScript: async () => [
-        {
-          result: {
-            html: '<html><head><title>Just a moment...</title></head><body><div id="challenge-running">Checking your browser</div></body></html>',
-            finalUrl: gatedUrl
-          }
-        }
-      ]
-    }
-  };
-
-  // First attempt detects Cloudflare and trips circuit breaker
-  await assert.rejects(() => fetchRenderedTabDocument(gatedUrl, { waitMs: 0 }), (err) => Boolean(err.isAntiBotChallenge));
-  assert.equal(createCalls, 1);
-  assert.equal(isSpaDomainCircuitOpen(gatedUrl), true);
-
-  // Second attempt on same domain MUST NOT spawn another background tab while circuit is open
-  await assert.rejects(() => fetchRenderedTabDocument('https://cf-gated.example.org/chapter/2', { waitMs: 0 }), /Proteção SPA ativa/);
-  assert.equal(createCalls, 1, 'Circuit breaker must prevent spawning additional background tabs');
-
-  clearSpaDomainCircuit(gatedUrl);
-  assert.equal(isSpaDomainCircuitOpen(gatedUrl), false);
-});
-
 test('BaseParser falls back to native adapter when stale customListSelector returns 0 chapters and retries HTTP if sourceTab DOM is empty', async () => {
   const seriesUrl = 'https://centralnovel.example.org/series/devourer/';
   const fullHtml = `<html><head><title>Devourer</title></head><body>
@@ -1376,74 +932,6 @@ test('BaseParser falls back to native adapter when stale customListSelector retu
   assert.equal(recovered.chapters.length, 2, 'Empty sourceTab DOM should recover via direct HTTP fetch');
 });
 
-test('Firefox moz-extension DNR rule ID 1 is preserved when applying and clearing navigation header rules (IDs 100..119)', async () => {
-  let sessionRules = [
-    {
-      id: 1,
-      priority: 1,
-      action: { type: 'modifyHeaders', requestHeaders: [{ header: 'Origin', operation: 'remove' }] }
-    }
-  ];
-  globalThis.chrome = {
-    runtime: {
-      getURL: (p = '') => `moz-extension://8f3b2c1a-4d5e-6f7a-8b9c-0d1e2f3a4b5c/${p}`
-    },
-    declarativeNetRequest: {
-      getSessionRules: async () => [...sessionRules],
-      updateSessionRules: async ({ removeRuleIds = [], addRules = [] }) => {
-        sessionRules = sessionRules.filter((r) => !removeRuleIds.includes(r.id)).concat(addRules);
-      }
-    }
-  };
-
-  const applied = await applyNavigationHeaderRules(['fiction.example.org'], 'https://fiction.example.org/toc');
-  assert.equal(applied, true);
-  assert.ok(sessionRules.some((r) => r.id === 1), 'Firefox Origin-removal rule ID 1 must remain intact');
-  const navRule = sessionRules.find((r) => r.id === 100);
-  assert.ok(navRule, 'Navigation rule ID 100 must be added');
-  assert.ok(navRule.condition.resourceTypes.includes('image'), 'Navigation rule should cover image requests');
-
-  const imgApplied = await applyImageRefererRule('https://cdn.example.org/cover.jpg', 'https://fiction.example.org/toc');
-  assert.equal(imgApplied, true);
-  assert.ok(sessionRules.some((r) => r.id === 120), 'Image Referer rule ID 120 must be added');
-  await clearImageRefererRules();
-  assert.ok(!sessionRules.some((r) => r.id === 120) && sessionRules.some((r) => r.id === 100) && sessionRules.some((r) => r.id === 1));
-
-  await applyImageRefererRule('https://cdn.example.org/cover.jpg', 'https://fiction.example.org/toc');
-  await clearNavigationHeaderRules();
-  assert.deepEqual(
-    sessionRules.map((r) => r.id),
-    [1],
-    'Clearing navigation rules must remove IDs 100..129 while keeping Firefox rule ID 1'
-  );
-});
-
-test('toHighResCoverUrl unwraps Jetpack proxy and strips resize and numeric w/h query params', () => {
-  assert.equal(
-    toHighResCoverUrl('https://i0.wp.com/example.com/uploads/cover.jpg?resize=200,300&w=200'),
-    'https://example.com/uploads/cover.jpg'
-  );
-  assert.equal(
-    toHighResCoverUrl('https://cdn.example.org/img/cover.webp?w=300&h=450&token=abc&w=auto'),
-    'https://cdn.example.org/img/cover.webp?token=abc&w=auto'
-  );
-  assert.equal(
-    toHighResCoverUrl('https://cdn.example.org/img/cover.jpg?resize=600,900&h=900'),
-    'https://cdn.example.org/img/cover.jpg'
-  );
-});
-
-test('resolveSafeHttpUrl allows only HTTP/HTTPS and blocks javascript, data, and vbscript schemes', () => {
-  assert.equal(resolveSafeHttpUrl('/chapter/2#sec', 'https://fiction.example.org/series/'), 'https://fiction.example.org/chapter/2');
-  assert.equal(resolveSafeHttpUrl('http://local.example.org/test'), 'http://local.example.org/test');
-  assert.equal(resolveSafeHttpUrl('#anchor-only', 'https://fiction.example.org/'), null);
-  assert.equal(resolveSafeHttpUrl('javascript:alert(1)', 'https://fiction.example.org/'), null);
-  assert.equal(resolveSafeHttpUrl('  JaVaScRiPt:alert(1)', 'https://fiction.example.org/'), null);
-  assert.equal(resolveSafeHttpUrl('data:text/html,<script>alert(1)</script>', 'https://fiction.example.org/'), null);
-  assert.equal(resolveSafeHttpUrl('vbscript:msgbox(1)', 'https://fiction.example.org/'), null);
-  assert.equal(resolveSafeHttpUrl('file:///etc/passwd', 'https://fiction.example.org/'), null);
-});
-
 test('Regression snapshot: novelbin chapter-to-index resolution, metadata, chapter list, and sr-only/duplicate-heading/ad cleanup', async () => {
   const expected = SNAPSHOTS.novelbin;
   const indexHtml = readFixture('novelbin-index.html');
@@ -1456,21 +944,9 @@ test('Regression snapshot: novelbin chapter-to-index resolution, metadata, chapt
 
   // Loading directly from a chapter URL resolves back to the /novel/<slug> index
   const { parser, series } = await loadSeriesWithParser(expected.chapters[0].url);
-  assert.equal(parser.id, expected.parserId);
-  assert.equal(series.startingUrl, expected.startingUrl);
-  assert.equal(series.title, expected.title);
-  assert.equal(series.author, expected.author);
+  assertParserSnapshot(expected, { parser, series });
   assert.notEqual(series.author, 'Novelbin');
-  assert.equal(series.language, expected.language);
-  assert.equal(series.status, expected.status);
-  assert.deepEqual(series.genres, expected.genres);
-  assert.equal(series.coverUrl, expected.coverUrl);
-  assert.equal(series.synopsis, expected.synopsis);
   assert.equal(series.requiresTabRender, true);
-  assert.deepEqual(
-    series.chapters.map((c) => ({ url: c.url, displayTitle: c.displayTitle, volume: c.volume })),
-    expected.chapters
-  );
 
   const parsedCh1 = await parser.downloadChapter(series.chapters[0], {});
   assert.equal(parsedCh1.chapterTitle, 'Chapter 1 - The Lantern');
@@ -1574,45 +1050,3 @@ test('looksLikeSpaShell detects React skeleton SPA even when noscript SEO fallba
   assert.equal(looksLikeSpaShell(spaWithNoscriptDoc), true);
 });
 
-test('TabRenderPool waits until tab URL transitions off previous chapter when tabs.get returns stale complete URL', async () => {
-  let activeTabUrl = 'https://spa.example.org/read/book/chapter-1';
-  let pollCount = 0;
-
-  globalThis.chrome = {
-    tabs: {
-      onUpdated: { addListener() {}, removeListener() {} },
-      query: async () => [],
-      create: async ({ url }) => {
-        activeTabUrl = url;
-        return { id: 901, status: 'complete', url };
-      },
-      update: async (id, { url }) => {
-        pollCount = 0;
-        // Simulate Chrome keeping previous URL with status complete for multiple polls before loading next URL
-        setTimeout(() => {
-          activeTabUrl = url;
-        }, 280);
-        return { id, status: 'complete', url: activeTabUrl };
-      },
-      get: async (id) => {
-        pollCount++;
-        return { id, status: 'complete', url: activeTabUrl };
-      },
-      remove: async () => {}
-    },
-    scripting: {
-      executeScript: async () => [
-        { result: `<html><body><article><p>Hydrated prose for ${activeTabUrl}</p></article></body></html>` }
-      ]
-    }
-  };
-
-  const pool = new TabRenderPool();
-  const ch1 = await fetchRenderedTabDocument('https://spa.example.org/read/book/chapter-1', { waitMs: 0, tabPool: pool });
-  const ch2 = await fetchRenderedTabDocument('https://spa.example.org/read/book/chapter-2', { waitMs: 0, tabPool: pool });
-  await pool.close();
-
-  assert.match(ch1.body.textContent, /chapter-1/);
-  assert.match(ch2.body.textContent, /chapter-2/);
-  assert.ok(pollCount >= 2, 'Should poll until tab URL transitions off chapter-1');
-});
