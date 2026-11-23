@@ -429,5 +429,12 @@ export const EN_MESSAGES = {
   firefoxPermGrantBtn: 'Grant Website Access',
   firefoxPermGrantedMsg: 'Website access granted on Firefox.',
   firefoxPermDeniedMsg:
-    'Website access permission was denied. Without it, Firefox will block loading pages and images.'
+    'Website access permission was denied. Without it, Firefox will block loading pages and images.',
+  btnTestSelectors: 'Test selectors',
+  btnTestingSelectors: 'Testing...',
+  msgTestSelectorsNeedUrl: 'Enter a series or chapter URL first to test selectors.',
+  msgTestSelectorsInvalidCss: 'Invalid CSS selector: {error}',
+  msgTestSelectorsResult:
+    'Test complete: {listCount} chapter(s) matched • sample parsed with {words} word(s) and {images} image(s).',
+  msgTestSelectorsFailed: 'Selector test failed: {error}'
 };

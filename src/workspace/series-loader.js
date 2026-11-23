@@ -1,5 +1,12 @@
-import { fetchDocumentWithOptions, sanitizeFilename } from '../core/parser-engine.js';
-import { loadSeriesWithParser } from '../parsers/index.js';
+import {
+  downloadAndParseChapter,
+  fetchDocumentWithOptions,
+  normalizeSpaces,
+  normalizeUrl,
+  resolveSafeHttpUrl,
+  sanitizeFilename
+} from '../core/parser-engine.js';
+import { loadSeriesWithParser, parserRegistry } from '../parsers/index.js';
 import { genericHtmlParser } from '../parsers/generic-html.js';
 import { $, normalizeRuleDomain, state, t } from './state.js';
 import { appendLog, hideBanner, showBanner } from './logger.js';
@@ -281,5 +288,102 @@ export async function handleAutoDetectSelectors() {
   } finally {
     btn.disabled = false;
     btn.textContent = t('btnAutoDetectSelectors');
+  }
+}
+
+export async function handleTestSelectors() {
+  const url = $('starting-url').value.trim();
+  const resultEl = $('selector-test-result');
+  const btn = $('btn-test-selectors');
+  const setTestResult = (msg) => {
+    if (!resultEl) return;
+    resultEl.textContent = msg;
+    resultEl.classList.remove('hidden');
+  };
+
+  if (!url) {
+    setTestResult(t('msgTestSelectorsNeedUrl'));
+    return;
+  }
+
+  readOptionsFromUi();
+  const validatorRoot = document.createDocumentFragment();
+  for (const rawSel of [
+    state.options.customListSelector,
+    state.options.customContentSelector,
+    state.options.customExcludeSelector
+  ]) {
+    const sel = String(rawSel || '').trim();
+    if (!sel) continue;
+    try {
+      validatorRoot.querySelectorAll(sel);
+    } catch (err) {
+      setTestResult(t('msgTestSelectorsInvalidCss', { error: err.message }));
+      return;
+    }
+  }
+
+  btn.disabled = true;
+  btn.textContent = t('btnTestingSelectors');
+
+  try {
+    const useTab = Boolean(state.options.renderWithTab || state.seriesRequiresTab);
+    const indexDoc = await fetchDocumentWithOptions(url, { renderWithTab: useTab, onLog: appendLog });
+    const parser = state.activeParser || parserRegistry.detect(indexDoc, url, state.options.parserId || 'auto');
+
+    let listCount = 0;
+    let sampleChapter = null;
+
+    if (state.options.customListSelector) {
+      const matched = Array.from(indexDoc.querySelectorAll(state.options.customListSelector));
+      const seenUrls = new Set();
+      for (const el of matched) {
+        const anchor = el.matches?.('a[href]') ? el : el.querySelector?.('a[href]');
+        const absUrl = anchor ? resolveSafeHttpUrl(anchor.getAttribute('href'), url) : null;
+        if (absUrl && !seenUrls.has(absUrl)) {
+          seenUrls.add(absUrl);
+          if (!sampleChapter) {
+            sampleChapter = { url: absUrl, displayTitle: normalizeSpaces(anchor.textContent) || absUrl };
+          }
+        }
+      }
+      listCount = seenUrls.size || matched.length;
+    } else {
+      const collected = parser.collectChapterNodes(indexDoc, url, state.options, {}) || [];
+      if (collected.length > 0) {
+        listCount = collected.length;
+        sampleChapter = collected[0];
+      } else if (
+        state.chapters?.length > 0 &&
+        normalizeUrl(state.activeSeries?.startingUrl || '') === normalizeUrl(url)
+      ) {
+        listCount = state.chapters.length;
+        sampleChapter = state.chapters[0];
+      }
+    }
+
+    const sampleTarget = sampleChapter || { url, displayTitle: url };
+    const effectiveOptions = {
+      ...state.options,
+      renderWithTab: useTab,
+      onLog: appendLog
+    };
+    const parsed = await downloadAndParseChapter(sampleTarget, parser || genericHtmlParser, effectiveOptions);
+    const words = normalizeSpaces((parsed.nodes || []).map((n) => n.textContent || '').join(' '))
+      .split(' ')
+      .filter(Boolean).length;
+    const images = parsed.images?.length || 0;
+
+    appendLog(
+      `[TEST] Seletores: list=${listCount}, sampleWords=${words}, sampleImages=${images} (${sampleTarget.url})`,
+      'info'
+    );
+    setTestResult(t('msgTestSelectorsResult', { listCount, words, images }));
+  } catch (err) {
+    appendLog(`ERRO ao testar seletores: ${err.message}`, 'error');
+    setTestResult(t('msgTestSelectorsFailed', { error: err.message }));
+  } finally {
+    btn.disabled = false;
+    btn.textContent = t('btnTestSelectors');
   }
 }

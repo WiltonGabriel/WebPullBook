@@ -192,7 +192,7 @@ export async function applyMergeSelectedChapters() {
   }
 }
 
-export async function openChapterPreviewForTarget(ch, parser = state.activeParser) {
+export async function openChapterPreviewForTarget(ch, parser = state.activeParser, { bypassCache = false } = {}) {
   if (!ch) return;
 
   const dialog = $('preview-modal');
@@ -211,7 +211,7 @@ export async function openChapterPreviewForTarget(ch, parser = state.activeParse
 
   try {
     readOptionsFromUi();
-    let parsed = await getChapterFromCaches(ch, getCacheKey(ch.url));
+    let parsed = bypassCache ? null : await getChapterFromCaches(ch, getCacheKey(ch.url));
     if (!parsed) {
       const effectiveOptions = {
         ...state.options,

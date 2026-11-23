@@ -714,6 +714,25 @@ async function runE2E() {
       'Series without a detected cover should automatically receive the default WebPullBook cover'
     );
 
+    // 6b. Test inline "Test selectors" diagnostic (valid selectors + invalid CSS syntax error handling)
+    await page.click('[data-tab="advanced"]');
+    await page.click('#btn-test-selectors');
+    await page.waitForFunction(
+      () => !document.querySelector('#selector-test-result')?.classList.contains('hidden') &&
+        /2 capítulo|2 chapter/i.test(document.querySelector('#selector-test-result')?.textContent || ''),
+      null,
+      { timeout: 10000 }
+    );
+    await page.fill('#opt-content-selector', 'div[');
+    await page.click('#btn-test-selectors');
+    await page.waitForFunction(
+      () => /inválido|invalid/i.test(document.querySelector('#selector-test-result')?.textContent || ''),
+      null,
+      { timeout: 5000 }
+    );
+    await page.fill('#opt-content-selector', autoContentSel);
+    await page.click('[data-tab="main"]');
+
     // 7a. Test zero-network live DOM capture via sourceTabId against a real Chromium tab
     const liveSrcTab = await context.newPage();
     await liveSrcTab.goto(seriesUrl);

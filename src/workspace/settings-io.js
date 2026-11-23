@@ -16,7 +16,7 @@ import {
   updateSaveLocationUi
 } from './directory-handle.js';
 import { handleSaveDomainRule, saveDomainRules } from './domain-rules-ui.js';
-import { handleAutoDetectSelectors } from './series-loader.js';
+import { handleAutoDetectSelectors, handleTestSelectors } from './series-loader.js';
 import { downloadBlobToChrome } from './download-storage.js';
 import { handleStartSelectorPicker, registerPickerMessageListener } from './tab-picker.js';
 
@@ -175,6 +175,7 @@ export function wireSettingsIoEvents({ applyLanguageChoice }) {
   );
 
   $('btn-auto-detect-selectors').addEventListener('click', () => handleAutoDetectSelectors());
+  $('btn-test-selectors').addEventListener('click', () => handleTestSelectors());
   $('btn-pick-list-selector').addEventListener('click', () => handleStartSelectorPicker('list'));
   $('btn-pick-content-selector').addEventListener('click', () => handleStartSelectorPicker('content'));
   $('btn-pick-exclude-selector').addEventListener('click', () => handleStartSelectorPicker('exclude'));

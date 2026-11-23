@@ -429,5 +429,12 @@ export const PT_MESSAGES = {
   firefoxPermGrantBtn: 'Conceder Acesso aos Sites',
   firefoxPermGrantedMsg: 'Acesso aos sites concedido no Firefox.',
   firefoxPermDeniedMsg:
-    'Acesso aos sites negado. Sem essa permissão, o Firefox bloqueará o carregamento de páginas e imagens.'
+    'Acesso aos sites negado. Sem essa permissão, o Firefox bloqueará o carregamento de páginas e imagens.',
+  btnTestSelectors: 'Testar seletores',
+  btnTestingSelectors: 'Testando...',
+  msgTestSelectorsNeedUrl: 'Informe uma URL de série ou capítulo para testar os seletores.',
+  msgTestSelectorsInvalidCss: 'Seletor CSS inválido: {error}',
+  msgTestSelectorsResult:
+    'Teste concluído: {listCount} capítulo(s) na lista • amostra com {words} palavra(s) e {images} imagem(ns).',
+  msgTestSelectorsFailed: 'Falha ao testar seletores: {error}'
 };
