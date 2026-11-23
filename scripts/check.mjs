@@ -44,7 +44,56 @@ try {
   if (!manifest.browser_specific_settings?.gecko?.id) {
     fail('manifest.json: browser_specific_settings.gecko.id is required for Firefox compatibility');
   }
-  console.log(`[OK] manifest.json & package.json: ${manifest.name} v${manifest.version}`);
+
+  // Validate WebExtension _locales & default_locale
+  let resolvedDisplayName = manifest.name;
+  const msgRefs = new Set();
+  for (const m of JSON.stringify(manifest).matchAll(/__MSG_([A-Za-z0-9_@]+)__/g)) {
+    msgRefs.add(m[1]);
+  }
+  if (fs.existsSync('_locales') || manifest.default_locale || msgRefs.size > 0) {
+    const defLocale = manifest.default_locale;
+    if (!defLocale) {
+      fail('manifest.json: default_locale is required when _locales or __MSG_*__ placeholders are used');
+    } else {
+      const defPath = path.join('_locales', defLocale, 'messages.json');
+      if (!fs.existsSync(defPath)) {
+        fail(`manifest.json: missing default locale file ${defPath}`);
+      }
+      const localeDirs = fs.existsSync('_locales')
+        ? fs.readdirSync('_locales', { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => d.name)
+        : [];
+      for (const loc of localeDirs) {
+        if (!/^[a-z]{2,3}(?:_[A-Z]{2})?$/.test(loc)) {
+          fail(`_locales/${loc}: invalid WebExtension locale folder name (expected e.g. "en" or "pt_BR")`);
+        }
+        const msgFile = path.join('_locales', loc, 'messages.json');
+        if (!fs.existsSync(msgFile)) {
+          fail(`${msgFile}: missing messages.json`);
+          continue;
+        }
+        try {
+          const catalog = JSON.parse(fs.readFileSync(msgFile, 'utf8'));
+          for (const key of msgRefs) {
+            const val = catalog?.[key]?.message;
+            if (typeof val !== 'string' || !val.trim()) {
+              fail(`${msgFile}: missing message for __MSG_${key}__`);
+            }
+          }
+          const descMsg = catalog?.extensionDescription?.message;
+          if (typeof descMsg === 'string' && descMsg.length > 132) {
+            fail(`${msgFile}: extensionDescription exceeds 132 characters (${descMsg.length})`);
+          }
+          if (loc === defLocale && manifest.name === '__MSG_extensionName__' && catalog?.extensionName?.message) {
+            resolvedDisplayName = catalog.extensionName.message;
+          }
+        } catch (err) {
+          fail(`${msgFile}: invalid JSON (${err.message})`);
+        }
+      }
+    }
+  }
+  console.log(`[OK] manifest.json & package.json: ${resolvedDisplayName} v${manifest.version}`);
 } catch (err) {
   fail(`manifest.json error: ${err.message}`);
 }
@@ -159,6 +208,7 @@ const lintableExts = new Set(['.js', '.mjs', '.html', '.css', '.json']);
 const textFiles = [
   'manifest.json',
   'package.json',
+  ...walk('_locales'),
   ...walk('src'),
   ...walk('tests').filter((f) => !f.includes(`${path.sep}fixtures${path.sep}`)),
   ...walk('scripts'),

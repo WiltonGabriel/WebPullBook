@@ -76,9 +76,60 @@ import {
 import { wireVolumeAndUrlModalEvents } from './volume-modals.js';
 import { wireSettingsIoEvents } from './settings-io.js';
 
+function renderFirefoxPermissionBanner() {
+  const banner = $('firefox-perm-banner');
+  if (!banner) return;
+  if (!state.firefoxPermMissing) {
+    banner.classList.add('hidden');
+    banner.replaceChildren();
+    return;
+  }
+  const textSpan = document.createElement('span');
+  textSpan.textContent = `${t('firefoxPermBannerMsg')} `;
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'btn secondary sm';
+  btn.textContent = t('firefoxPermGrantBtn');
+  btn.addEventListener('click', () => {
+    if (!chrome?.permissions?.request) return;
+    // Trigger chrome.permissions.request synchronously inside the click handler for Firefox user-gesture compliance
+    chrome.permissions
+      .request({ origins: ['https://*/*', 'http://*/*'] })
+      .then((granted) => {
+        if (granted) {
+          state.firefoxPermMissing = false;
+          renderFirefoxPermissionBanner();
+          showBanner(t('firefoxPermGrantedMsg'), 'success');
+        } else {
+          showBanner(t('firefoxPermDeniedMsg'), 'error');
+        }
+      })
+      .catch(() => {
+        showBanner(t('firefoxPermDeniedMsg'), 'error');
+      });
+  });
+  banner.replaceChildren(textSpan, btn);
+  banner.classList.remove('hidden');
+}
+
+async function checkFirefoxHostPermissions() {
+  try {
+    const extUrl = typeof chrome !== 'undefined' ? chrome.runtime?.getURL?.('') || '' : '';
+    if (!extUrl.startsWith('moz-extension://') || !chrome?.permissions?.contains) {
+      return;
+    }
+    const granted = await chrome.permissions.contains({ origins: ['https://*/*', 'http://*/*'] });
+    state.firefoxPermMissing = !granted;
+    renderFirefoxPermissionBanner();
+  } catch {
+    // Ignore when browser permissions API is restricted
+  }
+}
+
 function applyLanguageChoice(lang) {
   state.options.uiLang = lang === 'en' ? 'en' : 'pt';
   applyI18nToDom(state.options.uiLang);
+  renderFirefoxPermissionBanner();
   renderVolumeChips();
   renderChaptersTable();
   renderDomainRules();
@@ -506,6 +557,7 @@ async function init() {
 
     populateRegistries();
     await loadOptions(applyLanguageChoice);
+    await checkFirefoxHostPermissions();
     await loadDomainRules();
     await cacheStore.pruneExpired();
     await loadLibrary(renderLibrary);

@@ -194,6 +194,15 @@ export function toHighResCoverUrl(url) {
     if (u.searchParams.has('resize')) {
       u.searchParams.delete('resize');
     }
+    for (const key of ['w', 'h']) {
+      const vals = u.searchParams.getAll(key);
+      if (vals.length === 0) continue;
+      const kept = vals.filter((v) => !/^\d+$/.test(v));
+      if (kept.length !== vals.length) {
+        u.searchParams.delete(key);
+        for (const v of kept) u.searchParams.append(key, v);
+      }
+    }
     return u.toString();
   } catch {
     return url;

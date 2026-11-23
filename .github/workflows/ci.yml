@@ -64,8 +64,9 @@ jobs:
           REQUIRE_EPUBCHECK: "1"
         run: npm run test:e2e
 
-      - name: Dry-run extension ZIP package
+      - name: Dry-run extension ZIP package & Mozilla addons-linter
         run: |
-          zip -r WebPullBook-preview.zip manifest.json icons src LICENSE README.md README.pt.md docs
+          zip -r WebPullBook-preview.zip manifest.json _locales icons src LICENSE README.md README.pt.md docs
           unzip -t WebPullBook-preview.zip
+          npx --yes addons-linter WebPullBook-preview.zip
           rm -f WebPullBook-preview.zip

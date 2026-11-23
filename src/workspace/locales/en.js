@@ -423,5 +423,11 @@ export const EN_MESSAGES = {
   msgPickerNoTab: 'No open HTTP/HTTPS book tab was found. Open the page in another tab to pick a selector.',
   msgPickerCaptured: 'Captured selector for {target}: {selector}',
   msgPickerFailed: 'Could not launch visual picker on tab: {error}',
-  badgeEdited: 'Edited'
+  badgeEdited: 'Edited',
+  firefoxPermBannerMsg:
+    'On Firefox, grant website access once so WebPullBook can extract chapters and images from any site.',
+  firefoxPermGrantBtn: 'Grant Website Access',
+  firefoxPermGrantedMsg: 'Website access granted on Firefox.',
+  firefoxPermDeniedMsg:
+    'Website access permission was denied. Without it, Firefox will block loading pages and images.'
 };

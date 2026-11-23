@@ -18,9 +18,15 @@ import {
   isAntiBotChallengeDocument,
   isSpaDomainCircuitOpen,
   resolveSafeHttpUrl,
-  sanitizePathSegment
+  sanitizePathSegment,
+  toHighResCoverUrl
 } from '../src/core/parser-engine.js';
-import { applyNavigationHeaderRules, clearNavigationHeaderRules } from '../src/core/dnr-rules.js';
+import {
+  applyImageRefererRule,
+  applyNavigationHeaderRules,
+  clearImageRefererRules,
+  clearNavigationHeaderRules
+} from '../src/core/dnr-rules.js';
 import {
   ParserRegistry,
   loadSeriesWithParser,
@@ -1393,13 +1399,37 @@ test('Firefox moz-extension DNR rule ID 1 is preserved when applying and clearin
   const applied = await applyNavigationHeaderRules(['fiction.example.org'], 'https://fiction.example.org/toc');
   assert.equal(applied, true);
   assert.ok(sessionRules.some((r) => r.id === 1), 'Firefox Origin-removal rule ID 1 must remain intact');
-  assert.ok(sessionRules.some((r) => r.id === 100), 'Navigation rule ID 100 must be added');
+  const navRule = sessionRules.find((r) => r.id === 100);
+  assert.ok(navRule, 'Navigation rule ID 100 must be added');
+  assert.ok(navRule.condition.resourceTypes.includes('image'), 'Navigation rule should cover image requests');
 
+  const imgApplied = await applyImageRefererRule('https://cdn.example.org/cover.jpg', 'https://fiction.example.org/toc');
+  assert.equal(imgApplied, true);
+  assert.ok(sessionRules.some((r) => r.id === 120), 'Image Referer rule ID 120 must be added');
+  await clearImageRefererRules();
+  assert.ok(!sessionRules.some((r) => r.id === 120) && sessionRules.some((r) => r.id === 100) && sessionRules.some((r) => r.id === 1));
+
+  await applyImageRefererRule('https://cdn.example.org/cover.jpg', 'https://fiction.example.org/toc');
   await clearNavigationHeaderRules();
   assert.deepEqual(
     sessionRules.map((r) => r.id),
     [1],
-    'Clearing navigation rules must remove IDs 100..119 while keeping Firefox rule ID 1'
+    'Clearing navigation rules must remove IDs 100..129 while keeping Firefox rule ID 1'
+  );
+});
+
+test('toHighResCoverUrl unwraps Jetpack proxy and strips resize and numeric w/h query params', () => {
+  assert.equal(
+    toHighResCoverUrl('https://i0.wp.com/example.com/uploads/cover.jpg?resize=200,300&w=200'),
+    'https://example.com/uploads/cover.jpg'
+  );
+  assert.equal(
+    toHighResCoverUrl('https://cdn.example.org/img/cover.webp?w=300&h=450&token=abc&w=auto'),
+    'https://cdn.example.org/img/cover.webp?token=abc&w=auto'
+  );
+  assert.equal(
+    toHighResCoverUrl('https://cdn.example.org/img/cover.jpg?resize=600,900&h=900'),
+    'https://cdn.example.org/img/cover.jpg'
   );
 });
 

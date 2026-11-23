@@ -140,6 +140,7 @@ export async function handleUseDownloadsFolder() {
 
 export async function downloadBlobToChrome(blob, filename) {
   const url = URL.createObjectURL(blob);
+  let usedAnchorFallback = false;
   try {
     if (chrome?.downloads?.download) {
       const downloadId = await chrome.downloads.download({
@@ -177,12 +178,18 @@ export async function downloadBlobToChrome(blob, filename) {
         }
       });
     } else {
+      usedAnchorFallback = true;
       const a = document.createElement('a');
       a.href = url;
-      a.download = filename.split('/').pop();
+      a.download = filename.split('/').pop() || 'webpullbook-ebook.epub';
+      a.rel = 'noopener';
+      a.style.display = 'none';
+      const mount = document.body || document.documentElement;
+      mount?.appendChild(a);
       a.click();
+      a.remove();
     }
   } finally {
-    setTimeout(() => URL.revokeObjectURL(url), 5000);
+    setTimeout(() => URL.revokeObjectURL(url), usedAnchorFallback ? 30000 : 5000);
   }
 }

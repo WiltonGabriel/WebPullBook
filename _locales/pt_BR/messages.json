@@ -1,0 +1,14 @@
+{
+  "extensionName": {
+    "message": "WebPullBook",
+    "description": "Nome da extensão exibido nos menus do navegador e nas lojas."
+  },
+  "extensionDescription": {
+    "message": "Extraia web novels, ficções seriadas e páginas com múltiplos capítulos em ebooks EPUB organizados por volume direto no navegador.",
+    "description": "Resumo curto da extensão (<= 132 caracteres)."
+  },
+  "actionTitle": {
+    "message": "Abrir WebPullBook",
+    "description": "Texto de dica do botão da extensão na barra do navegador."
+  }
+}

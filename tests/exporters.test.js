@@ -4,7 +4,7 @@ import { installDomGlobals } from './helpers/dom-shim.js';
 import { readZipArchive } from './helpers/zip-reader.js';
 import { HtmlSanitizer, serializeChapterXhtml } from '../src/core/sanitizer.js';
 import { buildEpubStylesheet } from '../src/core/parser-engine.js';
-import { hashImageBytes, isAnimatedImage, sniffImageMime } from '../src/core/image-processor.js';
+import { fetchImageBytes, hashImageBytes, isAnimatedImage, sniffImageMime } from '../src/core/image-processor.js';
 import { BaseExporter } from '../src/exporters/base-exporter.js';
 import { exporterRegistry } from '../src/exporters/index.js';
 
@@ -16,16 +16,19 @@ const PNG_1X1 = Uint8Array.from(
 let restoreDom;
 let origFetch;
 let origFileReader;
+let origChrome;
 
 beforeEach(() => {
   restoreDom = installDomGlobals();
   origFetch = globalThis.fetch;
   origFileReader = globalThis.FileReader;
+  origChrome = globalThis.chrome;
 });
 
 afterEach(() => {
   globalThis.fetch = origFetch;
   globalThis.FileReader = origFileReader;
+  globalThis.chrome = origChrome;
   restoreDom();
 });
 
@@ -524,4 +527,43 @@ test('EpubExporter deduplicates identical images across different URLs by conten
   assert.match(ch1, /href="ch_0002\.xhtml#cena"/, 'Cross-chapter link should become internal EPUB link preserving fragment');
   assert.match(ch2, /href="ch_0001\.xhtml"/, 'Back-reference link to chapter 1 should become internal EPUB link');
   assert.match(ch2, /href="https:\/\/external\.org\/ref"/, 'External links outside the book must stay absolute');
+});
+
+test('fetchImageBytes installs temporary DNR Referer rule when credentialed and anonymous fetches fail', async () => {
+  let sessionRules = [];
+  let fetchCalls = 0;
+  let ruleInstalledDuringRetry = false;
+
+  globalThis.chrome = {
+    runtime: {
+      getURL: (p = '') => `chrome-extension://abcdefghijklmnop/${p}`
+    },
+    declarativeNetRequest: {
+      getSessionRules: async () => [...sessionRules],
+      updateSessionRules: async ({ removeRuleIds = [], addRules = [] }) => {
+        sessionRules = sessionRules.filter((r) => !removeRuleIds.includes(r.id)).concat(addRules);
+      }
+    }
+  };
+
+  globalThis.fetch = async () => {
+    fetchCalls++;
+    if (fetchCalls <= 2) {
+      return new Response('Forbidden hotlink', { status: 403 });
+    }
+    ruleInstalledDuringRetry = sessionRules.some(
+      (r) =>
+        r.id === 120 &&
+        r.action?.requestHeaders?.some((h) => h.header === 'Referer' && h.value === 'https://origin.example.org/ch-1')
+    );
+    return new Response(PNG_1X1, { status: 200, headers: { 'content-type': 'image/png' } });
+  };
+
+  const result = await fetchImageBytes('https://cdn.example.org/art.png', undefined, {
+    refererUrl: 'https://origin.example.org/ch-1'
+  });
+  assert.equal(fetchCalls, 3);
+  assert.equal(ruleInstalledDuringRetry, true, 'DNR Referer rule ID 120 should be active during hotlink retry');
+  assert.equal(sessionRules.length, 0, 'Temporary DNR Referer rule must be cleared after fetchImageBytes returns');
+  assert.equal(result.mime, 'image/png');
 });

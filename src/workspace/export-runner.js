@@ -11,6 +11,7 @@ import {
   serializeNodesForCache
 } from '../core/cache-store.js';
 import { exporterRegistry } from '../exporters/index.js';
+import { clearNavigationHeaderRules } from '../core/dnr-rules.js';
 import { resolveParserForChapterUrl } from '../parsers/index.js';
 import { $, getCacheKey, getCurrentSeriesKey, state, t } from './state.js';
 import { appendLog, hideBanner, renderExportReport, showBanner } from './logger.js';
@@ -467,6 +468,7 @@ export async function handlePackEpub(arg = {}) {
     }
   } finally {
     await tabPool.close();
+    await clearNavigationHeaderRules();
     state.running = false;
     $('btn-pack-epub').disabled = false;
     if (!state.batchRunning) {

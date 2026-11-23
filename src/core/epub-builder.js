@@ -79,7 +79,9 @@ export async function buildEpubBlob({
   const coverCandidates = [metadata.coverUrl, metadata.coverThumbUrl].filter(Boolean);
   for (const cUrl of coverCandidates) {
     try {
-      const { blob, bytes: rawBytes, mime } = await fetchImageBytes(cUrl, signal);
+      const { blob, bytes: rawBytes, mime } = await fetchImageBytes(cUrl, signal, {
+        refererUrl: metadata.startingUrl || ''
+      });
       let bytes = rawBytes;
       let finalMime = mime;
       let converted = false;
@@ -231,7 +233,9 @@ export async function buildEpubBlob({
           const imgErrors = [];
           for (const candidateUrl of imgCandidates) {
             try {
-              fetched = await fetchImageBytes(candidateUrl, signal);
+              fetched = await fetchImageBytes(candidateUrl, signal, {
+                refererUrl: parsed.chapter?.url || metadata.startingUrl || ''
+              });
               usedUrl = candidateUrl;
               break;
             } catch (e) {

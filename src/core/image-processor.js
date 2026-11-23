@@ -1,7 +1,8 @@
 /**
  * Image pipeline for EPUB packaging: magic-byte MIME sniffing, resilient fetching
- * (credentialed + anonymous retry), and safe canvas optimization with raw fallback.
+ * (credentialed + anonymous retry + DNR Referer fallback), and safe canvas optimization.
  */
+import { applyImageRefererRule, clearImageRefererRules } from './dnr-rules.js';
 
 export function sniffImageMime(bytes) {
   if (!bytes || bytes.length < 4) return null;
@@ -93,7 +94,7 @@ export function decodeDataUrlToBlob(dataUrl) {
   return { blob: new Blob([bytes], { type: mime }), bytes, mime };
 }
 
-export async function fetchImageBytes(url, signal) {
+export async function fetchImageBytes(url, signal, { refererUrl = '' } = {}) {
   if (/^data:/i.test(String(url || ''))) {
     return decodeDataUrlToBlob(url);
   }
@@ -121,6 +122,25 @@ export async function fetchImageBytes(url, signal) {
       if (err.name === 'AbortError') throw err;
       if (!resp && firstErr) throw firstErr;
       if (!resp) throw err;
+    }
+  }
+
+  // Some hotlink-protected CDNs reject fetches lacking a same-site/source Referer header
+  if ((!resp || !resp.ok) && refererUrl && /^https?:\/\//i.test(refererUrl)) {
+    const installed = await applyImageRefererRule(url, refererUrl);
+    if (installed) {
+      try {
+        const refResp = await fetch(url, { credentials: 'include', signal });
+        if (refResp.ok || !resp) {
+          resp = refResp;
+        }
+      } catch (err) {
+        if (err.name === 'AbortError') throw err;
+        if (!resp && firstErr) throw firstErr;
+        if (!resp) throw err;
+      } finally {
+        await clearImageRefererRules();
+      }
     }
   }
 

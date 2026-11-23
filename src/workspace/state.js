@@ -181,6 +181,7 @@ export const state = {
   logSeq: 0,
   logFilter: 'all',
   lastReport: null,
+  firefoxPermMissing: false,
   onCacheChanged: null,
   onLibraryUpdateAfterExport: null,
   onOpenChapterPreview: null

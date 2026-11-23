@@ -89,7 +89,7 @@ jobs:
 
       - name: Build extension archive
         run: |
-          zip -r "WebPullBook-v${VERSION}.zip" manifest.json icons src LICENSE README.md README.pt.md docs
+          zip -r "WebPullBook-v${VERSION}.zip" manifest.json _locales icons src LICENSE README.md README.pt.md docs
           sha256sum "WebPullBook-v${VERSION}.zip" > "WebPullBook-v${VERSION}.zip.sha256"
 
       - name: Create or update GitHub Release

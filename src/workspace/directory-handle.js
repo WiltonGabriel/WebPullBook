@@ -92,6 +92,11 @@ export async function checkCustomDirStatus() {
 export function updateSaveLocationUi() {
   const pill = $('save-folder-status');
   const clearBtn = $('btn-use-downloads-folder');
+  const pickBtn = $('btn-pick-save-folder');
+  if (pickBtn) {
+    const canPickFolder = typeof window !== 'undefined' && typeof window.showDirectoryPicker === 'function';
+    pickBtn.classList.toggle('hidden', !canPickFolder);
+  }
   if (!pill || !clearBtn) return;
 
   const isCustom = state.options.saveTargetMode === 'custom-dir';

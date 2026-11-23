@@ -1,0 +1,14 @@
+{
+  "extensionName": {
+    "message": "WebPullBook",
+    "description": "Extension name shown in browser menus and web stores."
+  },
+  "extensionDescription": {
+    "message": "Extract serialized web fiction and multi-chapter pages into clean, volume-organized EPUB ebooks directly in your browser.",
+    "description": "Short summary of the extension (<= 132 characters)."
+  },
+  "actionTitle": {
+    "message": "Open WebPullBook",
+    "description": "Tooltip shown for the browser toolbar action button."
+  }
+}

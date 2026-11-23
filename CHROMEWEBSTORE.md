@@ -153,10 +153,59 @@ Mozilla Add-ons (`addons.mozilla.org`) does not charge a developer registration 
   - **Homepage / Support / Privacy Policy:** `https://wiltongabriel.github.io/WebPullBook/`, `https://github.com/WiltonGabriel/WebPullBook/issues`, `https://wiltongabriel.github.io/WebPullBook/privacy.html`
   - **Screenshots (`1280×800` PNG):** Reuse the 5 screenshots listed under `website/assets/screenshots/`
 - **Ready-to-Paste Notes for Reviewers:**
-  > WebPullBook is a 100% client-side, zero-dependency Manifest V3 extension with no build step or remote code execution (`src/` runs unmodified). `tabs` and `scripting` are used only when the user clicks the extension action (to read the active tab URL or DOM cleanly, populate the Merge Tabs dialog, run the user-initiated CSS selector picker, or reuse one background tab when extracting React/JS-hydrated SPAs). Additionally, in `src/parsers/scribblehub.js`, if a direct extension fetch cannot retrieve the full paginated table of contents, `chrome.scripting.executeScript` runs a read-only same-origin `POST /wp-admin/admin-ajax.php` (`action=wi_getreleases_pagination`, `pagenum=-1`) strictly to read the chapter list HTML when the user initiates extraction on that work. `declarativeNetRequestWithHostAccess` sets Firefox session rule ID `1` to remove `Origin: moz-extension://` on extension-initiated fetches so images/chapters are not rejected by CORS, plus temporary rules ID `100..119` for navigation headers during extraction. `http://*/*` and `https://*/*` host permissions are required because users extract books and articles from arbitrary websites of their choice. No user telemetry or analytics are collected by the extension.
+  > WebPullBook is a 100% client-side, zero-dependency Manifest V3 extension with no build step or remote code execution (`src/` runs unmodified). `tabs` and `scripting` are used only when the user clicks the extension action (to read the active tab URL or DOM cleanly, populate the Merge Tabs dialog, run the user-initiated CSS selector picker, or reuse one background tab when extracting React/JS-hydrated SPAs). Additionally, in `src/parsers/scribblehub.js`, if a direct extension fetch cannot retrieve the full paginated table of contents, `chrome.scripting.executeScript` runs a read-only same-origin `POST /wp-admin/admin-ajax.php` (`action=wi_getreleases_pagination`, `pagenum=-1`) strictly to read the chapter list HTML when the user initiates extraction on that work. `declarativeNetRequestWithHostAccess` sets Firefox session rule ID `1` to remove `Origin: moz-extension://` on extension-initiated fetches so images/chapters are not rejected by CORS, plus temporary rules ID `100..129` for navigation and hotlink-protected image Referer headers during active extraction. `http://*/*` and `https://*/*` host permissions are required because users extract books and articles from arbitrary websites of their choice. No user telemetry or analytics are collected by the extension.
 - **Target Platforms & Firefox for Android Roadmap:**
   - Currently targets **Firefox Desktop (128+)** only (keep *Firefox for Android* unchecked during AMO submission until mobile testing is complete).
   - **Planned Future Work (`gecko_android`):** Add `browser_specific_settings.gecko_android` in `manifest.json` (`strict_min_version: "142.0"` for `data_collection_permissions`), refine mobile touch/viewport layouts in `src/workspace/workspace.css`, and test `tabs`/`scripting`/downloads behavior on Firefox for Android.
+
+---
+
+## Ficha das Lojas (Português — pt-BR)
+
+Use os campos abaixo na aba **Português (Brasil) (`pt-BR`)** do Mozilla Add-ons Developer Hub e da Chrome Web Store:
+
+**Nome da Extensão** [OBRIGATÓRIO]
+WebPullBook
+
+**Descrição Curta (Chrome Web Store / `_locales/pt_BR`)** (129 caracteres — limite ≤ 132)
+Extraia web novels, ficções seriadas e páginas com múltiplos capítulos em ebooks EPUB organizados por volume direto no navegador.
+
+**Resumo (AMO — Firefox Add-ons)** (128 caracteres — limite ≤ 250)
+Extraia web novels, ficções seriadas, artigos e abas abertas do navegador em ebooks EPUB 2/3, HTML único, Markdown e TXT offline.
+
+**Descrição Detalhada** [OBRIGATÓRIO]
+O WebPullBook converte web novels, light novels, ficções seriadas, artigos, documentações e abas abertas do navegador em arquivos EPUB 2, EPUB 3, HTML único, Markdown e texto puro (TXT) organizados por volume para leitura offline.
+
+FUNCIONALIDADES
+• Extração por Capítulos e Volumes — Abra a página de sumário ou um capítulo da obra e carregue automaticamente os capítulos agrupados por volume.
+• Perfis de Leitor para Kindle e Kobo — Predefinições prontas para Kindle (Antigo EPUB 2 para Send to Kindle), Kindle (Moderno EPUB 3 para Calibre USB), Kobo e Leitores Digitais, Padrão Moderno e Somente Texto.
+• Estrutura Completa de Livro — Gera capa (incluindo capa padrão automática quando a página não possui imagem), Página de Informações opcional (título, autor, gêneros, link da fonte e sinopse), Sumário navegável no início do livro, notas de rodapé pop-up em EPUB 3 e Página Final do Livro.
+• Pré-visualização, Edição Rápida e Mesclagem — Revise capítulos antes de exportar, edite títulos ou parágrafos inline ou mescle vários capítulos selecionados em um só.
+• Juntar Abas Abertas — Combine artigos, blogs ou capítulos abertos em múltiplas abas do navegador em um único volume ou livros separados.
+• Seletor Visual CSS e Regras por Domínio — Aponte diretamente na página para capturar lista de capítulos, corpo do texto ou elementos a excluir e salve regras por domínio.
+• Modo Seguro Adaptativo e Cache Local de 7 Dias — Adapta o ritmo das requisições à latência do servidor e ao cabeçalho `Retry-After`, permitindo retomar downloads interrompidos via cache local em IndexedDB.
+• Biblioteca Salva e Atualizações — Acompanhe obras em andamento localmente e identifique novos capítulos com um clique.
+
+COMO USAR
+1. Acesse no navegador a página de índice (ou qualquer capítulo) da obra desejada.
+2. Clique no ícone do WebPullBook na barra do navegador para abrir o workspace.
+3. Escolha o Perfil de Leitor (Kindle, Kobo, Moderno ou Somente Texto) e o formato de saída (EPUB, HTML, Markdown ou TXT).
+4. Selecione todos os volumes ou capítulos específicos com Ctrl+Clique e Shift+Clique.
+5. Clique em Empacotar EPUB para salvar o arquivo na pasta Downloads.
+
+PRIVACIDADE
+O WebPullBook processa todo o conteúdo localmente dentro do seu navegador. Não utiliza servidores próprios, telemetria ou rastreamento. Suas preferências e obras salvas permanecem apenas no seu dispositivo, e as requisições de rede vão diretamente do navegador apenas para os sites escolhidos por você.
+
+PERMISSÕES
+• tabs — Lê a URL da aba ativa ao clicar no ícone, lista abas abertas em Juntar Abas e gerencia uma aba auxiliar única ao renderizar páginas dinâmicas (SPA).
+• scripting — Captura o DOM vivo da aba ativa, extrai HTML hidratado em páginas SPA, lê o sumário paginado na origem quando acionado pelo usuário e executa o seletor visual CSS.
+• host_permissions (http://*/*, https://*/*) — Permite extrair capítulos e imagens dos sites, blogs e documentações selecionados por você.
+• declarativeNetRequestWithHostAccess — Aplica regras temporárias de sessão durante a extração para cabeçalhos de navegação e compatibilidade CORS no Firefox, sem afetar o restante da navegação.
+• downloads — Salva os ebooks EPUB, HTML, Markdown, TXT e logs na sua pasta Downloads.
+• storage — Armazena localmente suas preferências, Perfil de Leitor, Biblioteca e regras por domínio.
+
+SUPORTE
+Encontrou algum problema ou deseja sugerir melhoria? Abra uma issue em https://github.com/WiltonGabriel/WebPullBook/issues ou visite https://wiltongabriel.github.io/WebPullBook/pt/
 
 ---
 
@@ -177,7 +226,7 @@ Mozilla Add-ons (`addons.mozilla.org`) does not charge a developer registration 
 The release workflow ([.github/workflows/release.yml](.github/workflows/release.yml)) packages only runtime and documentation files required by the extension:
 
 ```bash
-zip -r "WebPullBook-v${VERSION}.zip" manifest.json icons src LICENSE README.md README.pt.md docs
+zip -r "WebPullBook-v${VERSION}.zip" manifest.json _locales icons src LICENSE README.md README.pt.md docs
 ```
 
 This explicitly excludes `.git/`, `node_modules/`, `tests/`, `scripts/`, `website/`, and `CHROMEWEBSTORE.md`.

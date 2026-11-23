@@ -423,5 +423,11 @@ export const PT_MESSAGES = {
   msgPickerNoTab: 'Nenhuma aba HTTP/HTTPS da obra foi encontrada aberta. Abra a página em outra aba para apontar o seletor.',
   msgPickerCaptured: 'Seletor capturado para {target}: {selector}',
   msgPickerFailed: 'Não foi possível iniciar o seletor visual na aba: {error}',
-  badgeEdited: 'Editado'
+  badgeEdited: 'Editado',
+  firefoxPermBannerMsg:
+    'No Firefox, conceda permissão de acesso aos sites uma vez para extrair capítulos e imagens de qualquer domínio.',
+  firefoxPermGrantBtn: 'Conceder Acesso aos Sites',
+  firefoxPermGrantedMsg: 'Acesso aos sites concedido no Firefox.',
+  firefoxPermDeniedMsg:
+    'Acesso aos sites negado. Sem essa permissão, o Firefox bloqueará o carregamento de páginas e imagens.'
 };

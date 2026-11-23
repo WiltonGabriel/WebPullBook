@@ -1,36 +1,50 @@
 /**
  * Opens the WebPullBook workspace in a dedicated tab, passing the active tab URL when applicable.
  */
+let firefoxRulePromise = null;
+
 async function setupCrossOriginHeaderWorkaroundForFirefox() {
-  try {
-    const extUrl = chrome.runtime.getURL('');
-    if (!extUrl.startsWith('moz-extension://') || !chrome.declarativeNetRequest?.updateSessionRules) {
-      return;
-    }
-    const extHost = new URL(extUrl).hostname;
-    await chrome.declarativeNetRequest.updateSessionRules({
-      removeRuleIds: [1],
-      addRules: [
-        {
-          id: 1,
-          priority: 1,
-          action: {
-            type: 'modifyHeaders',
-            requestHeaders: [{ header: 'Origin', operation: 'remove' }]
-          },
-          condition: {
-            initiatorDomains: [extHost],
-            resourceTypes: ['xmlhttprequest', 'image', 'other']
+  if (firefoxRulePromise) return firefoxRulePromise;
+  firefoxRulePromise = (async () => {
+    try {
+      const extUrl = chrome.runtime.getURL('');
+      if (!extUrl.startsWith('moz-extension://') || !chrome.declarativeNetRequest?.updateSessionRules) {
+        return;
+      }
+      const extHost = new URL(extUrl).hostname;
+      await chrome.declarativeNetRequest.updateSessionRules({
+        removeRuleIds: [1],
+        addRules: [
+          {
+            id: 1,
+            priority: 1,
+            action: {
+              type: 'modifyHeaders',
+              requestHeaders: [{ header: 'Origin', operation: 'remove' }]
+            },
+            condition: {
+              initiatorDomains: [extHost],
+              resourceTypes: ['xmlhttprequest', 'image', 'other']
+            }
           }
-        }
-      ]
-    });
-  } catch {
-    // Ignore if browser restricts session header rules
-  }
+        ]
+      });
+    } catch {
+      // Ignore if browser restricts session header rules
+    } finally {
+      firefoxRulePromise = null;
+    }
+  })();
+  return firefoxRulePromise;
 }
 
 setupCrossOriginHeaderWorkaroundForFirefox();
+chrome.runtime?.onInstalled?.addListener(() => {
+  setupCrossOriginHeaderWorkaroundForFirefox();
+});
+chrome.runtime?.onStartup?.addListener(() => {
+  setupCrossOriginHeaderWorkaroundForFirefox();
+});
 
 chrome.action.onClicked.addListener(async (tab) => {
   try {
