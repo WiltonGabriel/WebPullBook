@@ -494,8 +494,8 @@ export function syncWebsite() {
 
       // 5. Sync footer authorship & license line across all pages
       const footerLine = isPt
-        ? `<span>Criado e mantido por <a href="https://github.com/WiltonGabriel">Wilton Gabriel</a> e contribuidores • <a href="https://github.com/WiltonGabriel/WebPullBook/blob/main/LICENSE">Licença MIT</a> • <span data-wpb-version data-wpb-version-prefix="Versão ">Versão ${versionLabel}</span></span>`
-        : `<span>Created and maintained by <a href="https://github.com/WiltonGabriel">Wilton Gabriel</a> &amp; contributors • <a href="https://github.com/WiltonGabriel/WebPullBook/blob/main/LICENSE">MIT License</a> • <span data-wpb-version data-wpb-version-prefix="Version ">Version ${versionLabel}</span></span>`;
+        ? `<span>Criado e mantido por <a href="https://github.com/WiltonGabriel">Wilton Gabriel</a> e contribuidores • <a href="https://github.com/WiltonGabriel/WebPullBook/blob/main/LICENSE">Licença GNU AGPLv3</a> • <span data-wpb-version data-wpb-version-prefix="Versão ">Versão ${versionLabel}</span></span>`
+        : `<span>Created and maintained by <a href="https://github.com/WiltonGabriel">Wilton Gabriel</a> &amp; contributors • <a href="https://github.com/WiltonGabriel/WebPullBook/blob/main/LICENSE">GNU AGPLv3 License</a> • <span data-wpb-version data-wpb-version-prefix="Version ">Version ${versionLabel}</span></span>`;
       html = html.replace(
         /(<div class="footer-bottom">\s*)<span>[\s\S]*?<\/span><\/span>/,
         `$1${footerLine}`

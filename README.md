@@ -7,7 +7,7 @@
 [![Firefox Add-ons](https://img.shields.io/badge/Firefox%20Add--ons-Available-FF7139?style=flat-square)](https://addons.mozilla.org/firefox/addon/webpullbook/)
 [![Version](https://img.shields.io/badge/Version-1.6.1--beta-0ea5e9?style=flat-square)](https://github.com/WiltonGabriel/WebPullBook/releases)
 [![Dependencies](https://img.shields.io/badge/Dependencies-Zero-16a34a?style=flat-square)](src/core/zip.js)
-[![License: MIT](https://img.shields.io/badge/License-MIT-f59e0b?style=flat-square)](LICENSE)
+[![License: AGPLv3](https://img.shields.io/badge/License-AGPLv3-f59e0b?style=flat-square)](LICENSE)
 [![CI Validation](https://github.com/WiltonGabriel/WebPullBook/actions/workflows/ci.yml/badge.svg)](https://github.com/WiltonGabriel/WebPullBook/actions/workflows/ci.yml)
 
 **WebPullBook** is an open-source browser extension (Chrome, Edge, Brave, and Firefox 128+) with zero runtime dependencies for **converting web pages into EPUB** (**Web-to-EPUB**): extract web novels, light novels, serialized fiction, fanfiction, blogs, documentation, and open tabs into volume-organized **EPUB 2 / EPUB 3** ebooks (plus **HTML**, **Markdown**, and **TXT**) for **Kindle**, **Kobo**, **Calibre**, and mobile readers.
@@ -163,7 +163,7 @@ For the full 5-stage pipeline walkthrough, module summary, and step-by-step pars
 
 ## Authorship, Maintainers & Contributing
 
-WebPullBook was created and is maintained by **Wilton Gabriel** ([@WiltonGabriel](https://github.com/WiltonGabriel)), with contributions from the open-source community. The project is released under the [MIT License](LICENSE) and follows our [Code of Conduct](.github/CODE_OF_CONDUCT.md).
+WebPullBook was created and is maintained by **Wilton Gabriel** ([@WiltonGabriel](https://github.com/WiltonGabriel)), with contributions from the open-source community. The project is licensed under the [GNU Affero General Public License v3.0 (AGPL-3.0-or-later)](LICENSE) (versions `<= v1.6.1-beta` remain historically under the MIT License) and follows our [Code of Conduct](.github/CODE_OF_CONDUCT.md).
 
 ### Ways to Help — Special Focus on Parser Development
 

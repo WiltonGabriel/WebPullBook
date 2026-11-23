@@ -7,7 +7,7 @@
 [![Firefox Add-ons](https://img.shields.io/badge/Firefox%20Add--ons-Dispon%C3%ADvel-FF7139?style=flat-square)](https://addons.mozilla.org/firefox/addon/webpullbook/)
 [![Versão](https://img.shields.io/badge/Vers%C3%A3o-1.6.1--beta-0ea5e9?style=flat-square)](https://github.com/WiltonGabriel/WebPullBook/releases)
 [![Dependências](https://img.shields.io/badge/Depend%C3%AAncias-Zero-16a34a?style=flat-square)](src/core/zip.js)
-[![Licença: MIT](https://img.shields.io/badge/Licen%C3%A7a-MIT-f59e0b?style=flat-square)](LICENSE)
+[![Licença: AGPLv3](https://img.shields.io/badge/Licen%C3%A7a-AGPLv3-f59e0b?style=flat-square)](LICENSE)
 [![CI Validation](https://github.com/WiltonGabriel/WebPullBook/actions/workflows/ci.yml/badge.svg)](https://github.com/WiltonGabriel/WebPullBook/actions/workflows/ci.yml)
 
 **WebPullBook** é uma extensão de navegador open source (Chrome, Edge, Brave e Firefox 128+) sem dependências de runtime para **converter páginas web em EPUB** (**Web-to-EPUB**): extrai webnovels, light novels, ficções seriadas, fanfics, blogs, documentações e abas abertas para arquivos **EPUB 2 / EPUB 3** (além de **HTML**, **Markdown** e **TXT**) organizados por volume para leitura offline no **Kindle**, **Kobo**, **Calibre** e celulares.
@@ -163,7 +163,7 @@ Para detalhes do pipeline em 5 etapas, mapa de módulos e guia passo a passo de 
 
 ## Autoria, Manutenção e Contribuições
 
-O WebPullBook foi criado e é mantido por **Wilton Gabriel** ([@WiltonGabriel](https://github.com/WiltonGabriel)), contando com a colaboração de contribuidores da comunidade open source. O projeto é distribuído sob a [Licença MIT](LICENSE) e segue nosso [Código de Conduta](docs/pt/CODE_OF_CONDUCT.pt.md).
+O WebPullBook foi criado e é mantido por **Wilton Gabriel** ([@WiltonGabriel](https://github.com/WiltonGabriel)), contando com a colaboração de contribuidores da comunidade open source. O projeto é distribuído sob a [Licença GNU Affero General Public License v3.0 (AGPL-3.0-or-later)](LICENSE) (versões `<= v1.6.1-beta` permanecem historicamente sob a Licença MIT) e segue nosso [Código de Conduta](docs/pt/CODE_OF_CONDUCT.pt.md).
 
 ### Formas de Contribuir — Destaque para Desenvolvimento e Adição de Parsers
 

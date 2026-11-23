@@ -147,7 +147,7 @@ Mozilla Add-ons (`addons.mozilla.org`) does not charge a developer registration 
 - **Data Collection Consent:** `data_collection_permissions: { "required": ["none"] }` (matches `addons-linter` canonical zero-collection declaration)
 - **Submission Package:** Upload `WebPullBook-v<version>.zip` from GitHub Releases directly at `https://addons.mozilla.org/developers/` (no separate source code archive is required because WebPullBook uses native ES modules with zero build steps, zero bundlers, and zero minification)
 - **Listing Metadata:**
-  - **License:** MIT
+  - **License:** GNU AGPLv3 (`AGPL-3.0-or-later`; versions up to `v1.6.1-beta` remain historically under the MIT License)
   - **Summary (≤ 250 chars):** Extract web novels, serialized fiction, articles, and open browser tabs into volume-organized EPUB 2/3, single-file HTML, Markdown, and TXT ebooks offline in your browser.
   - **Categories:** *Download Management*, *Other*
   - **Homepage / Support / Privacy Policy:** `https://wiltongabriel.github.io/WebPullBook/`, `https://github.com/WiltonGabriel/WebPullBook/issues`, `https://wiltongabriel.github.io/WebPullBook/privacy.html`
