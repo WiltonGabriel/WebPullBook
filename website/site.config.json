@@ -5,6 +5,7 @@
   "repositoryUrl": "https://github.com/WiltonGabriel/WebPullBook",
   "firefoxAddonsUrl": "https://addons.mozilla.org/firefox/addon/webpullbook/",
   "releasesUrl": "https://github.com/WiltonGabriel/WebPullBook/releases",
+  "releasesLatestUrl": "https://github.com/WiltonGabriel/WebPullBook/releases/latest",
   "releasesApiUrl": "https://api.github.com/repos/WiltonGabriel/WebPullBook/releases?per_page=1",
   "issuesUrl": "https://github.com/WiltonGabriel/WebPullBook/issues",
   "socialPreviewImage": "https://wiltongabriel.github.io/WebPullBook/assets/images/social-preview.png",

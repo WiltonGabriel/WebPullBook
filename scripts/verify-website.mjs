@@ -376,6 +376,24 @@ for (const page of siteConfig.pages) {
     } else if (goatCounterTags.length > 0) {
       fail(`${v.relFile}: unexpected GoatCounter script tag while analytics.endpoint is empty`);
     }
+
+    const configuredLinks = {
+      firefoxAddons: siteConfig.firefoxAddonsUrl,
+      releases: siteConfig.releasesUrl,
+      releasesLatest: siteConfig.releasesLatestUrl,
+      repository: siteConfig.repositoryUrl,
+      issues: siteConfig.issuesUrl
+    };
+    for (const aMatch of html.matchAll(/<a\b[^>]*\bdata-wpb-link="([^"]+)"[^>]*>/gi)) {
+      const key = aMatch[1];
+      const expectedHref = configuredLinks[key];
+      const actualHref = extractAttr(aMatch[0], 'href');
+      if (!expectedHref) {
+        fail(`${v.relFile}: unknown data-wpb-link="${key}"`);
+      } else if (actualHref !== expectedHref) {
+        fail(`${v.relFile}: data-wpb-link="${key}" href="${actualHref}" !== "${expectedHref}"`);
+      }
+    }
   }
 }
 

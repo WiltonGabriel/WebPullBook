@@ -117,82 +117,29 @@ Seletor CSS de elementos a excluir:  .ads, .translator-note
 
 ```text
 WebPullBook/
-├── .github/                      # Templates de Issue/PR, Segurança, Conduta, Dependabot e workflows CI/Release/Pages/CodeQL
-├── AGENTS.md                     # Instruções e regras de arquitetura para agentes de IA
-├── CHANGELOG.md                  # Histórico de versões
-├── CHROMEWEBSTORE.md             # Preparação para lojas, justificativa de permissões e privacidade
-├── CONTRIBUTING.md               # Guia de desenvolvimento e criação de parsers
-├── LICENSE                       # Licença MIT
-├── README.md                     # Documentação (English)
-├── README.pt.md                  # Documentação (Português)
-├── manifest.json                 # Manifesto da extensão (MV3)
-├── docs/
-│   ├── COMPATIBILITY.md          # Tabela de compatibilidade em 4 níveis (editável via PR)
-│   ├── READER_PRESETS.pt.md      # Guia de perfis de leitor (PT / EN)
-│   └── SEO_AND_GITHUB_PAGES.md   # Guia operacional do GitHub Pages e Google Search Console
-├── icons/                        # Ícones da extensão
-├── scripts/                      # Linter (check.mjs), extrator de notas de release e validador do site
-├── tests/                        # Testes unitários/snapshots (node:test), fixtures HTML e E2E Playwright Chromium
-├── website/                      # Site estático oficial bilíngue para GitHub Pages (excluído do ZIP da extensão)
-└── src/
-    ├── background/
-    │   └── service-worker.js     # Abre o workspace ao clicar no ícone e configura regra DNR Origin no Firefox
-    ├── core/
-    │   ├── base-parser.js        # BaseParser (OOP) e pipeline de capítulos
-    │   ├── cache-store.js        # Cache persistente em IndexedDB com expiração (TTL)
-    │   ├── dnr-rules.js          # Regras temporárias declarativeNetRequest de navegação
-    │   ├── epub-builder.js       # Orquestração EPUB 2/3 e reescrita de links internos
-    │   ├── epub-css.js           # Gerador de CSS para e-readers
-    │   ├── epub-templates.js     # Templates OPF, NCX, NAV, Capa, Info, Fim e Sumário
-    │   ├── image-processor.js    # Sniffing por magic bytes, hash dedup e fallback canvas
-    │   ├── net-fetcher.js        # HTTP com charset, captura da aba ativa, TabRenderPool e segurança SPA
-    │   ├── parser-engine.js      # Fachada de re-export dos módulos centrais
-    │   ├── rate-limiter.js       # AdaptiveRateLimiter (Modo Seguro adaptativo e Retry-After)
-    │   ├── sanitizer.js          # HtmlSanitizer -> XHTML válido, __cf_email__, nextPrevUrls
-    │   ├── selector-utils.js     # Gerador de seletores CSS para captura visual
-    │   ├── text-utils.js         # Normalização, volumes, caminhos e capas
-    │   ├── xhtml-serializer.js   # Serializador XHTML estrito e notas pop-up EPUB 3
-    │   └── zip.js                # Empacotador ZIP nativo via CompressionStream
-    ├── exporters/
-    │   ├── index.js              # ExporterRegistry (EPUB, HTML, Markdown, TXT)
-    │   ├── base-exporter.js      # BaseExporter com conversão DOM -> Markdown/TXT
-    │   ├── epub-exporter.js      # Exportador EPUB 2/3
-    │   ├── html-exporter.js      # Exportador HTML único offline
-    │   ├── markdown-exporter.js  # Exportador Markdown (.md)
-    │   └── txt-exporter.js       # Exportador Texto Puro (.txt)
-    ├── parsers/
-    │   ├── index.js              # ParserRegistry com ranking por pontuação DOM
-    │   ├── generic-html.js       # Extrator heurístico, detecção de seletores e paginação
-    │   ├── wp-lightnovel.js      # Adaptador estrutural para temas WordPress de ficção
-    │   ├── madara-theme.js       # Adaptador estrutural para temas estilo Madara
-    │   ├── royalroad.js          # Adaptador para fictions, volumes e notas ocultas
-    │   ├── scribblehub.js        # Adaptador com paginação/AJAX e detecção anti-bot
-    │   ├── novelmania.js         # Adaptador para índice paginado via API e volumes
-    │   └── novelbin.js           # Adaptador para páginas React SPA e capítulos renderizados em aba
-    └── workspace/
-        ├── cache-sessions-ui.js  # Visualização e retomada de sessões salvas no cache IndexedDB
-        ├── chapter-modals.js     # Pré-visualização de capítulo, edição inline e modal de mesclagem
-        ├── chapters-ui.js        # Tabela de capítulos, chips de volumes e seleção Ctrl/Shift
-        ├── cover-ui.js           # Upload de capa, gerador de capa padrão com logo e prévia
-        ├── directory-handle.js   # Persistência de pasta via File System Access API e prévia de caminho
-        ├── domain-rules-ui.js    # Interface de regras de seletores CSS salvas por domínio
-        ├── download-storage.js   # Gravação via chrome.downloads e FileSystemDirectoryHandle
-        ├── export-runner.js      # Fila de exportação, Pausar/Cancelar, Modo Seguro e saída
-        ├── i18n.js               # Dicionários e tradução da interface (PT / EN)
-        ├── library-ui.js         # Biblioteca de séries salvas e fluxo de atualização em lote
-        ├── library-view.js       # Organização unificada vs. separada por site e selos de origem
-        ├── logger.js             # Logs de diagnóstico, filtros e relatório pós-exportação
-        ├── options-storage.js    # Opções persistentes, sincronia de perfis e isolamento de seletores
-        ├── series-loader.js      # Carregamento da obra, auto-SPA, capa padrão e auto-seletores CSS
-        ├── settings-io.js        # Modais de confirmação de restauração e exportação/importação JSON
-        ├── state.js              # Estado centralizado, perfis e utilitários compartilhados
-        ├── tab-picker.js         # Modal de juntar abas e seletor visual ponto-a-ponto
-        ├── theme-init.js         # Inicialização de tema sem FOUC
-        ├── volume-modals.js      # Modais de definição manual de volumes e edição de lista de URLs
-        ├── workspace.css         # Estilos adaptativos claro/escuro/sépia/meia-noite
-        ├── workspace.html        # Interface principal, Biblioteca e modais nativos
-        └── workspace.js          # Orquestrador enxuto ligando eventos e ciclo de vida
+├── .github/            # Templates de Issue/PR, Segurança, Conduta, Dependabot e workflows CI/Release/Pages/CodeQL
+├── _locales/           # Localização do manifesto da extensão (en, pt_BR)
+├── AGENTS.md           # Regras de arquitetura, segurança e guardrails para agentes de IA
+├── CHANGELOG.md        # Histórico oficial de versões (lido por scripts/extract-release-notes.mjs)
+├── CHROMEWEBSTORE.md   # Preparação para lojas, justificativa de permissões e privacidade
+├── CONTRIBUTING.md     # Guia de desenvolvimento e criação de parsers (EN + espelho docs/pt/)
+├── LICENSE             # Licença do projeto
+├── README.md / README.pt.md  # Visão geral do repositório (EN / PT-BR)
+├── manifest.json       # Manifesto multi-navegador MV3 (Chrome + Firefox gecko)
+├── docs/               # COMPATIBILITY.md, READER_PRESETS*.md, guia de SEO e espelhos docs/pt/
+├── icons/              # Ícones da extensão e lojas (SVG + PNG)
+├── scripts/            # Linter (check.mjs), sincronização/validação do site e extrator de release notes
+├── src/
+│   ├── background/     # Service worker / script de fundo MV3 + regra DNR Origin no Firefox
+│   ├── core/           # BaseParser, net-fetcher, sanitização XHTML, imagens, EPUB, IndexedDB e ZIP
+│   ├── exporters/      # Exportadores polimórficos (EPUB 2/3, HTML único, Markdown, TXT)
+│   ├── parsers/        # ParserRegistry, GenericHtmlParser e adaptadores (ver docs/COMPATIBILITY.md)
+│   └── workspace/      # UI da extensão, 4 temas adaptativos, controladores modulares e locales PT/EN
+├── tests/              # Suítes nativas node:test, fixtures anonimizadas e E2E Chromium Playwright
+└── website/            # Site estático bilíngue no GitHub Pages (sincronizado de docs/; fora do ZIP)
 ```
+
+Para detalhes do pipeline em 5 etapas, mapa de módulos e guia passo a passo de parsers, consulte [CONTRIBUTING.pt.md](docs/pt/CONTRIBUTING.pt.md) e [AGENTS.md](AGENTS.md).
 
 ---
 

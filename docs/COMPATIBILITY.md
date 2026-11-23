@@ -50,7 +50,7 @@ Sites without a dedicated adapter that work via WebPullBook's generic HTML extra
 
 ## Parser Regression Fixtures
 
-Each parser adapter has automated HTML snapshot fixtures verified on every CI run:
+Authoritative inventory of every parser module registered in [src/parsers/index.js](../src/parsers/index.js) and its automated HTML snapshot fixtures verified on every CI run:
 
 | Adapter | Last Verified | Index Fixture | Chapter Fixture | Snapshot Expectations |
 | :--- | :--- | :--- | :--- | :--- |

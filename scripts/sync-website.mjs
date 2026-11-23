@@ -5,11 +5,12 @@
  *  - docs/COMPATIBILITY.md       -> website/compatibility.html, website/pt/compatibility.html, index.html, faq.html
  *  - docs/READER_PRESETS.md      -> website/features.html
  *  - docs/READER_PRESETS.pt.md   -> website/pt/features.html
- *  - manifest.json & CHANGELOG.md -> version strings, JSON-LD softwareVersion, site.config.json
+ *  - manifest.json & site.config.json -> version strings, official links, JSON-LD & sitemap.xml
  */
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -322,6 +323,100 @@ export function syncGoatCounterScript(html, analyticsConfig) {
   );
 }
 
+function syncConfiguredLinks(html, siteConfig) {
+  if (!siteConfig) return html;
+  const linkMap = {
+    firefoxAddons: siteConfig.firefoxAddonsUrl,
+    releases: siteConfig.releasesUrl,
+    releasesLatest: siteConfig.releasesLatestUrl,
+    repository: siteConfig.repositoryUrl,
+    issues: siteConfig.issuesUrl
+  };
+  return String(html || '').replace(/<a\b[^>]*\bdata-wpb-link="([^"]+)"[^>]*>/gi, (tag, key) => {
+    const nextHref = linkMap[key];
+    if (!nextHref) return tag;
+    return tag.replace(/\bhref="[^"]*"/i, `href="${escapeHtml(nextHref)}"`);
+  });
+}
+
+function syncIndexJsonLd(html, siteConfig) {
+  if (!siteConfig || !/"@type":\s*"SoftwareApplication"/.test(html)) return html;
+  let out = html;
+  if (siteConfig.firefoxAddonsUrl) {
+    out = out.replace(/"installUrl":\s*"[^"]+"/, `"installUrl": "${siteConfig.firefoxAddonsUrl}"`);
+  }
+  if (siteConfig.releasesUrl) {
+    out = out.replace(/"downloadUrl":\s*"[^"]+"/, `"downloadUrl": "${siteConfig.releasesUrl}"`);
+  }
+  if (siteConfig.repositoryUrl) {
+    out = out.replace(/"codeRepository":\s*"[^"]+"/, `"codeRepository": "${siteConfig.repositoryUrl}"`);
+  }
+  if (siteConfig.firefoxAddonsUrl && siteConfig.repositoryUrl) {
+    out = out.replace(
+      /"sameAs":\s*\[\s*[\s\S]*?\s*\]/,
+      `"sameAs": [\n      "${siteConfig.firefoxAddonsUrl}",\n      "${siteConfig.repositoryUrl}"\n    ]`
+    );
+  }
+  return out;
+}
+
+function resolveGitLastmodDate(relRepoPath) {
+  const dirty = execFileSync('git', ['status', '--porcelain', '--', relRepoPath], {
+    cwd: ROOT,
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'ignore']
+  }).trim();
+  if (dirty) {
+    return new Date().toISOString().slice(0, 10);
+  }
+  const commitDate = execFileSync('git', ['log', '-1', '--format=%cs', '--', relRepoPath], {
+    cwd: ROOT,
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'ignore']
+  }).trim();
+  return /^\d{4}-\d{2}-\d{2}$/.test(commitDate) ? commitDate : '';
+}
+
+function syncSitemapLastmod(siteConfig) {
+  const sitemapPath = path.join(WEBSITE_DIR, 'sitemap.xml');
+  if (!siteConfig || !fs.existsSync(sitemapPath)) return;
+
+  try {
+    const isShallow = execFileSync('git', ['rev-parse', '--is-shallow-repository'], {
+      cwd: ROOT,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore']
+    }).trim();
+    if (isShallow === 'true') return;
+  } catch {
+    return;
+  }
+
+  const baseUrl = String(siteConfig.baseUrl || '').replace(/\/+$/, '');
+  const locToFile = new Map();
+  for (const p of siteConfig.pages || []) {
+    locToFile.set(`${baseUrl}${p.en}`, `website/${p.enFile}`);
+    locToFile.set(`${baseUrl}${p.pt}`, `website/${p.ptFile}`);
+  }
+
+  const original = fs.readFileSync(sitemapPath, 'utf8');
+  const updated = original.replace(/<url>[\s\S]*?<\/url>/g, (block) => {
+    const locMatch = block.match(/<loc>([^<]+)<\/loc>/);
+    const repoRel = locMatch ? locToFile.get(locMatch[1].trim()) : '';
+    if (!repoRel) return block;
+    try {
+      const lastmod = resolveGitLastmodDate(repoRel);
+      if (!lastmod) return block;
+      return block.replace(/<lastmod>[^<]*<\/lastmod>/, `<lastmod>${lastmod}</lastmod>`);
+    } catch {
+      return block;
+    }
+  });
+  if (updated !== original) {
+    fs.writeFileSync(sitemapPath, updated, 'utf8');
+  }
+}
+
 export function syncWebsite() {
   const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'manifest.json'), 'utf8'));
   const compatMd = fs.readFileSync(path.join(ROOT, 'docs', 'COMPATIBILITY.md'), 'utf8');
@@ -406,12 +501,27 @@ export function syncWebsite() {
         `$1${footerLine}`
       );
 
-      // 6. Sync optional GoatCounter analytics script tag from website/site.config.json
+      // 6. Sync [data-wpb-link] official links and JSON-LD metadata from website/site.config.json
+      html = syncConfiguredLinks(html, siteConfig);
+      html = syncIndexJsonLd(html, siteConfig);
+
+      // 7. Sync optional GoatCounter analytics script tag from website/site.config.json
       html = syncGoatCounterScript(html, goatCounterConfig);
 
       fs.writeFileSync(filePath, html, 'utf8');
     }
   }
+
+  const notFoundPath = path.join(WEBSITE_DIR, '404.html');
+  if (fs.existsSync(notFoundPath)) {
+    const raw404 = fs.readFileSync(notFoundPath, 'utf8');
+    const synced404 = syncConfiguredLinks(raw404, siteConfig);
+    if (synced404 !== raw404) {
+      fs.writeFileSync(notFoundPath, synced404, 'utf8');
+    }
+  }
+
+  syncSitemapLastmod(siteConfig);
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

@@ -55,7 +55,7 @@
           <li><a href="privacy.html">Privacy</a></li>
           <li><a href="contributing.html">Contributing</a></li>
           <li>
-            <a class="nav-github-link" href="https://github.com/WiltonGabriel/WebPullBook" aria-label="GitHub Repository" title="GitHub Repository">
+            <a class="nav-github-link" href="https://github.com/WiltonGabriel/WebPullBook" aria-label="GitHub Repository" title="GitHub Repository" data-wpb-link="repository">
               <svg viewBox="0 0 16 16" width="18" height="18" fill="currentColor" aria-hidden="true">
                 <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"></path>
               </svg>
@@ -84,11 +84,11 @@
     <section class="page-hero">
       <div class="container">
         <h1>Installation &amp; Basic Usage</h1>
-        <p>WebPullBook is officially published on <a href="https://addons.mozilla.org/firefox/addon/webpullbook/">Firefox Add-ons (AMO)</a> for Firefox 128+. Chrome Web Store submission is planned next; during Beta, Chrome, Edge, and Brave users can install the signed release package from GitHub Releases with no build step.</p>
+        <p>WebPullBook is officially published on <a href="https://addons.mozilla.org/firefox/addon/webpullbook/" data-wpb-link="firefoxAddons">Firefox Add-ons (AMO)</a> for Firefox 128+. Chrome Web Store submission is planned next; during Beta, Chrome, Edge, and Brave users can install the signed release package from GitHub Releases with no build step.</p>
         <div class="cta-row" style="margin-block-start: 1.25rem; margin-block-end: 0;">
-          <a class="btn primary" href="https://addons.mozilla.org/firefox/addon/webpullbook/">Install on Firefox Add-ons</a>
-          <a class="btn secondary" href="https://github.com/WiltonGabriel/WebPullBook/releases/latest">GitHub Releases (Chrome / Chromium)</a>
-          <a class="btn secondary" href="https://github.com/WiltonGabriel/WebPullBook/releases">All Releases &amp; Checksums</a>
+          <a class="btn primary" href="https://addons.mozilla.org/firefox/addon/webpullbook/" data-wpb-link="firefoxAddons">Install on Firefox Add-ons</a>
+          <a class="btn secondary" href="https://github.com/WiltonGabriel/WebPullBook/releases/latest" data-wpb-link="releasesLatest">GitHub Releases (Chrome / Chromium)</a>
+          <a class="btn secondary" href="https://github.com/WiltonGabriel/WebPullBook/releases" data-wpb-link="releases">All Releases &amp; Checksums</a>
         </div>
       </div>
     </section>
@@ -100,7 +100,7 @@
             <span class="badge accent">Mozilla Firefox 128+ (Manifest V3)</span>
             <h2>1. Mozilla Firefox (128 or Newer)</h2>
             <ol>
-              <li>Open the <a href="https://addons.mozilla.org/firefox/addon/webpullbook/">WebPullBook page on Firefox Add-ons</a>.</li>
+              <li>Open the <a href="https://addons.mozilla.org/firefox/addon/webpullbook/" data-wpb-link="firefoxAddons">WebPullBook page on Firefox Add-ons</a>.</li>
               <li>Click <strong>Add to Firefox</strong> and confirm the requested permissions.</li>
               <li>Signed updates are delivered automatically by Firefox Add-ons.</li>
               <li><em>For Developers:</em> Local development builds can still be loaded temporarily in <code>about:debugging#/runtime/this-firefox</code>.</li>
@@ -111,7 +111,7 @@
             <span class="badge accent">Chrome • Edge • Brave • Vivaldi • Chromium</span>
             <h2>2. Chrome &amp; Chromium Browsers</h2>
             <ol>
-              <li>Download the release archive from <a href="https://github.com/WiltonGabriel/WebPullBook/releases/latest">GitHub Releases</a> and extract it to a permanent folder on your computer.</li>
+              <li>Download the release archive from <a href="https://github.com/WiltonGabriel/WebPullBook/releases/latest" data-wpb-link="releasesLatest">GitHub Releases</a> and extract it to a permanent folder on your computer.</li>
               <li>Open <code>chrome://extensions/</code> (or <code>edge://extensions/</code> / <code>brave://extensions/</code>).</li>
               <li>Enable <strong>Developer mode</strong> in the top-right corner.</li>
               <li>Click <strong>Load unpacked</strong> and select the extracted folder containing <code>manifest.json</code>.</li>
@@ -193,9 +193,9 @@ npm run check</code></pre>
           <ul>
             <li><a href="contributing.html">Contributing Guide</a></li>
             <li><a href="privacy.html">Privacy &amp; Permissions</a></li>
-            <li><a href="https://github.com/WiltonGabriel/WebPullBook">GitHub Repository</a></li>
-            <li><a href="https://github.com/WiltonGabriel/WebPullBook/releases">Official Releases (Beta)</a></li>
-            <li><a href="https://github.com/WiltonGabriel/WebPullBook/issues">Issue Tracker</a></li>
+            <li><a href="https://github.com/WiltonGabriel/WebPullBook" data-wpb-link="repository">GitHub Repository</a></li>
+            <li><a href="https://github.com/WiltonGabriel/WebPullBook/releases" data-wpb-link="releases">Official Releases (Beta)</a></li>
+            <li><a href="https://github.com/WiltonGabriel/WebPullBook/issues" data-wpb-link="issues">Issue Tracker</a></li>
           </ul>
         </div>
 
