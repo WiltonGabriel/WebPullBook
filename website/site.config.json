@@ -3,6 +3,7 @@
   "version": "1.6.1",
   "baseUrl": "https://wiltongabriel.github.io/WebPullBook",
   "repositoryUrl": "https://github.com/WiltonGabriel/WebPullBook",
+  "firefoxAddonsUrl": "https://addons.mozilla.org/firefox/addon/webpullbook/",
   "releasesUrl": "https://github.com/WiltonGabriel/WebPullBook/releases",
   "releasesApiUrl": "https://api.github.com/repos/WiltonGabriel/WebPullBook/releases?per_page=1",
   "issuesUrl": "https://github.com/WiltonGabriel/WebPullBook/issues",

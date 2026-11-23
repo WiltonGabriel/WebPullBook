@@ -1,7 +1,7 @@
 # Chrome Web Store & Mozilla Add-ons Listing Readiness — WebPullBook
 
-> Last Updated: 2026-11-20
-> Current Release Status: **Beta (`v1.6.1-beta`)** — distributed via [GitHub Releases](https://github.com/WiltonGabriel/WebPullBook/releases); prepared for future store publication.
+> Last Updated: 2026-11-23
+> Current Release Status: **Beta (`v1.6.1-beta`)** — published on [Firefox Add-ons (AMO)](https://addons.mozilla.org/firefox/addon/webpullbook/) and [GitHub Releases](https://github.com/WiltonGabriel/WebPullBook/releases); prepared for Chrome Web Store submission.
 
 ## Store Listing
 
@@ -36,7 +36,9 @@ WebPullBook processes extracted content locally inside your browser. It uses no 
 
 PERMISSIONS
 • "Read your browsing history / tabs" (tabs) — Needed to read the URL of the active tab when you click the extension icon, list open tabs when you use Merge Tabs, and manage a background tab when rendering dynamic pages.
+• "Inspect or capture active page content" (scripting) — Needed to capture the live rendered DOM from the active tab, extract hydrated HTML from SPA pages, read paginated tables of contents on the active origin when triggered by you, and run the visual CSS selector picker.
 • "Access your data for all websites" (host_permissions) — Needed so you can extract chapters and images from the websites, blogs, or documentation pages you choose to convert.
+• "Block or modify network requests on visited sites" (declarativeNetRequestWithHostAccess) — Needed for temporary session rules during active extraction so cross-origin image/chapter fetches and Firefox CORS header cleanup succeed without affecting unrelated browsing.
 • "Manage your downloads" (downloads) — Needed to save generated EPUB, HTML, Markdown, and TXT files to your Downloads folder.
 • "Store data locally" (storage) — Needed to save your preferences, Reader Profile, Library, and per-domain rules on your device.
 
@@ -127,7 +129,7 @@ Portuguese (Brazil) & English (Bilingual UI)
 
 ## Distribution & Developer Info
 
-**Visibility**: Public (Once Beta concludes and store submission is initiated)
+**Visibility**: Published on Firefox Add-ons (AMO); Chrome Web Store submission pending (once Beta concludes)
 **Regions**: All regions
 **Publisher Name**: Wilton Gabriel (WebPullBook Contributors)
 **Support URL**: `https://github.com/WiltonGabriel/WebPullBook/issues`
@@ -135,10 +137,11 @@ Portuguese (Brazil) & English (Bilingual UI)
 
 ---
 
-## Mozilla Add-ons (AMO — Firefox) Submission Readiness
+## Mozilla Add-ons (AMO — Firefox) Listing & Review Notes
 
 Mozilla Add-ons (`addons.mozilla.org`) does not charge a developer registration fee and accepts the same cross-browser Manifest V3 package directly:
 
+- **Published Listing URL:** https://addons.mozilla.org/firefox/addon/webpullbook/
 - **Add-on ID (`gecko.id`):** `webpullbook@wiltongabriel.github.io` (configured under `browser_specific_settings.gecko` in `manifest.json`)
 - **Minimum Version & Event Script:** `strict_min_version: "128.0"` and `background.scripts` (`src/background/service-worker.js`)
 - **Data Collection Consent:** `data_collection_permissions: { "required": ["none"] }` (matches `addons-linter` canonical zero-collection declaration)
@@ -150,7 +153,7 @@ Mozilla Add-ons (`addons.mozilla.org`) does not charge a developer registration 
   - **Homepage / Support / Privacy Policy:** `https://wiltongabriel.github.io/WebPullBook/`, `https://github.com/WiltonGabriel/WebPullBook/issues`, `https://wiltongabriel.github.io/WebPullBook/privacy.html`
   - **Screenshots (`1280×800` PNG):** Reuse the 5 screenshots listed under `website/assets/screenshots/`
 - **Ready-to-Paste Notes for Reviewers:**
-  > WebPullBook is a 100% client-side, zero-dependency Manifest V3 extension with no build step or remote code execution (`src/` runs unmodified). `tabs` and `scripting` are used only when the user clicks the extension action (to read the active tab URL or DOM cleanly, populate the Merge Tabs dialog, or reuse one background tab when extracting React/JS-hydrated SPAs). `declarativeNetRequestWithHostAccess` sets Firefox session rule ID `1` to remove `Origin: moz-extension://` on extension-initiated fetches so images/chapters are not rejected by CORS, plus temporary rules ID `100..119` for navigation headers during extraction. `http://*/*` and `https://*/*` host permissions are required because users extract books and articles from arbitrary websites of their choice. No user telemetry or analytics are collected by the extension.
+  > WebPullBook is a 100% client-side, zero-dependency Manifest V3 extension with no build step or remote code execution (`src/` runs unmodified). `tabs` and `scripting` are used only when the user clicks the extension action (to read the active tab URL or DOM cleanly, populate the Merge Tabs dialog, run the user-initiated CSS selector picker, or reuse one background tab when extracting React/JS-hydrated SPAs). Additionally, in `src/parsers/scribblehub.js`, if a direct extension fetch cannot retrieve the full paginated table of contents, `chrome.scripting.executeScript` runs a read-only same-origin `POST /wp-admin/admin-ajax.php` (`action=wi_getreleases_pagination`, `pagenum=-1`) strictly to read the chapter list HTML when the user initiates extraction on that work. `declarativeNetRequestWithHostAccess` sets Firefox session rule ID `1` to remove `Origin: moz-extension://` on extension-initiated fetches so images/chapters are not rejected by CORS, plus temporary rules ID `100..119` for navigation headers during extraction. `http://*/*` and `https://*/*` host permissions are required because users extract books and articles from arbitrary websites of their choice. No user telemetry or analytics are collected by the extension.
 - **Target Platforms & Firefox for Android Roadmap:**
   - Currently targets **Firefox Desktop (128+)** only (keep *Firefox for Android* unchecked during AMO submission until mobile testing is complete).
   - **Planned Future Work (`gecko_android`):** Add `browser_specific_settings.gecko_android` in `manifest.json` (`strict_min_version: "142.0"` for `data_collection_permissions`), refine mobile touch/viewport layouts in `src/workspace/workspace.css`, and test `tabs`/`scripting`/downloads behavior on Firefox for Android.
@@ -161,7 +164,7 @@ Mozilla Add-ons (`addons.mozilla.org`) does not charge a developer registration 
 
 | Version | Date | Changes | Status |
 |---------|------|---------|--------|
-| `1.6.1` (`1.6.1-beta`) | 2026-11-20 | Reload Cover button (restores the original series cover in high resolution), vertical 2:3 cover preview, emoji-free language/theme selectors, versioning policy and Firefox for Android roadmap documentation. | Draft (GitHub Release Beta) |
+| `1.6.1` (`1.6.1-beta`) | 2026-11-20 | Reload Cover button (restores the original series cover in high resolution), vertical 2:3 cover preview, emoji-free language/theme selectors, versioning policy and Firefox for Android roadmap documentation. | Published (Firefox Add-ons & GitHub Release Beta) |
 | `1.6.0` (`1.6.0-beta`) | 2026-11-20 | Verified NovelBin React SPA adapter, generic SPA `TabRenderPool` & DOM stability upgrades, `.sr-only`/duplicate-heading sanitizer hardening, CodeQL security fixes, 5-theme website improvements, and updated policies/docs. | Released (GitHub Release Beta) |
 | `1.5.0` (`1.5.0-beta`) | 2026-11-20 | Automatic default cover fallback with WebPullBook logo, official bilingual GitHub Pages site with dynamic version detection and direct `.zip` download, `AGENTS.md`, `CHROMEWEBSTORE.md`, and quiet/minimalist documentation review. | Released (GitHub Release Beta) |
 | `1.4.0` (`1.4.0-beta`) | 2026-11-20 | Reader Profiles for Kindle (Legacy/Modern) & Kobo, Start-of-Book TOC, customizable Information & End-of-Book pages, active-tab live DOM capture, resilient image pipeline, Ctrl/Shift range selection, per-site selector isolation, Library batch updates, and SRP modularization. | Released (GitHub Release Beta) |

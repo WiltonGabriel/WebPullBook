@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="color-scheme" content="light dark">
   <title>Compatibility Matrix &amp; Supported Patterns — WebPullBook</title>
-  <meta name="description" content="Four-tier compatibility classification for WebPullBook: Verified &amp; Tested sites, Added / Not Officially Tested layouts, Potentially Compatible HTML/SPA patterns, Not Compatible limitations, and browser test coverage.">
+  <meta name="description" content="Four-tier WebPullBook compatibility matrix: verified adapters, WordPress/Madara layouts, generic HTML and SPA extraction, limitations, and browser coverage.">
   <link rel="canonical" href="https://wiltongabriel.github.io/WebPullBook/compatibility.html">
   <link rel="alternate" hreflang="en" href="https://wiltongabriel.github.io/WebPullBook/compatibility.html">
   <link rel="alternate" hreflang="pt-BR" href="https://wiltongabriel.github.io/WebPullBook/pt/compatibility.html">
@@ -281,7 +281,7 @@
                 <td><strong>Google Chrome / Chromium</strong></td>
                 <td>Chrome 114+</td>
                 <td><span class="badge success">Supported (MV3)</span></td>
-                <td><strong>Automated in CI:</strong> Playwright Chromium E2E test suite (loading unpacked extension, extracting series, previewing/editing, Library, exporting EPUB, and W3C EPUBCheck validation) + 56 Node.js unit/snapshot tests.</td>
+                <td><strong>Automated in CI:</strong> Playwright Chromium E2E test suite (loading unpacked extension, extracting series, previewing/editing, Library, exporting EPUB, and W3C EPUBCheck validation) + the native Node.js unit and snapshot test suite.</td>
               </tr>
               <tr>
                 <td><strong>Microsoft Edge / Brave / Vivaldi</strong></td>
@@ -293,7 +293,7 @@
                 <td><strong>Mozilla Firefox</strong></td>
                 <td>Firefox 128.0+</td>
                 <td><span class="badge success">Supported (MV3 Gecko)</span></td>
-                <td><strong>Static CI Checks + Manual Browser Validation:</strong> CI statically validates <code>background.scripts</code>, <code>browser_specific_settings.gecko</code> (Firefox 128+), and Firefox <code>Origin</code> header DNR rules. Live browser testing in Firefox is performed manually via <code>about:debugging</code> because Playwright's Firefox driver does not support loading unpacked WebExtensions via CLI flags.</td>
+                <td><strong>Signed on AMO + Static CI Checks:</strong> Published as a signed add-on on <a href="https://addons.mozilla.org/firefox/addon/webpullbook/">Firefox Add-ons (AMO)</a> with <code>data_collection_permissions</code> declared as none. CI statically validates <code>background.scripts</code>, <code>browser_specific_settings.gecko</code> (Firefox 128+), and Firefox <code>Origin</code> header DNR rules, while interactive UI testing in Firefox is performed manually via <code>about:debugging</code>.</td>
               </tr>
             </tbody>
           </table>

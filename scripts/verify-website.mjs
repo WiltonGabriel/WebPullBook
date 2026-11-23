@@ -29,6 +29,33 @@ if (!fs.existsSync(configPath)) {
 const siteConfig = JSON.parse(fs.readFileSync(configPath, 'utf8'));
 const BASE_URL = siteConfig.baseUrl.replace(/\/+$/, '');
 
+function decodeBasicHtmlEntities(str) {
+  return String(str || '')
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>');
+}
+
+// Validate Firefox Add-ons canonical URL
+if (typeof siteConfig.firefoxAddonsUrl !== 'string' || !siteConfig.firefoxAddonsUrl.trim()) {
+  fail('website/site.config.json: firefoxAddonsUrl must be a non-empty HTTPS URL');
+} else {
+  const amoRaw = siteConfig.firefoxAddonsUrl.trim();
+  try {
+    const amoUrl = new URL(amoRaw);
+    if (amoUrl.protocol !== 'https:') {
+      fail(`website/site.config.json: firefoxAddonsUrl must use https: (${amoRaw})`);
+    }
+    if (amoUrl.hostname !== 'addons.mozilla.org') {
+      fail(`website/site.config.json: firefoxAddonsUrl hostname must be addons.mozilla.org (${amoRaw})`);
+    }
+  } catch {
+    fail(`website/site.config.json: invalid firefoxAddonsUrl URL (${amoRaw})`);
+  }
+}
+
 // 0. Validate GoatCounter analytics configuration
 const analyticsCfg = siteConfig.analytics;
 let analyticsEndpoint = '';
@@ -166,8 +193,11 @@ for (const page of siteConfig.pages) {
     // Unique <title>
     const titleMatch = html.match(/<title>([^<]+)<\/title>/i);
     const title = titleMatch?.[1]?.trim() || '';
-    if (!title || title.length < 15) {
+    const decodedTitle = decodeBasicHtmlEntities(title);
+    if (!title || decodedTitle.length < 15) {
       fail(`${v.relFile}: missing or too short <title>`);
+    } else if (decodedTitle.length > 70) {
+      fail(`${v.relFile}: <title> exceeds 70 chars (${decodedTitle.length}): "${decodedTitle}"`);
     } else if (seenTitles.has(title)) {
       fail(`${v.relFile}: duplicate <title> with ${seenTitles.get(title)}: "${title}"`);
     } else {
@@ -177,8 +207,11 @@ for (const page of siteConfig.pages) {
     // Meta description
     const descMatch = html.match(/<meta\s+name="description"\s+content="([^"]+)"/i);
     const desc = descMatch?.[1]?.trim() || '';
-    if (!desc || desc.length < 50) {
+    const decodedDesc = decodeBasicHtmlEntities(desc);
+    if (!desc || decodedDesc.length < 50) {
       fail(`${v.relFile}: missing or too short meta description`);
+    } else if (decodedDesc.length > 165) {
+      fail(`${v.relFile}: meta description exceeds 165 chars (${decodedDesc.length})`);
     } else if (seenDescriptions.has(desc)) {
       fail(`${v.relFile}: duplicate meta description with ${seenDescriptions.get(desc)}`);
     } else {

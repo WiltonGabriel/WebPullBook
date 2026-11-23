@@ -58,7 +58,7 @@ Principais arquivos:
 - [src/background/service-worker.js](../../src/background/service-worker.js) — Abertura do workspace e regra `Origin` no Firefox.
 - [src/core/](../../src/core/parser-engine.js) — Módulos coesos de responsabilidade única: `parser-engine.js`, `base-parser.js`, `net-fetcher.js`, `rate-limiter.js`, `dnr-rules.js`, `text-utils.js`, `selector-utils.js`, `epub-css.js`, `sanitizer.js`, `xhtml-serializer.js`, `image-processor.js`, `epub-templates.js`, `epub-builder.js`, `zip.js` e `cache-store.js`.
 - [src/exporters/](../../src/exporters/index.js) — `BaseExporter` e `ExporterRegistry` (`epub`, `html`, `md`, `txt`).
-- [src/parsers/](../../src/parsers/index.js) — `ParserRegistry`, `GenericHtmlParser` e adaptadores (`wp-lightnovel`, `madara-theme`, `royalroad`, `scribblehub`, `novelmania`).
+- [src/parsers/](../../src/parsers/index.js) — `ParserRegistry`, `GenericHtmlParser` e adaptadores (`wp-lightnovel`, `madara-theme`, `royalroad`, `scribblehub`, `novelmania`, `novelbin`).
 - [src/workspace/](../../src/workspace/workspace.html) — Workspace modular (`theme-init.js`, `state.js`, `i18n.js` + `locales/`, `logger.js`, `options-storage.js`, `directory-handle.js`, `domain-rules-ui.js`, `chapters-ui.js`, `cover-ui.js`, `chapter-modals.js`, `volume-modals.js`, `series-loader.js`, `export-runner.js`, `download-storage.js`, `library-ui.js`, `library-view.js`, `cache-sessions-ui.js`, `settings-io.js`, `tab-picker.js` e `workspace.js`).
 - [docs/READER_PRESETS.pt.md](../READER_PRESETS.pt.md) — Guia dos perfis de leitor definidos em `READER_PRESETS` ([state.js](../../src/workspace/state.js)).
 - `website/` — Site estático bilíngue publicado no GitHub Pages (sincronizado via `npm run sync:website` e validado pelo `npm run lint`).
@@ -126,7 +126,7 @@ O código da extensão não precisa de `npm install` nem de compilação (`npm r
 | `npm run check` | Apenas Node.js | Executa `npm run lint && npm test` (recomendado antes de todo commit/PR). |
 | `npm run lint` | Apenas Node.js | Paridade `manifest.json`/`package.json`, chaves MV3 do Firefox, sintaxe JS, CSP MV3, links Markdown, paridade PT/EN no i18n, IDs do DOM, LF/espaços e `verify-website.mjs`. |
 | `npm run lint:fix` | Apenas Node.js | Corrige automaticamente fins de linha LF e espaços no fim das linhas. |
-| `npm test` | Apenas Node.js | 65 testes nativos (`HtmlSanitizer`, `createZipBlob`, `ParserRegistry`, `ExporterRegistry`, `CacheStore`, `ImageProcessor`, `AdaptiveRateLimiter`, `TabRenderPool`, mais `EPUBCheck` se disponível). |
+| `npm test` | Apenas Node.js | Suíte nativa de testes unitários e snapshots (`node:test`) cobrindo `HtmlSanitizer`, `createZipBlob`, `ParserRegistry`, `ExporterRegistry`, `CacheStore`, `ImageProcessor`, `AdaptiveRateLimiter`, `TabRenderPool`, além de `EPUBCheck` quando disponível. |
 | `npm run sync:website` | Apenas Node.js | Sincroniza tabelas e versões de `website/` a partir de `docs/` e `manifest.json`. |
 | `REQUIRE_EPUBCHECK=1 npm run test:epubcheck` | Java 21+ e EPUBCheck | Valida EPUB 2 e EPUB 3 gerados (0 erros, 0 avisos). |
 | `npm run test:e2e` | `npm install` + `npx playwright install chromium` | Abre o Chromium com a extensão carregada e testa extração, seleção, perfis, biblioteca, regras por domínio, download real e mesclagem de abas. |

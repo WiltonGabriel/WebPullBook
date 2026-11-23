@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="color-scheme" content="light dark">
-  <title>Privacy Policy &amp; Permissions Disclosure — WebPullBook</title>
-  <meta name="description" content="Privacy Policy and Manifest V3 permissions justification for WebPullBook: local extension execution with zero telemetry, local storage details, and cookieless GoatCounter analytics on the public website.">
+  <title>Privacy Policy &amp; Permissions — WebPullBook</title>
+  <meta name="description" content="Privacy Policy and Manifest V3 permissions for WebPullBook: local execution with zero extension telemetry, local storage details, and cookieless site metrics.">
   <link rel="canonical" href="https://wiltongabriel.github.io/WebPullBook/privacy.html">
   <link rel="alternate" hreflang="en" href="https://wiltongabriel.github.io/WebPullBook/privacy.html">
   <link rel="alternate" hreflang="pt-BR" href="https://wiltongabriel.github.io/WebPullBook/pt/privacy.html">
@@ -164,7 +164,7 @@
               </tr>
               <tr>
                 <td><code>IndexedDB</code></td>
-                <td><code>WebPullBookDirHandles</code></td>
+                <td><code>WebPullBookHandles</code></td>
                 <td>Stores the optional local folder permission handle (<code>FileSystemDirectoryHandle</code>) when you choose a custom output folder on your computer.</td>
                 <td>Kept until you click <strong>Use Downloads</strong> or clear browser extension data.</td>
               </tr>
@@ -230,6 +230,8 @@
             </tbody>
           </table>
         </div>
+
+        <p style="margin-block-start: 1rem;">For Mozilla Firefox Add-ons (AMO), <code>manifest.json</code> also declares <code>data_collection_permissions: { "required": ["none"] }</code> under <code>browser_specific_settings.gecko</code>, reflecting that WebPullBook collects or transmits no user data.</p>
       </div>
     </section>
 

@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="color-scheme" content="light dark">
-  <title>WebPullBook — Extensão Web-to-EPUB para Baixar Web Novels e Converter Páginas em EPUB 2/3</title>
-  <meta name="description" content="Extensão de navegador open source (Manifest V3) para Chrome e Firefox 128+ que extrai web novels, light novels, fanfics, artigos e abas abertas em ebooks EPUB 2, EPUB 3, HTML, Markdown e TXT organizados por volume para leitura offline.">
+  <title>WebPullBook — Extensão Web-to-EPUB para Chrome e Firefox</title>
+  <meta name="description" content="Extensão open source para Chrome e Firefox 128+ que converte web novels, light novels, artigos e abas abertas em EPUB 2/3, HTML, Markdown e TXT offline.">
   <meta name="author" content="Wilton Gabriel">
   <link rel="canonical" href="https://wiltongabriel.github.io/WebPullBook/pt/">
   <link rel="alternate" hreflang="en" href="https://wiltongabriel.github.io/WebPullBook/">
@@ -50,8 +50,13 @@
       "url": "https://github.com/WiltonGabriel"
     },
     "url": "https://wiltongabriel.github.io/WebPullBook/pt/",
+    "installUrl": "https://addons.mozilla.org/firefox/addon/webpullbook/",
     "downloadUrl": "https://github.com/WiltonGabriel/WebPullBook/releases",
     "codeRepository": "https://github.com/WiltonGabriel/WebPullBook",
+    "sameAs": [
+      "https://addons.mozilla.org/firefox/addon/webpullbook/",
+      "https://github.com/WiltonGabriel/WebPullBook"
+    ],
     "featureList": [
       "Exportação EPUB 2 e EPUB 3 validada com W3C EPUBCheck",
       "Perfis de Leitor para Kindle (Send to Kindle e Calibre USB) e Kobo",
@@ -122,8 +127,8 @@
           </p>
           <div class="cta-row">
             <a class="btn primary" href="installation.html">Como Instalar</a>
+            <a class="btn secondary" href="https://addons.mozilla.org/firefox/addon/webpullbook/">Firefox Add-ons</a>
             <a class="btn secondary" href="https://github.com/WiltonGabriel/WebPullBook/releases">Releases no GitHub</a>
-            <a class="btn secondary" href="https://github.com/WiltonGabriel/WebPullBook">Repositório no GitHub</a>
           </div>
         </div>
 
@@ -183,15 +188,16 @@
 
         <div class="grid-3">
           <article class="card">
-            <h3>1. Baixe a Release</h3>
-            <p>Baixe o pacote da versão mais recente em <a href="https://github.com/WiltonGabriel/WebPullBook/releases/latest">GitHub Releases</a> e extraia a pasta no seu computador.</p>
+            <h3>1. Obtenha a Extensão</h3>
+            <p><strong>Firefox 128+:</strong> Instale com um clique pelo <a href="https://addons.mozilla.org/firefox/addon/webpullbook/">Firefox Add-ons (AMO)</a>.<br>
+            <strong>Chrome / Edge / Brave:</strong> Baixe o pacote mais recente em <a href="https://github.com/WiltonGabriel/WebPullBook/releases/latest">GitHub Releases</a> e extraia a pasta.</p>
           </article>
 
           <article class="card">
-            <h3>2. Carregue no Navegador</h3>
+            <h3>2. Ative no Navegador</h3>
             <ul>
+              <li><strong>Mozilla Firefox:</strong> Confirme as permissões no Firefox Add-ons; as atualizações assinadas chegam automaticamente.</li>
               <li><strong>Chrome / Edge / Brave:</strong> Abra <code>chrome://extensions/</code>, ative o <strong>Modo do desenvolvedor</strong>, clique em <strong>Carregar sem compactação</strong> e selecione a pasta extraída.</li>
-              <li><strong>Firefox 128+:</strong> Abra <code>about:debugging#/runtime/this-firefox</code>, clique em <strong>Carregar extensão temporária...</strong> e selecione o arquivo <code>manifest.json</code> (ou o próprio <code>.zip</code>).</li>
             </ul>
           </article>
 

@@ -9,3 +9,15 @@
 *.png binary
 *.jpg binary
 *.webp binary
+
+# Exclude non-runtime website, tests, dev scripts, and CI/store files from git archive (GitHub "Download ZIP")
+.github/ export-ignore
+.gitattributes export-ignore
+.gitignore export-ignore
+AGENTS.md export-ignore
+CHROMEWEBSTORE.md export-ignore
+package.json export-ignore
+package-lock.json export-ignore
+scripts/ export-ignore
+tests/ export-ignore
+website/ export-ignore

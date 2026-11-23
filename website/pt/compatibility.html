@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="color-scheme" content="light dark">
-  <title>Matriz de Compatibilidade &amp; Padrões Suportados — WebPullBook</title>
-  <meta name="description" content="Classificação de compatibilidade em quatro níveis do WebPullBook: Verificados e Testados, Adicionados mas Não Testados Oficialmente, Potencialmente Compatíveis, Não Compatíveis e cobertura de testes em navegadores.">
+  <title>Matriz de Compatibilidade &amp; Padrões — WebPullBook</title>
+  <meta name="description" content="Matriz de compatibilidade em 4 níveis do WebPullBook: adaptadores verificados, temas WordPress/Madara, extração HTML/SPA, limitações e suporte a navegadores.">
   <link rel="canonical" href="https://wiltongabriel.github.io/WebPullBook/pt/compatibility.html">
   <link rel="alternate" hreflang="en" href="https://wiltongabriel.github.io/WebPullBook/compatibility.html">
   <link rel="alternate" hreflang="pt-BR" href="https://wiltongabriel.github.io/WebPullBook/pt/compatibility.html">
@@ -281,7 +281,7 @@
                 <td><strong>Google Chrome / Chromium</strong></td>
                 <td>Chrome 114+</td>
                 <td><span class="badge success">Suportado (MV3)</span></td>
-                <td><strong>Automatizado no CI:</strong> Suíte E2E com Playwright Chromium (carregando a extensão descompactada, extraindo obras, pré-visualizando/editando, Biblioteca, exportando EPUB e validando com W3C EPUBCheck) + 56 testes unitários/snapshots em Node.js.</td>
+                <td><strong>Automatizado no CI:</strong> Suíte E2E com Playwright Chromium (carregando a extensão descompactada, extraindo obras, pré-visualizando/editando, Biblioteca, exportando EPUB e validando com W3C EPUBCheck) + a suíte nativa de testes unitários e snapshots em Node.js.</td>
               </tr>
               <tr>
                 <td><strong>Microsoft Edge / Brave / Vivaldi</strong></td>
@@ -293,7 +293,7 @@
                 <td><strong>Mozilla Firefox</strong></td>
                 <td>Firefox 128.0+</td>
                 <td><span class="badge success">Suportado (MV3 Gecko)</span></td>
-                <td><strong>Validação Estática no CI + Teste Manual no Navegador:</strong> O CI valida estaticamente <code>background.scripts</code>, <code>browser_specific_settings.gecko</code> (Firefox 128+) e a regra DNR de remoção do cabeçalho <code>Origin</code>. O teste de interface no Firefox é feito manualmente via <code>about:debugging</code>, pois o driver Firefox do Playwright não suporta carregar WebExtensions descompactadas por flags de linha de comando.</td>
+                <td><strong>Assinado no AMO + Validação Estática no CI:</strong> Publicado como extensão assinada no <a href="https://addons.mozilla.org/firefox/addon/webpullbook/">Firefox Add-ons (AMO)</a> com <code>data_collection_permissions</code> declarado como nenhuma coleta. O CI valida estaticamente <code>background.scripts</code>, <code>browser_specific_settings.gecko</code> (Firefox 128+) e a regra DNR do cabeçalho <code>Origin</code>, enquanto o teste interativo de interface no Firefox é feito manualmente via <code>about:debugging</code>.</td>
               </tr>
             </tbody>
           </table>

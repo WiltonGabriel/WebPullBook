@@ -4,28 +4,28 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="color-scheme" content="light dark">
-  <title>Beta Installation Guide (Chrome, Edge, Brave &amp; Firefox) — WebPullBook</title>
-  <meta name="description" content="How to download and install the WebPullBook Beta browser extension on Google Chrome, Microsoft Edge, Brave, Chromium, and Mozilla Firefox 128+ from GitHub Releases.">
+  <title>Installation Guide (Firefox, Chrome, Edge &amp; Brave) — WebPullBook</title>
+  <meta name="description" content="Install WebPullBook from Firefox Add-ons (1-click) or GitHub Releases for Chrome, Edge, Brave, and Chromium. Includes basic usage and update instructions.">
   <link rel="canonical" href="https://wiltongabriel.github.io/WebPullBook/installation.html">
   <link rel="alternate" hreflang="en" href="https://wiltongabriel.github.io/WebPullBook/installation.html">
   <link rel="alternate" hreflang="pt-BR" href="https://wiltongabriel.github.io/WebPullBook/pt/installation.html">
   <link rel="alternate" hreflang="x-default" href="https://wiltongabriel.github.io/WebPullBook/installation.html">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="WebPullBook">
-  <meta property="og:title" content="Beta Installation Guide (Chrome &amp; Firefox) — WebPullBook">
-  <meta property="og:description" content="Download and install the WebPullBook Beta browser extension from GitHub Releases on Chrome, Edge, Brave, and Firefox 128+.">
+  <meta property="og:title" content="Installation Guide (Firefox &amp; Chrome) — WebPullBook">
+  <meta property="og:description" content="Install WebPullBook from Firefox Add-ons for Firefox 128+ or via GitHub Releases on Chrome, Edge, Brave, and Chromium.">
   <meta property="og:url" content="https://wiltongabriel.github.io/WebPullBook/installation.html">
   <meta property="og:image" content="https://wiltongabriel.github.io/WebPullBook/assets/images/social-preview.png">
   <meta property="og:image:width" content="1280">
   <meta property="og:image:height" content="640">
-  <meta property="og:image:alt" content="WebPullBook Beta installation guide">
+  <meta property="og:image:alt" content="WebPullBook installation guide">
   <meta property="og:locale" content="en_US">
   <meta property="og:locale:alternate" content="pt_BR">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="Beta Installation Guide — WebPullBook">
-  <meta name="twitter:description" content="Install WebPullBook Beta on Chrome, Edge, Brave, and Firefox 128+ from GitHub Releases.">
+  <meta name="twitter:title" content="Installation Guide — WebPullBook">
+  <meta name="twitter:description" content="Install WebPullBook on Firefox 128+ (Firefox Add-ons) and Chrome, Edge, or Brave (GitHub Releases).">
   <meta name="twitter:image" content="https://wiltongabriel.github.io/WebPullBook/assets/images/social-preview.png">
-  <meta name="twitter:image:alt" content="WebPullBook Beta installation guide">
+  <meta name="twitter:image:alt" content="WebPullBook installation guide">
   <link rel="icon" type="image/svg+xml" href="assets/images/icon.svg">
   <link rel="icon" type="image/png" sizes="128x128" href="assets/images/icon-128.png">
   <link rel="stylesheet" href="assets/css/styles.css">
@@ -84,9 +84,10 @@
     <section class="page-hero">
       <div class="container">
         <h1>Installation &amp; Basic Usage</h1>
-        <p>WebPullBook is currently in Beta and is not yet published on the Chrome Web Store or Firefox Add-ons. You can download the release package from GitHub Releases and load it in your browser with no build step.</p>
+        <p>WebPullBook is officially published on <a href="https://addons.mozilla.org/firefox/addon/webpullbook/">Firefox Add-ons (AMO)</a> for Firefox 128+. Chrome Web Store submission is planned next; during Beta, Chrome, Edge, and Brave users can install the signed release package from GitHub Releases with no build step.</p>
         <div class="cta-row" style="margin-block-start: 1.25rem; margin-block-end: 0;">
-          <a class="btn primary" href="https://github.com/WiltonGabriel/WebPullBook/releases/latest">GitHub Releases</a>
+          <a class="btn primary" href="https://addons.mozilla.org/firefox/addon/webpullbook/">Install on Firefox Add-ons</a>
+          <a class="btn secondary" href="https://github.com/WiltonGabriel/WebPullBook/releases/latest">GitHub Releases (Chrome / Chromium)</a>
           <a class="btn secondary" href="https://github.com/WiltonGabriel/WebPullBook/releases">All Releases &amp; Checksums</a>
         </div>
       </div>
@@ -96,24 +97,24 @@
       <div class="container">
         <div class="grid-2">
           <article class="card">
+            <span class="badge accent">Mozilla Firefox 128+ (Manifest V3)</span>
+            <h2>1. Mozilla Firefox (128 or Newer)</h2>
+            <ol>
+              <li>Open the <a href="https://addons.mozilla.org/firefox/addon/webpullbook/">WebPullBook page on Firefox Add-ons</a>.</li>
+              <li>Click <strong>Add to Firefox</strong> and confirm the requested permissions.</li>
+              <li>Signed updates are delivered automatically by Firefox Add-ons.</li>
+              <li><em>For Developers:</em> Local development builds can still be loaded temporarily in <code>about:debugging#/runtime/this-firefox</code>.</li>
+            </ol>
+          </article>
+
+          <article class="card">
             <span class="badge accent">Chrome • Edge • Brave • Vivaldi • Chromium</span>
-            <h2>1. Chrome &amp; Chromium Browsers</h2>
+            <h2>2. Chrome &amp; Chromium Browsers</h2>
             <ol>
               <li>Download the release archive from <a href="https://github.com/WiltonGabriel/WebPullBook/releases/latest">GitHub Releases</a> and extract it to a permanent folder on your computer.</li>
               <li>Open <code>chrome://extensions/</code> (or <code>edge://extensions/</code> / <code>brave://extensions/</code>).</li>
               <li>Enable <strong>Developer mode</strong> in the top-right corner.</li>
               <li>Click <strong>Load unpacked</strong> and select the extracted folder containing <code>manifest.json</code>.</li>
-            </ol>
-          </article>
-
-          <article class="card">
-            <span class="badge accent">Mozilla Firefox 128+ (Manifest V3)</span>
-            <h2>2. Mozilla Firefox (128 or Newer)</h2>
-            <ol>
-              <li>Download the <code>.zip</code> archive using the button above (extracting is optional on Firefox).</li>
-              <li>Open <code>about:debugging#/runtime/this-firefox</code> in Firefox 128+.</li>
-              <li>Click <strong>Load Temporary Add-on...</strong> and select <code>manifest.json</code> (or the downloaded <code>.zip</code> file directly).</li>
-              <li><em>Limitation during Beta:</em> Temporary add-ons remain active for the current Firefox session and must be reloaded in <code>about:debugging</code> after restarting Firefox until the extension is signed on Mozilla Add-ons.</li>
             </ol>
           </article>
         </div>
@@ -149,8 +150,8 @@
     <section class="section">
       <div class="container">
         <div class="section-header">
-          <h2>Installing via Git Clone &amp; Updating</h2>
-          <p>If you prefer tracking updates via Git, the repository root can be loaded directly as an unpacked extension:</p>
+          <h2>For Developers: Git Clone &amp; Updating</h2>
+          <p>For developers and contributors running from source or testing changes, the repository root can be loaded directly as an unpacked extension:</p>
         </div>
 
         <figure>
@@ -161,7 +162,7 @@ cd WebPullBook
 npm run check</code></pre>
         </figure>
 
-        <p style="color: var(--muted);">To update an existing installation when a new release comes out, extract the new <code>.zip</code> over the same folder (or run <code>git pull</code>) and click reload on <code>chrome://extensions/</code>. Saved settings and Library entries in <code>chrome.storage.local</code> are preserved.</p>
+        <p style="color: var(--muted);">End users do not need Git—use Firefox Add-ons or download the clean release <code>.zip</code> above. For manual Chromium updates, extract the new <code>.zip</code> over the same folder (or run <code>git pull</code>) and reload on <code>chrome://extensions/</code>; saved settings and Library entries in <code>chrome.storage.local</code> are preserved.</p>
       </div>
     </section>
   </main>

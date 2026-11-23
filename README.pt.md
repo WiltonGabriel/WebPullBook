@@ -4,6 +4,7 @@
 
 [![Manifest V3](https://img.shields.io/badge/Manifest-V3-4338ca?style=flat-square)](manifest.json)
 [![Chrome & Firefox](https://img.shields.io/badge/Navegadores-Chrome%20%7C%20Edge%20%7C%20Firefox%20128%2B-2563eb?style=flat-square)](#-primeiros-passos)
+[![Firefox Add-ons](https://img.shields.io/badge/Firefox%20Add--ons-Dispon%C3%ADvel-FF7139?style=flat-square)](https://addons.mozilla.org/firefox/addon/webpullbook/)
 [![Versão](https://img.shields.io/badge/Vers%C3%A3o-1.6.1--beta-0ea5e9?style=flat-square)](https://github.com/WiltonGabriel/WebPullBook/releases)
 [![Dependências](https://img.shields.io/badge/Depend%C3%AAncias-Zero-16a34a?style=flat-square)](src/core/zip.js)
 [![Licença: MIT](https://img.shields.io/badge/Licen%C3%A7a-MIT-f59e0b?style=flat-square)](LICENSE)
@@ -11,8 +12,9 @@
 
 **WebPullBook** é uma extensão de navegador open source (Chrome, Edge, Brave e Firefox 128+) sem dependências de runtime para **converter páginas web em EPUB** (**Web-to-EPUB**): extrai webnovels, light novels, ficções seriadas, fanfics, blogs, documentações e abas abertas para arquivos **EPUB 2 / EPUB 3** (além de **HTML**, **Markdown** e **TXT**) organizados por volume para leitura offline no **Kindle**, **Kobo**, **Calibre** e celulares.
 
-Repositório: https://github.com/WiltonGabriel/WebPullBook  
-Site oficial: https://wiltongabriel.github.io/WebPullBook/pt/
+Firefox Add-ons (AMO): https://addons.mozilla.org/firefox/addon/webpullbook/  
+Site oficial: https://wiltongabriel.github.io/WebPullBook/pt/  
+Repositório: https://github.com/WiltonGabriel/WebPullBook
 
 [Funcionalidades](#-principais-funcionalidades) • [Instalação](#-primeiros-passos) • [Compatibilidade](#-compatibilidade) • [Perguntas Frequentes](#-perguntas-frequentes-faq) • [Como Ajudar](#-autoria-manutenção-e-contribuições)
 
@@ -65,27 +67,25 @@ A tabela de compatibilidade em quatro níveis (**Verificados e Testados**, **Adi
 
 ## Primeiros Passos
 
-> **Status Beta (`v1.6.1-beta`):** O WebPullBook está atualmente em Beta e ainda não foi publicado na Chrome Web Store ou no Firefox Add-ons. A instalação é feita manualmente utilizando o pacote oficial disponível em [GitHub Releases](https://github.com/WiltonGabriel/WebPullBook/releases).
-
-### Instalação (Chrome / Chromium)
-
-Não é necessário compilar código nem instalar pacotes.
-
-1. Baixe o pacote `WebPullBook-v*.zip` na página de [Releases](https://github.com/WiltonGabriel/WebPullBook/releases) e extraia a pasta, **ou** clone este repositório:
-   ```bash
-   git clone https://github.com/WiltonGabriel/WebPullBook.git
-   ```
-2. Abra `chrome://extensions/` no Google Chrome (ou navegador baseado em Chromium).
-3. Ative o **Modo do desenvolvedor** no canto superior direito.
-4. Clique em **Carregar sem compactação** (*Load unpacked*) e selecione a pasta `WebPullBook/` contendo o [manifest.json](manifest.json).
+> **Status de Lançamento (`v1.6.1-beta`):** O WebPullBook já está publicado oficialmente no [Firefox Add-ons (AMO)](https://addons.mozilla.org/firefox/addon/webpullbook/) para Firefox 128+. A publicação na Chrome Web Store está nos próximos passos; até lá, quem usa Chrome, Edge ou Brave pode instalar o pacote oficial disponível em [GitHub Releases](https://github.com/WiltonGabriel/WebPullBook/releases).
 
 ### Instalação (Mozilla Firefox)
 
 Compatível com **Firefox 128+** (Manifest V3):
 
-1. Baixe o pacote `WebPullBook-v*.zip` em [Releases](https://github.com/WiltonGabriel/WebPullBook/releases) (ou clone este repositório).
-2. Abra `about:debugging#/runtime/this-firefox` no Firefox.
-3. Clique em **Carregar extensão temporária...** (*Load Temporary Add-on...*) e selecione o arquivo [manifest.json](manifest.json) (ou diretamente o `.zip`).
+1. Acesse a página oficial do [WebPullBook no Firefox Add-ons](https://addons.mozilla.org/firefox/addon/webpullbook/).
+2. Clique em **Adicionar ao Firefox** e confirme as permissões. As atualizações passam a chegar automaticamente pela loja.
+
+### Instalação (Chrome / Chromium)
+
+Não é necessário compilar código nem instalar pacotes.
+
+1. Baixe o pacote `WebPullBook-v*.zip` mais recente na página de [Releases](https://github.com/WiltonGabriel/WebPullBook/releases) e extraia para uma pasta permanente no computador.
+2. Abra `chrome://extensions/` no Google Chrome (ou `edge://extensions/` / `brave://extensions/`).
+3. Ative o **Modo do desenvolvedor** no canto superior direito.
+4. Clique em **Carregar sem compactação** (*Load unpacked*) e selecione a pasta extraída contendo o [manifest.json](manifest.json).
+
+> **Para Desenvolvedores:** Se quiser editar o código ou contribuir, clone o repositório (`git clone https://github.com/WiltonGabriel/WebPullBook.git`) e carregue a pasta sem compactação no Chromium ou como extensão temporária via `about:debugging#/runtime/this-firefox` no Firefox. Consulte [CONTRIBUTING.pt.md](docs/pt/CONTRIBUTING.pt.md).
 
 ### Uso Básico
 
@@ -167,7 +167,8 @@ WebPullBook/
     │   ├── madara-theme.js       # Adaptador estrutural para temas estilo Madara
     │   ├── royalroad.js          # Adaptador para fictions, volumes e notas ocultas
     │   ├── scribblehub.js        # Adaptador com paginação/AJAX e detecção anti-bot
-    │   └── novelmania.js         # Adaptador para índice paginado via API e volumes
+    │   ├── novelmania.js         # Adaptador para índice paginado via API e volumes
+    │   └── novelbin.js           # Adaptador para páginas React SPA e capítulos renderizados em aba
     └── workspace/
         ├── cache-sessions-ui.js  # Visualização e retomada de sessões salvas no cache IndexedDB
         ├── chapter-modals.js     # Pré-visualização de capítulo, edição inline e modal de mesclagem

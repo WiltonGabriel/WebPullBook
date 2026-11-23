@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="color-scheme" content="light dark">
-  <title>WebPullBook — Web Novel &amp; Web-to-EPUB Browser Extension (EPUB 2/3, HTML, Markdown, TXT)</title>
-  <meta name="description" content="Open-source Manifest V3 browser extension for Chrome and Firefox 128+ to extract web novels, light novels, serialized fiction, articles, and open tabs into volume-organized EPUB 2, EPUB 3, HTML, Markdown, and TXT ebooks for offline reading.">
+  <title>WebPullBook — Web-to-EPUB Browser Extension (EPUB 2/3 &amp; More)</title>
+  <meta name="description" content="Open-source Chrome &amp; Firefox 128+ extension to extract web novels, light novels, articles, and open tabs into EPUB 2/3, HTML, Markdown, and TXT offline.">
   <meta name="author" content="Wilton Gabriel">
   <link rel="canonical" href="https://wiltongabriel.github.io/WebPullBook/">
   <link rel="alternate" hreflang="en" href="https://wiltongabriel.github.io/WebPullBook/">
@@ -43,14 +43,20 @@
     "softwareVersion": "1.6.1-beta",
     "license": "https://opensource.org/licenses/MIT",
     "isAccessibleForFree": true,
+    "inLanguage": "en",
     "author": {
       "@type": "Person",
       "name": "Wilton Gabriel",
       "url": "https://github.com/WiltonGabriel"
     },
     "url": "https://wiltongabriel.github.io/WebPullBook/",
+    "installUrl": "https://addons.mozilla.org/firefox/addon/webpullbook/",
     "downloadUrl": "https://github.com/WiltonGabriel/WebPullBook/releases",
     "codeRepository": "https://github.com/WiltonGabriel/WebPullBook",
+    "sameAs": [
+      "https://addons.mozilla.org/firefox/addon/webpullbook/",
+      "https://github.com/WiltonGabriel/WebPullBook"
+    ],
     "featureList": [
       "EPUB 2 and EPUB 3 export validated with W3C EPUBCheck",
       "Reader Profiles for Kindle (Send to Kindle & Calibre USB) and Kobo",
@@ -120,9 +126,9 @@
             <strong>WebPullBook</strong> is an open-source browser extension (<strong>Web-to-EPUB</strong>) written in native JavaScript with zero runtime dependencies. It extracts web novels, light novels, fanfiction, articles, documentation, and open tabs into volume-organized <strong>EPUB 2</strong>, <strong>EPUB 3</strong>, <strong>HTML</strong>, <strong>Markdown</strong>, and <strong>TXT</strong> files for <strong>Kindle</strong>, <strong>Kobo</strong>, <strong>Calibre</strong>, and local reading.
           </p>
           <div class="cta-row">
-            <a class="btn primary" href="installation.html">How to Install</a>
+            <a class="btn primary" href="installation.html">Install Guide</a>
+            <a class="btn secondary" href="https://addons.mozilla.org/firefox/addon/webpullbook/">Firefox Add-ons</a>
             <a class="btn secondary" href="https://github.com/WiltonGabriel/WebPullBook/releases">GitHub Releases</a>
-            <a class="btn secondary" href="https://github.com/WiltonGabriel/WebPullBook">GitHub Repository</a>
           </div>
         </div>
 
@@ -182,15 +188,16 @@
 
         <div class="grid-3">
           <article class="card">
-            <h3>1. Download the Release</h3>
-            <p>Download the latest release package from <a href="https://github.com/WiltonGabriel/WebPullBook/releases/latest">GitHub Releases</a> and extract the folder on your computer.</p>
+            <h3>1. Get the Extension</h3>
+            <p><strong>Firefox 128+:</strong> Install in one click from <a href="https://addons.mozilla.org/firefox/addon/webpullbook/">Firefox Add-ons (AMO)</a>.<br>
+            <strong>Chrome / Edge / Brave:</strong> Download the latest archive from <a href="https://github.com/WiltonGabriel/WebPullBook/releases/latest">GitHub Releases</a> and extract it.</p>
           </article>
 
           <article class="card">
-            <h3>2. Load in Your Browser</h3>
+            <h3>2. Enable in Your Browser</h3>
             <ul>
+              <li><strong>Mozilla Firefox:</strong> Confirm permissions in Firefox Add-ons—signed updates arrive automatically.</li>
               <li><strong>Chrome / Edge / Brave:</strong> Open <code>chrome://extensions/</code>, enable <strong>Developer mode</strong>, click <strong>Load unpacked</strong>, and select the extracted folder.</li>
-              <li><strong>Firefox 128+:</strong> Open <code>about:debugging#/runtime/this-firefox</code>, click <strong>Load Temporary Add-on...</strong>, and select <code>manifest.json</code> (or the <code>.zip</code> file).</li>
             </ul>
           </article>
 
