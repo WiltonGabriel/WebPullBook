@@ -30,4 +30,12 @@ export function applyI18nToDom(lang = 'pt') {
     const key = el.getAttribute('data-i18n-title');
     if (key) el.setAttribute('title', translate(lang, key));
   }
+  for (const el of document.querySelectorAll('[data-i18n-aria]')) {
+    const key = el.getAttribute('data-i18n-aria');
+    if (key) el.setAttribute('aria-label', translate(lang, key));
+  }
+  for (const el of document.querySelectorAll('[data-i18n-alt]')) {
+    const key = el.getAttribute('data-i18n-alt');
+    if (key) el.setAttribute('alt', translate(lang, key));
+  }
 }

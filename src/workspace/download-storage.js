@@ -43,8 +43,15 @@ async function resolveUniqueFileNameInDir(dirHandle, filename) {
   return `${stem} (${Date.now()})${ext}`;
 }
 
-async function writeBlobToDirectoryHandle(rootHandle, relativePath, blob) {
-  const parts = String(relativePath || '').split('/').filter(Boolean);
+export async function writeBlobToDirectoryHandle(rootHandle, relativePath, blob) {
+  const parts = String(relativePath || '')
+    .replace(/\\/g, '/')
+    .split('/')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (parts.some((seg) => seg === '.' || seg === '..' || /[/\\\x00]/.test(seg))) {
+    throw new Error(`Invalid relative output path: ${relativePath}`);
+  }
   const rawName = parts.pop() || 'webpullbook-ebook.epub';
   let dir = rootHandle;
   for (const seg of parts) {
@@ -53,8 +60,13 @@ async function writeBlobToDirectoryHandle(rootHandle, relativePath, blob) {
   const uniqueName = await resolveUniqueFileNameInDir(dir, rawName);
   const fileHandle = await dir.getFileHandle(uniqueName, { create: true });
   const writable = await fileHandle.createWritable();
-  await writable.write(blob);
-  await writable.close();
+  try {
+    await writable.write(blob);
+    await writable.close();
+  } catch (err) {
+    await writable.abort?.().catch(() => {});
+    throw err;
+  }
   return parts.length > 0 ? `${parts.join('/')}/${uniqueName}` : uniqueName;
 }
 
@@ -140,56 +152,104 @@ export async function handleUseDownloadsFolder() {
 
 export async function downloadBlobToChrome(blob, filename) {
   const url = URL.createObjectURL(blob);
-  let usedAnchorFallback = false;
-  try {
-    if (chrome?.downloads?.download) {
-      const downloadId = await chrome.downloads.download({
+  const saveAs = !state.options.noSaveAs;
+  let revokeTimer = null;
+  let revoked = false;
+  const revokeNow = () => {
+    if (revoked) return;
+    revoked = true;
+    if (revokeTimer) clearTimeout(revokeTimer);
+    URL.revokeObjectURL(url);
+  };
+
+  if (chrome?.downloads?.download) {
+    let downloadId = null;
+    try {
+      downloadId = await chrome.downloads.download({
         url,
         filename,
-        saveAs: !state.options.noSaveAs,
+        saveAs,
         conflictAction: 'uniquify'
       });
-      await new Promise((resolve) => {
-        let done = false;
-        const finish = () => {
-          if (done) return;
-          done = true;
-          clearTimeout(timer);
-          chrome.downloads.onChanged.removeListener(listener);
-          resolve();
-        };
-        const listener = (delta) => {
-          if (
-            delta.id === downloadId &&
-            delta.state &&
-            (delta.state.current === 'complete' || delta.state.current === 'interrupted')
-          ) {
-            finish();
-          }
-        };
-        chrome.downloads.onChanged.addListener(listener);
-        const timer = setTimeout(finish, 3000);
-        if (chrome.downloads.search) {
-          chrome.downloads.search({ id: downloadId }).then((items) => {
-            if (items?.[0]?.state === 'complete' || items?.[0]?.state === 'interrupted') {
-              finish();
-            }
-          }).catch(() => {});
-        }
-      });
-    } else {
-      usedAnchorFallback = true;
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename.split('/').pop() || 'webpullbook-ebook.epub';
-      a.rel = 'noopener';
-      a.style.display = 'none';
-      const mount = document.body || document.documentElement;
-      mount?.appendChild(a);
-      a.click();
-      a.remove();
+    } catch (err) {
+      revokeNow();
+      throw err;
     }
+
+    await new Promise((resolve) => {
+      let done = false;
+      const safetyCeilingMs = saveAs ? 10 * 60 * 1000 : 120 * 1000;
+      const awaitLimitMs = saveAs ? 10 * 60 * 1000 : 10000;
+
+      const cleanupListener = () => {
+        chrome.downloads.onChanged?.removeListener?.(listener);
+      };
+
+      const finish = (completed = false) => {
+        if (!done) {
+          done = true;
+          clearTimeout(awaitTimer);
+          resolve();
+        }
+        if (completed) {
+          cleanupListener();
+          clearTimeout(safetyTimer);
+          revokeTimer = setTimeout(revokeNow, 1000);
+          revokeTimer.unref?.();
+        }
+      };
+
+      const listener = (delta) => {
+        if (
+          delta.id === downloadId &&
+          delta.state &&
+          (delta.state.current === 'complete' || delta.state.current === 'interrupted')
+        ) {
+          finish(true);
+        }
+      };
+
+      chrome.downloads.onChanged?.addListener?.(listener);
+
+      // Safety ceiling avoids dangling listeners/object URLs if the browser misses onChanged
+      const safetyTimer = setTimeout(() => {
+        cleanupListener();
+        revokeNow();
+        finish(false);
+      }, safetyCeilingMs);
+      safetyTimer.unref?.();
+
+      const awaitTimer = setTimeout(() => {
+        finish(false);
+      }, awaitLimitMs);
+      awaitTimer.unref?.();
+
+      if (chrome.downloads.search) {
+        chrome.downloads
+          .search({ id: downloadId })
+          .then((items) => {
+            if (items?.[0]?.state === 'complete' || items?.[0]?.state === 'interrupted') {
+              finish(true);
+            }
+          })
+          .catch(() => {});
+      }
+    });
+    return;
+  }
+
+  try {
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename.split('/').pop() || 'webpullbook-ebook.epub';
+    a.rel = 'noopener';
+    a.style.display = 'none';
+    const mount = document.body || document.documentElement;
+    mount?.appendChild(a);
+    a.click();
+    a.remove();
   } finally {
-    setTimeout(() => URL.revokeObjectURL(url), usedAnchorFallback ? 30000 : 5000);
+    revokeTimer = setTimeout(revokeNow, 30000);
+    revokeTimer.unref?.();
   }
 }

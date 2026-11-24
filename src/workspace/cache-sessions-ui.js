@@ -13,7 +13,8 @@ import {
   t
 } from './state.js';
 import { showBanner } from './logger.js';
-import { syncMetadataToUi } from './options-storage.js';
+import { readOptionsFromUi, sanitizeCoverPreviewUrl, syncMetadataToUi } from './options-storage.js';
+import { applyDomainRuleForUrl } from './domain-rules-ui.js';
 import {
   getVolumeGroups,
   populateRangeSelects,
@@ -45,10 +46,11 @@ export async function renderCacheSessions() {
     card.className = 'lib-card';
     card.dataset.origin = origin.domain;
 
-    if (sess.metadata?.coverUrl) {
+    const safeCoverUrl = sanitizeCoverPreviewUrl(sess.metadata?.coverUrl);
+    if (safeCoverUrl) {
       const img = document.createElement('img');
       img.className = 'lib-cover';
-      img.src = sess.metadata.coverUrl;
+      img.src = safeCoverUrl;
       img.alt = '';
       card.appendChild(img);
     } else {
@@ -102,7 +104,7 @@ export async function renderCacheSessions() {
     btnPurge.addEventListener('click', async () => {
       await cacheStore.deleteSeriesCache(sess.seriesKey);
       for (const ch of sess.chapters || []) {
-        state.chapterCache.delete(getCacheKey(ch.url));
+        state.chapterCache.delete(ch.pinnedCacheKey || getCacheKey(ch.url, sess.parserId || 'auto'));
       }
       if (getCurrentSeriesKey() === sess.seriesKey) {
         for (const ch of state.chapters) {
@@ -129,26 +131,42 @@ export async function renderCacheSessions() {
 }
 
 export async function restoreCachedSession(sess, onlyCached = false) {
+  if (state.running || state.batchRunning) {
+    showBanner(t('msgLoadBlockedExportRunning'), 'error');
+    return;
+  }
   switchTab('main');
   state.activeParser = getParserById(sess.parserId) || genericHtmlParser;
   state.seriesRequiresTab = Boolean(sess.metadata?.requiresTabRender);
+  state.pageDomCache.clear();
+  $('opt-list-selector').value = '';
+  $('opt-content-selector').value = '';
+  $('opt-exclude-selector').value = '';
+  $('opt-strip-regex').value = '';
+  state.appliedRuleDomain = '';
+  state.autoFilledSelectors = null;
+  applyDomainRuleForUrl(sess.metadata?.startingUrl || '');
+  readOptionsFromUi();
+
   state.metadata = {
     ...sess.metadata,
     filename: sess.metadata?.filename || sanitizeFilename(sess.metadata?.title || 'WebPullBook', true)
   };
 
-  const keys = (sess.chapters || []).map((c) => getCacheKey(c.url));
+  const sessParserId = sess.parserId || state.activeParser?.id || 'auto';
+  const keys = (sess.chapters || []).map((c) => c.pinnedCacheKey || getCacheKey(c.url, sessParserId));
   const diskMap = await cacheStore.hasChapters(keys);
 
   let cachedHitCount = 0;
   state.chapters = (sess.chapters || []).map((ch) => {
-    const key = getCacheKey(ch.url);
+    const key = ch.pinnedCacheKey || getCacheKey(ch.url, sessParserId);
     const diskRec = diskMap.get(key);
     if (diskRec) {
       state.chapterCache.set(key, {
         chapterTitle: diskRec.chapterTitle,
         subtitle: diskRec.subtitle,
-        contentXml: diskRec.contentXml
+        contentXml: diskRec.contentXml,
+        ...(diskRec.imageFallbacks ? { imageFallbacks: diskRec.imageFallbacks } : {})
       });
       cachedHitCount++;
     }
@@ -162,6 +180,9 @@ export async function restoreCachedSession(sess, onlyCached = false) {
 
   state.volumeFilter = null;
   state.lastClickedIdx = -1;
+  state.lastClickedChapState = null;
+  state.lastClickedVolIdx = -1;
+  state.lastClickedVolState = null;
   const vols = getVolumeGroups().length;
   const modeRadio = document.querySelector(`input[name="pack-mode"][value="${vols > 1 ? 'by-volume' : 'single'}"]`);
   if (modeRadio) modeRadio.checked = true;

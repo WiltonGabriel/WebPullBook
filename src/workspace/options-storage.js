@@ -45,9 +45,77 @@ export function stripSiteScopedOptions(opts) {
   return clean;
 }
 
-function resolveEffectiveTheme(theme) {
-  if (VALID_THEMES.has(theme)) return theme;
-  return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+export function sanitizeImportedOptions(raw) {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    throw new Error('Invalid options payload');
+  }
+  const clean = { ...DEFAULT_OPTIONS };
+  const numberBounds = {
+    delayMs: [0, 30000],
+    concurrency: [1, 6],
+    maxRetries: [0, 5],
+    safeRpm: [5, 120],
+    safeBatchSize: [0, 500],
+    cacheTtlDays: [0, 3650],
+    maxChaptersPerEpub: [1, 100000],
+    compressedResolution: [200, 8192],
+    imageQuality: [40, 98],
+    renderWaitMs: [0, 5000],
+    lineHeight: [1.1, 2.4]
+  };
+  const allowedEnums = {
+    uiLang: new Set(['pt', 'en']),
+    theme: new Set(['system', 'light', 'dark', 'sepia', 'midnight']),
+    libraryViewMode: new Set(['unified', 'by-site']),
+    outputFormat: new Set(['epub', 'html', 'md', 'txt']),
+    saveTargetMode: new Set(['downloads', 'custom-dir']),
+    folderLayout: new Set([
+      'root-title',
+      'root-author-title',
+      'root-format-title',
+      'root-only',
+      'title-only',
+      'author-title',
+      'flat',
+      'custom'
+    ]),
+    compressedFormat: new Set(['jpg', 'png', 'webp']),
+    fontFamily: new Set(['reader-default', 'serif', 'sans', 'monospace']),
+    textAlign: new Set(['justify', 'left', 'start'])
+  };
+
+  for (const key of Object.keys(DEFAULT_OPTIONS)) {
+    if (!Object.hasOwn(raw, key)) continue;
+    const val = raw[key];
+    const expectedType = typeof DEFAULT_OPTIONS[key];
+    if (expectedType === 'boolean') {
+      if (typeof val === 'boolean') clean[key] = val;
+    } else if (expectedType === 'number') {
+      const n = Number(val);
+      if (Number.isFinite(n)) {
+        const bounds = numberBounds[key];
+        const clamped = bounds ? Math.max(bounds[0], Math.min(bounds[1], n)) : n;
+        clean[key] = key === 'lineHeight' ? clamped : Math.trunc(clamped);
+      }
+    } else if (expectedType === 'string') {
+      if (typeof val === 'string') {
+        if (key === 'parserId') {
+          if (val === 'auto' || getParserById(val)) clean[key] = val;
+          continue;
+        }
+        if (key === 'readerPreset') {
+          if (val === 'custom' || Object.hasOwn(READER_PRESETS, val)) clean[key] = val;
+          continue;
+        }
+        const enumSet = allowedEnums[key];
+        if (!enumSet || enumSet.has(val)) {
+          clean[key] = val;
+        }
+      }
+    }
+  }
+  clean.grayscaleImages = false;
+  return clean;
 }
 
 export function applyThemeChoice(theme) {
@@ -74,7 +142,7 @@ export function applyThemeChoice(theme) {
   }
   const topThemeEl = $('ui-theme-top');
   if (topThemeEl) {
-    topThemeEl.value = resolveEffectiveTheme(theme);
+    topThemeEl.value = VALID_THEMES.has(theme) ? theme : 'system';
   }
 }
 
@@ -221,7 +289,7 @@ export function updatePackButtonLabel() {
       : t('btnExportFmt', { ext: exporter.extension.toUpperCase() });
 }
 
-function sanitizeCoverPreviewUrl(rawUrl) {
+export function sanitizeCoverPreviewUrl(rawUrl) {
   const trimmed = String(rawUrl || '').trim();
   if (!trimmed) return '';
   if (/^data:image\/(?:png|jpeg|jpg|gif|webp|avif);base64,[a-z0-9+/=]+$/i.test(trimmed)) {

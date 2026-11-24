@@ -11,7 +11,7 @@ import {
   serializeNodesForCache
 } from '../core/cache-store.js';
 import { exporterRegistry } from '../exporters/index.js';
-import { clearNavigationHeaderRules } from '../core/dnr-rules.js';
+import { applyNavigationHeaderRules, clearNavigationHeaderRules } from '../core/dnr-rules.js';
 import { resolveParserForChapterUrl } from '../parsers/index.js';
 import { $, getCacheKey, getCurrentSeriesKey, state, t } from './state.js';
 import { appendLog, hideBanner, renderExportReport, showBanner } from './logger.js';
@@ -30,29 +30,46 @@ export { downloadBlobToChrome, formatOutputFilename, handlePickSaveFolder, handl
 
 export async function waitWhilePaused(signal) {
   let announcedPause = false;
-  let prevLabel = '';
   while (state.paused) {
     if (!announcedPause) {
-      prevLabel = $('progress-label')?.textContent || '';
-      if ($('progress-label')) $('progress-label').textContent = t('progressPaused');
+      const labelEl = $('progress-label');
+      const curLabel = labelEl?.textContent || '';
+      if (labelEl) {
+        if (curLabel && curLabel !== t('progressPaused')) {
+          state._prePauseProgressLabel = curLabel;
+        }
+        labelEl.textContent = t('progressPaused');
+      }
       announcedPause = true;
     }
     if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
     await new Promise((r) => setTimeout(r, 250));
   }
-  if (announcedPause && $('progress-label')?.textContent === t('progressPaused') && prevLabel) {
-    $('progress-label').textContent = prevLabel;
+  if (announcedPause && $('progress-label')?.textContent === t('progressPaused') && state._prePauseProgressLabel) {
+    $('progress-label').textContent = state._prePauseProgressLabel;
+    state._prePauseProgressLabel = '';
   }
 }
 
 async function enforceSafeThrottle(rateLimiter, networkFetchCount, signal) {
-  readOptionsFromUi();
+  const safeEl = $('opt-safe-mode');
+  const delayEl = $('opt-delay');
+  const rpmEl = $('opt-safe-rpm');
+  const batchEl = $('opt-safe-batch');
+  const liveSafeMode = safeEl ? Boolean(safeEl.checked) : Boolean(state.options.safeMode);
+  const liveDelayMs = delayEl ? Math.max(0, Math.min(30000, parseInt(delayEl.value, 10) || 0)) : (state.options.delayMs || 0);
+  const liveSafeRpm = rpmEl ? Math.max(5, Math.min(120, parseInt(rpmEl.value, 10) || 22)) : (state.options.safeRpm || 22);
+  const parsedBatch = batchEl ? parseInt(batchEl.value, 10) : NaN;
+  const liveSafeBatch = Number.isNaN(parsedBatch)
+    ? (state.options.safeBatchSize ?? 25)
+    : Math.max(0, Math.min(500, parsedBatch));
+
   const plan = rateLimiter.computeNextWait({
-    safeMode: Boolean(state.options.safeMode),
-    baseDelayMs: state.options.delayMs || 0,
+    safeMode: liveSafeMode,
+    baseDelayMs: liveDelayMs,
     minParserDelayMs: state.activeParser?.minDelayMs || 0,
-    safeRpm: state.options.safeRpm || 22,
-    safeBatchSize: state.options.safeBatchSize ?? 25,
+    safeRpm: liveSafeRpm,
+    safeBatchSize: liveSafeBatch,
     networkFetchCount
   });
   if (!plan.waitMs || plan.waitMs <= 0) return;
@@ -64,35 +81,46 @@ async function enforceSafeThrottle(rateLimiter, networkFetchCount, signal) {
     }
   }
   await rateLimiter.waitCooperatively(plan.waitMs, {
-    isSafeModeActive: () => Boolean(state.options.safeMode),
+    isSafeModeActive: () => Boolean($('opt-safe-mode')?.checked ?? state.options.safeMode),
+    allowSafeModeEarlyExit: plan.reason !== 'retry-after',
     signal
   });
 }
 
 export async function handlePackEpub(arg = {}) {
-  if (state.running) return;
+  if (state.running) {
+    return { filesGenerated: 0, totalOkChapters: 0, totalFailedChapters: 0, cancelled: false };
+  }
   const externalSignal = arg && typeof arg === 'object' && 'aborted' in (arg.externalSignal || {})
     ? arg.externalSignal
     : null;
+  const suppliedDirHandle = arg && typeof arg === 'object' && 'dirHandle' in arg ? arg.dirHandle : undefined;
   readMetadataFromUi();
   readOptionsFromUi();
 
   const selected = state.chapters.filter((c) => c.included);
   if (selected.length === 0) {
     showBanner(t('msgSelectAtLeastOne'), 'error');
-    return;
+    return { filesGenerated: 0, totalOkChapters: 0, totalFailedChapters: 0, cancelled: false };
   }
-
-  const activeDirHandle = await ensureCustomDirWritable();
 
   state.running = true;
-  if (!externalSignal) {
-    state.paused = false;
-    state.abortController = new AbortController();
-  }
-  const signal = externalSignal || state.abortController.signal;
-
   $('btn-pack-epub').disabled = true;
+
+  const packController = new AbortController();
+  const onExternalAbort = () => packController.abort(externalSignal.reason);
+  if (externalSignal) {
+    if (externalSignal.aborted) {
+      packController.abort(externalSignal.reason);
+    } else {
+      externalSignal.addEventListener('abort', onExternalAbort, { once: true });
+    }
+  } else {
+    state.paused = false;
+    state.abortController = packController;
+  }
+  const signal = packController.signal;
+
   $('btn-retry-failed').classList.add('hidden');
   $('btn-pause').disabled = false;
   $('btn-cancel').disabled = false;
@@ -100,8 +128,20 @@ export async function handlePackEpub(arg = {}) {
   $('btn-pause').textContent = state.paused ? t('btnResume') : t('btnPause');
   hideBanner();
 
-  await saveOptions();
-  await persistSessionSnapshot();
+  let filesGenerated = 0;
+  let totalOkChapters = 0;
+  let totalFailedChapters = 0;
+  let cancelled = false;
+  let fatalChapterError = null;
+  const tabPool = new TabRenderPool();
+
+  try {
+    const activeDirHandle = suppliedDirHandle !== undefined ? suppliedDirHandle : await ensureCustomDirWritable();
+    await saveOptions();
+    await persistSessionSnapshot();
+    if (state.activeParser?.id === 'scribblehub') {
+      await applyNavigationHeaderRules(['scribblehub.com'], state.metadata.startingUrl || '');
+    }
 
   const mode = document.querySelector('input[name="pack-mode"]:checked')?.value || 'by-volume';
   const jobs = [];
@@ -154,9 +194,6 @@ export async function handlePackEpub(arg = {}) {
 
   const totalChaptersAll = selected.length;
   let completedGlobal = 0;
-  let filesGenerated = 0;
-  let totalOkChapters = 0;
-  let totalFailedChapters = 0;
   let networkFetchCount = 0;
   let cacheHits = 0;
   const packStartedAt = Date.now();
@@ -181,9 +218,6 @@ export async function handlePackEpub(arg = {}) {
     nextPrevMap.set(ch, adjacent);
   }
 
-  const tabPool = new TabRenderPool();
-
-  try {
     const initialBatchWidth = rateLimiter.getEffectiveBatchWidth({
       safeMode: Boolean(state.options.safeMode),
       requiresTab: Boolean(state.seriesRequiresTab || state.options.renderWithTab),
@@ -199,7 +233,13 @@ export async function handlePackEpub(arg = {}) {
     );
 
     const processSingleChapterFetch = async (ch) => {
-      const cacheKey = getCacheKey(ch.url);
+      const chapterParser = resolveParserForChapterUrl(
+        ch.url,
+        state.activeParser,
+        state.options.parserId,
+        state.metadata.startingUrl
+      );
+      const cacheKey = ch.pinnedCacheKey || getCacheKey(ch.url, chapterParser?.id || state.activeParser?.id || 'auto');
       const cachedHydrated = await getChapterFromCaches(ch, cacheKey);
       if (cachedHydrated) {
         ch.status = 'ok';
@@ -214,12 +254,6 @@ export async function handlePackEpub(arg = {}) {
 
       const fetchStartedAt = Date.now();
       try {
-        const chapterParser = resolveParserForChapterUrl(
-          ch.url,
-          state.activeParser,
-          state.options.parserId,
-          state.metadata.startingUrl
-        );
         const chapterFetchOptions = {
           ...state.options,
           ...(state.seriesRequiresTab ? { renderWithTab: true } : {}),
@@ -232,10 +266,17 @@ export async function handlePackEpub(arg = {}) {
         networkFetchCount++;
         rateLimiter.recordSuccess(Date.now() - fetchStartedAt);
 
+        const imageFallbacks = {};
+        for (const img of parsed.images || []) {
+          if (img?.originalUrl && img?.fallbackUrl) {
+            imageFallbacks[img.originalUrl] = img.fallbackUrl;
+          }
+        }
         const cacheRec = {
           chapterTitle: parsed.chapterTitle,
           subtitle: parsed.subtitle,
-          contentXml: serializeNodesForCache(parsed.nodes)
+          contentXml: serializeNodesForCache(parsed.nodes),
+          ...(Object.keys(imageFallbacks).length > 0 ? { imageFallbacks } : {})
         };
         state.chapterCache.set(cacheKey, cacheRec);
         await cacheStore.putChapter({
@@ -245,6 +286,7 @@ export async function handlePackEpub(arg = {}) {
           chapterTitle: cacheRec.chapterTitle,
           subtitle: cacheRec.subtitle,
           nodes: parsed.nodes,
+          imageFallbacks,
           ttlDays: state.options.cacheTtlDays
         });
 
@@ -253,7 +295,10 @@ export async function handlePackEpub(arg = {}) {
         ch.logId = '';
         return { kind: 'ok', ch, hydrated: hydrateCachedChapter(ch, cacheRec), fromNetwork: true };
       } catch (err) {
-        if (err.name === 'AbortError') throw err;
+        if (err.name === 'AbortError') {
+          if (fatalChapterError) return { kind: 'aborted-by-fatal', ch, fromNetwork: true };
+          throw err;
+        }
         if ((err.isRateLimit || err.isAntiBotChallenge) && state.options.autoPauseOnRateLimit !== false) {
           rateLimiter.recordThrottle({ retryAfterSec: err.retryAfterSec });
           ch.status = 'error';
@@ -284,17 +329,12 @@ export async function handlePackEpub(arg = {}) {
         }
         ch.status = 'error';
         ch.errorMsg = err.message;
-        totalFailedChapters++;
-        ch.logId = appendLog(`FALHA no capítulo "${ch.displayTitle}" (${ch.url}): ${err.message}`, 'error');
-        chapterErrors.push({
-          chapterIndex: ch.index,
-          chapterTitle: ch.displayTitle,
-          chapterUrl: ch.url,
-          message: err.message,
-          logId: ch.logId
-        });
-        if (state.options.continueOnError === false) throw err;
-        return { kind: 'error', ch, fromNetwork: true };
+        const fatal = state.options.continueOnError === false;
+        if (fatal) {
+          if (!fatalChapterError) fatalChapterError = err;
+          packController.abort();
+        }
+        return { kind: 'error', ch, err, fatal, fromNetwork: true };
       }
     };
 
@@ -347,10 +387,25 @@ export async function handlePackEpub(arg = {}) {
             await state.onCacheChanged?.();
             await waitWhilePaused(signal);
             clearSpaDomainCircuit(res.pauseTrigger.url);
+            state.pageDomCache.clear();
             hideBanner();
             break;
           }
-          if (res.kind === 'ok') {
+          if (res.kind === 'aborted-by-fatal') {
+            continue;
+          }
+          if (res.kind === 'error') {
+            totalFailedChapters++;
+            res.ch.logId = appendLog(`FALHA no capítulo "${res.ch.displayTitle}" (${res.ch.url}): ${res.err.message}`, 'error');
+            chapterErrors.push({
+              chapterIndex: res.ch.index,
+              chapterTitle: res.ch.displayTitle,
+              chapterUrl: res.ch.url,
+              message: res.err.message,
+              logId: res.ch.logId
+            });
+            if (res.fatal) throw res.err;
+          } else if (res.kind === 'ok') {
             parsedChapters.push(res.hydrated);
             allPackagedChapters.push(res.ch);
             totalOkChapters++;
@@ -457,16 +512,21 @@ export async function handlePackEpub(arg = {}) {
       imageWarnings
     });
   } catch (err) {
-    await persistSessionSnapshot();
-    await state.onCacheChanged?.();
-    if (err.name === 'AbortError') {
+    await persistSessionSnapshot().catch(() => {});
+    await state.onCacheChanged?.().catch(() => {});
+    const reportedErr = err.name === 'AbortError' && fatalChapterError ? fatalChapterError : err;
+    if (reportedErr.name === 'AbortError') {
+      cancelled = true;
       appendLog('Empacotamento cancelado pelo usuário.', 'warn');
       showBanner(t('msgPackCancelled'), 'info');
     } else {
-      appendLog(`ERRO durante empacotamento: ${err.message}`, 'error');
-      showBanner(`Erro: ${err.message}`, 'error');
+      appendLog(`ERRO durante empacotamento: ${reportedErr.message}`, 'error');
+      showBanner(`Erro: ${reportedErr.message}`, 'error');
     }
   } finally {
+    if (externalSignal) {
+      externalSignal.removeEventListener('abort', onExternalAbort);
+    }
     await tabPool.close();
     await clearNavigationHeaderRules();
     state.running = false;
@@ -480,4 +540,5 @@ export async function handlePackEpub(arg = {}) {
     }
     renderChaptersTable();
   }
+  return { filesGenerated, totalOkChapters, totalFailedChapters, cancelled };
 }

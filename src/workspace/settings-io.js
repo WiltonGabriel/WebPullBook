@@ -4,6 +4,7 @@ import { showBanner } from './logger.js';
 import {
   applyThemeChoice,
   readOptionsFromUi,
+  sanitizeImportedOptions,
   saveOptions,
   stripSiteScopedOptions,
   syncOptionsToUi,
@@ -15,7 +16,7 @@ import {
   updatePathPreview,
   updateSaveLocationUi
 } from './directory-handle.js';
-import { handleSaveDomainRule, saveDomainRules } from './domain-rules-ui.js';
+import { handleSaveDomainRule, sanitizeDomainRules, saveDomainRules } from './domain-rules-ui.js';
 import { handleAutoDetectSelectors, handleTestSelectors } from './series-loader.js';
 import { downloadBlobToChrome } from './download-storage.js';
 import { handleStartSelectorPicker, registerPickerMessageListener } from './tab-picker.js';
@@ -126,14 +127,22 @@ export function wireSettingsIoEvents({ applyLanguageChoice }) {
   );
 
   $('btn-reset-extraction').addEventListener('click', () =>
-    resetOptionSection('advExtractionHeading', [
-      'parserId',
-      'customListSelector',
-      'customContentSelector',
-      'customExcludeSelector',
-      'customStripPatterns',
-      'crawlNextLinks'
-    ])
+    resetOptionSection(
+      'advExtractionHeading',
+      [
+        'parserId',
+        'customListSelector',
+        'customContentSelector',
+        'customExcludeSelector',
+        'customStripPatterns',
+        'crawlNextLinks'
+      ],
+      () => {
+        state.activeParser = null;
+        state.appliedRuleDomain = '';
+        state.autoFilledSelectors = false;
+      }
+    )
   );
 
   $('btn-reset-network').addEventListener('click', () =>
@@ -198,14 +207,23 @@ export function wireSettingsIoEvents({ applyLanguageChoice }) {
     if (!file) return;
     try {
       const parsed = JSON.parse(await file.text());
-      const importedOpts = parsed?.options && typeof parsed.options === 'object' ? parsed.options : parsed;
-      state.options = {
-        ...DEFAULT_OPTIONS,
-        ...stripSiteScopedOptions(importedOpts),
-        grayscaleImages: false
-      };
-      if (parsed?.domainRules && typeof parsed.domainRules === 'object') {
-        state.domainRules = { ...state.domainRules, ...parsed.domainRules };
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+        throw new Error('Invalid bundle structure');
+      }
+      const hasOptionsProp = Object.hasOwn(parsed, 'options');
+      const rawOpts = hasOptionsProp ? parsed.options : parsed;
+      const sanitizedOpts = stripSiteScopedOptions(sanitizeImportedOptions(rawOpts));
+      let importedRules = null;
+      if (Object.hasOwn(parsed, 'domainRules') && parsed.domainRules !== undefined) {
+        if (!parsed.domainRules || typeof parsed.domainRules !== 'object' || Array.isArray(parsed.domainRules)) {
+          throw new Error('Invalid domainRules object');
+        }
+        importedRules = sanitizeDomainRules(parsed.domainRules);
+      }
+
+      state.options = sanitizedOpts;
+      if (importedRules) {
+        state.domainRules = { ...state.domainRules, ...importedRules };
         await saveDomainRules();
       }
       syncOptionsToUi();
@@ -215,8 +233,9 @@ export function wireSettingsIoEvents({ applyLanguageChoice }) {
       showBanner('OK', 'success');
     } catch (err) {
       showBanner(`JSON Error: ${err.message}`, 'error');
+    } finally {
+      e.target.value = '';
     }
-    e.target.value = '';
   });
 
   $('btn-reset-all-opts').addEventListener('click', () => {
@@ -227,6 +246,10 @@ export function wireSettingsIoEvents({ applyLanguageChoice }) {
       onConfirm: () => {
         state.customDirHandle = null;
         state.customDirPermission = 'none';
+        state.activeParser = null;
+        state.appliedRuleDomain = '';
+        state.autoFilledSelectors = false;
+        state.seriesRequiresTab = false;
         state.options = {
           ...DEFAULT_OPTIONS,
           uiLang: state.options.uiLang,

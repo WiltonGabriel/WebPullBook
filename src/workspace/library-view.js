@@ -30,7 +30,7 @@ export function getItemOriginInfo(sourceDomain, urlOrKey) {
 export function createSourceBadge(origin) {
   const badge = document.createElement('span');
   badge.className = 'lib-source-badge';
-  badge.textContent = `🌐 ${origin.label}`;
+  badge.textContent = origin.label;
   badge.title = origin.label;
   return badge;
 }
@@ -126,7 +126,7 @@ export function renderCollectionView(grid, items, getOriginFn, buildCardFn, empt
 
       const heading = document.createElement('h3');
       heading.className = 'lib-site-group-title';
-      heading.textContent = `🌐 ${grp.origin.label}`;
+      heading.textContent = grp.origin.label;
 
       const countPill = document.createElement('span');
       countPill.className = 'pill';

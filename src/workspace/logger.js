@@ -132,8 +132,28 @@ export function appendLog(msg, level) {
     msg
   };
   state.logs.push(entry);
-  if (state.logs.length > 2500) state.logs.shift();
-  renderLogsOutput();
+  let trimmedId = null;
+  if (state.logs.length > 2500) {
+    trimmedId = state.logs.shift()?.id || null;
+  }
+
+  const box = $('log-output');
+  const filter = state.logFilter || 'all';
+  if (box && (filter === 'all' || filter === entry.level)) {
+    if (!box.firstElementChild) {
+      renderLogsOutput();
+    } else {
+      if (trimmedId) {
+        const staleEl = document.getElementById(trimmedId);
+        if (staleEl && staleEl.parentNode === box) staleEl.remove();
+      }
+      const line = document.createElement('div');
+      line.id = entry.id;
+      line.className = `log-line log-${entry.level}`;
+      appendTextWithLinks(line, `[${entry.time}] ${entry.msg}`);
+      box.appendChild(line);
+    }
+  }
   updateLogBadges();
   return id;
 }
@@ -166,7 +186,7 @@ export function showBanner(msg, type = 'info', action = null) {
     btn.textContent = action.label;
     btn.addEventListener('click', () => {
       if (chrome?.tabs?.create) {
-        chrome.tabs.create({ url: safeActionUrl, active: true });
+        Promise.resolve(chrome.tabs.create({ url: safeActionUrl, active: true })).catch(() => {});
       } else {
         window.open(safeActionUrl, '_blank', 'noopener,noreferrer');
       }

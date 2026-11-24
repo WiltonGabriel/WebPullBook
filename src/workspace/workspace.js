@@ -28,7 +28,7 @@ import {
   updatePackButtonLabel
 } from './options-storage.js';
 import { updatePathPreview, updateSaveLocationUi } from './directory-handle.js';
-import { loadDomainRules, renderDomainRules } from './domain-rules-ui.js';
+import { loadDomainRules, renderDomainRules, sanitizeDomainRules } from './domain-rules-ui.js';
 import {
   getVisibleChapters,
   populateRangeSelects,
@@ -76,6 +76,8 @@ import {
 import { wireVolumeAndUrlModalEvents } from './volume-modals.js';
 import { wireSettingsIoEvents } from './settings-io.js';
 
+let pendingInitialLoad = null;
+
 function renderFirefoxPermissionBanner() {
   const banner = $('firefox-perm-banner');
   if (!banner) return;
@@ -95,11 +97,16 @@ function renderFirefoxPermissionBanner() {
     // Trigger chrome.permissions.request synchronously inside the click handler for Firefox user-gesture compliance
     chrome.permissions
       .request({ origins: ['https://*/*', 'http://*/*'] })
-      .then((granted) => {
+      .then(async (granted) => {
         if (granted) {
           state.firefoxPermMissing = false;
           renderFirefoxPermissionBanner();
           showBanner(t('firefoxPermGrantedMsg'), 'success');
+          if (pendingInitialLoad) {
+            const { url, sourceTabId } = pendingInitialLoad;
+            pendingInitialLoad = null;
+            await handleLoadSeries(url, { sourceTabId });
+          }
         } else {
           showBanner(t('firefoxPermDeniedMsg'), 'error');
         }
@@ -431,7 +438,18 @@ function wireEvents() {
     renderAllChapterViews();
   });
   $('btn-reverse-order').addEventListener('click', () => {
+    if (state.running || state.batchRunning) {
+      showBanner(t('msgLoadBlockedExportRunning'), 'error');
+      return;
+    }
     state.chapters.reverse();
+    state.chapters.forEach((ch, idx) => {
+      ch.index = idx + 1;
+    });
+    state.lastClickedIdx = -1;
+    state.lastClickedChapState = null;
+    state.lastClickedVolIdx = -1;
+    state.lastClickedVolState = null;
     populateRangeSelects();
     renderAllChapterViews();
   });
@@ -465,12 +483,16 @@ function wireEvents() {
     state.paused = !state.paused;
     $('btn-pause').textContent = state.paused ? t('btnResume') : t('btnPause');
     if (state.paused) {
-      state._prePauseProgressLabel = $('progress-label').textContent;
+      const curLabel = $('progress-label').textContent;
+      if (curLabel && curLabel !== t('progressPaused')) {
+        state._prePauseProgressLabel = curLabel;
+      }
       $('progress-label').textContent = t('progressPaused');
     } else {
       clearSpaDomainCircuit();
       if ($('progress-label').textContent === t('progressPaused') && state._prePauseProgressLabel) {
         $('progress-label').textContent = state._prePauseProgressLabel;
+        state._prePauseProgressLabel = '';
       }
     }
   });
@@ -516,10 +538,15 @@ function wireEvents() {
 
   if (chrome?.storage?.onChanged) {
     chrome.storage.onChanged.addListener((changes, areaName) => {
-      if (areaName === 'local' && changes.wpbLibrary?.newValue) {
+      if (areaName !== 'local') return;
+      if (changes.wpbLibrary?.newValue) {
         state.library = changes.wpbLibrary.newValue;
         renderLibrary();
         renderCacheSessions();
+      }
+      if (changes.wpbDomainRules?.newValue) {
+        state.domainRules = sanitizeDomainRules(changes.wpbDomainRules.newValue);
+        renderDomainRules();
       }
     });
   }
@@ -566,7 +593,12 @@ async function init() {
 
     if (hasInitialUrl) {
       $('starting-url').value = initialUrl;
-      await handleLoadSeries(initialUrl, { sourceTabId: parsedTabId });
+      if (state.firefoxPermMissing) {
+        pendingInitialLoad = { url: initialUrl, sourceTabId: parsedTabId };
+        appendLog('[PERM] Aguardando permissão de acesso em sites no Firefox antes de carregar URL inicial.', 'info');
+      } else {
+        await handleLoadSeries(initialUrl, { sourceTabId: parsedTabId });
+      }
     }
   } finally {
     setLoadingOverlay(false);

@@ -17,8 +17,13 @@ function openHandleDb() {
           db.createObjectStore(HANDLE_STORE_NAME);
         }
       };
-      req.onsuccess = (e) => resolve(e.target.result);
+      req.onsuccess = (e) => {
+        const db = e.target.result;
+        db.onversionchange = () => db.close();
+        resolve(db);
+      };
       req.onerror = () => resolve(null);
+      req.onblocked = () => resolve(null);
     } catch {
       resolve(null);
     }
@@ -29,13 +34,26 @@ export async function loadSavedDirectoryHandle() {
   const db = await openHandleDb();
   if (!db) return null;
   return new Promise((resolve) => {
+    let result = null;
+    const finish = (val = null) => {
+      try {
+        db.close();
+      } catch {
+        // ignore close errors
+      }
+      resolve(val);
+    };
     try {
       const tx = db.transaction(HANDLE_STORE_NAME, 'readonly');
       const req = tx.objectStore(HANDLE_STORE_NAME).get(OUTPUT_DIR_KEY);
-      req.onsuccess = () => resolve(req.result || null);
-      req.onerror = () => resolve(null);
+      req.onsuccess = () => {
+        result = req.result || null;
+      };
+      tx.oncomplete = () => finish(result);
+      tx.onerror = () => finish(null);
+      tx.onabort = () => finish(null);
     } catch {
-      resolve(null);
+      finish(null);
     }
   });
 }
@@ -44,13 +62,22 @@ export async function persistDirectoryHandle(handle) {
   const db = await openHandleDb();
   if (!db) return;
   await new Promise((resolve) => {
+    const finish = () => {
+      try {
+        db.close();
+      } catch {
+        // ignore close errors
+      }
+      resolve();
+    };
     try {
       const tx = db.transaction(HANDLE_STORE_NAME, 'readwrite');
       tx.objectStore(HANDLE_STORE_NAME).put(handle, OUTPUT_DIR_KEY);
-      tx.oncomplete = () => resolve();
-      tx.onerror = () => resolve();
+      tx.oncomplete = finish;
+      tx.onerror = finish;
+      tx.onabort = finish;
     } catch {
-      resolve();
+      finish();
     }
   });
 }
@@ -61,13 +88,22 @@ export async function clearSavedDirectoryHandle() {
   const db = await openHandleDb();
   if (!db) return;
   await new Promise((resolve) => {
+    const finish = () => {
+      try {
+        db.close();
+      } catch {
+        // ignore close errors
+      }
+      resolve();
+    };
     try {
       const tx = db.transaction(HANDLE_STORE_NAME, 'readwrite');
       tx.objectStore(HANDLE_STORE_NAME).delete(OUTPUT_DIR_KEY);
-      tx.oncomplete = () => resolve();
-      tx.onerror = () => resolve();
+      tx.oncomplete = finish;
+      tx.onerror = finish;
+      tx.onabort = finish;
     } catch {
-      resolve();
+      finish();
     }
   });
 }

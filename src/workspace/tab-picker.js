@@ -153,16 +153,18 @@ export function renderMergeTabsList() {
     const eyeBtn = document.createElement('button');
     eyeBtn.type = 'button';
     eyeBtn.className = 'btn ghost sm';
-    eyeBtn.textContent = '👁';
+    eyeBtn.textContent = t('btnPreviewShort');
     eyeBtn.title = t('btnPreviewTitle');
     eyeBtn.addEventListener('click', () => {
       openChapterPreviewForTarget(
         {
           url: item.url,
           tabId: item.tabId,
-          displayTitle: normalizeSpaces(item.title) || item.url
+          displayTitle: normalizeSpaces(item.title) || item.url,
+          readOnlyPreview: true
         },
-        genericHtmlParser
+        genericHtmlParser,
+        { readOnly: true }
       );
     });
 
@@ -176,6 +178,10 @@ export function renderMergeTabsList() {
 }
 
 export function applyMergedTabsSelection() {
+  if (state.running || state.batchRunning) {
+    showBanner(t('msgLoadBlockedExportRunning'), 'error');
+    return;
+  }
   const chosen = mergeCandidates.filter((item) => item.included);
   if (chosen.length === 0) {
     showBanner(t('msgNoTabsSelected'), 'error');
@@ -239,6 +245,9 @@ export function applyMergedTabsSelection() {
 
   state.volumeFilter = null;
   state.lastClickedIdx = -1;
+  state.lastClickedChapState = null;
+  state.lastClickedVolIdx = -1;
+  state.lastClickedVolState = null;
   syncMetadataToUi();
   populateRangeSelects();
   renderAllChapterViews();
@@ -422,6 +431,14 @@ function injectWebPullBookPicker(requestId, hudHintText, cancelText, mode) {
     hudLabel.textContent = previewSel ? `${hudHintText} -> ${previewSel}` : hudHintText;
   };
 
+  const safeSendMessage = (payload) => {
+    try {
+      Promise.resolve(chrome.runtime.sendMessage(payload)).catch(() => {});
+    } catch {
+      // ignore closed extension context
+    }
+  };
+
   const onClick = (e) => {
     if (hud.contains(e.target)) return;
     e.preventDefault();
@@ -430,20 +447,20 @@ function injectWebPullBookPicker(requestId, hudHintText, cancelText, mode) {
     const target = activeTarget || pickTargetEl(e.target);
     const selector = buildSelector(target);
     cleanup();
-    chrome.runtime.sendMessage({ type: 'wpb-selector-picked', requestId, selector });
+    safeSendMessage({ type: 'wpb-selector-picked', requestId, selector });
   };
 
   const onKey = (e) => {
     if (e.key === 'Escape') {
       e.preventDefault();
       cleanup();
-      chrome.runtime.sendMessage({ type: 'wpb-selector-cancelled', requestId });
+      safeSendMessage({ type: 'wpb-selector-cancelled', requestId });
     }
   };
 
   cancelBtn.addEventListener('click', () => {
     cleanup();
-    chrome.runtime.sendMessage({ type: 'wpb-selector-cancelled', requestId });
+    safeSendMessage({ type: 'wpb-selector-cancelled', requestId });
   });
 
   document.addEventListener('mousemove', onMove, true);
@@ -464,6 +481,16 @@ export async function handleStartSelectorPicker(field) {
   };
   const cfg = fieldMap[field];
   if (!cfg) return;
+
+  if (state.pickerRequest?.tabId) {
+    await chrome.scripting
+      .executeScript({
+        target: { tabId: state.pickerRequest.tabId },
+        func: () => window.__wpbPickerCleanup?.()
+      })
+      .catch(() => {});
+    state.pickerRequest = null;
+  }
 
   const tabs = await chrome.tabs.query({});
   const httpTabs = tabs.filter((tb) => /^https?:\/\//i.test(tb.url || ''));
@@ -499,8 +526,9 @@ export async function handleStartSelectorPicker(field) {
 
 export function registerPickerMessageListener() {
   if (!chrome?.runtime?.onMessage) return;
-  chrome.runtime.onMessage.addListener((msg) => {
+  chrome.runtime.onMessage.addListener((msg, sender) => {
     if (!msg || !state.pickerRequest || msg.requestId !== state.pickerRequest.requestId) return;
+    if (sender?.tab?.id != null && sender.tab.id !== state.pickerRequest.tabId) return;
     const req = state.pickerRequest;
     state.pickerRequest = null;
 
@@ -521,7 +549,9 @@ export function registerPickerMessageListener() {
         saveOptions();
       }
       chrome.tabs?.getCurrent?.((selfTab) => {
-        if (selfTab?.id) chrome.tabs.update(selfTab.id, { active: true }).catch?.(() => {});
+        if (selfTab?.id) {
+          Promise.resolve(chrome.tabs.update(selfTab.id, { active: true })).catch(() => {});
+        }
       });
       appendLog(`Seletor visual (${req.field}): ${msg.selector}`);
       showBanner(t('msgPickerCaptured', { target: req.targetLabel, selector: msg.selector }), 'success');

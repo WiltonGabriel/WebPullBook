@@ -4,17 +4,21 @@ import { $, state, t } from './state.js';
 import { appendLog, showBanner } from './logger.js';
 import { readMetadataFromUi, updateCoverPreview } from './options-storage.js';
 
+let currentCoverSeq = 0;
+
 export async function handleUploadCoverFile(file) {
   if (!file || !/^image\/(?:jpeg|png|webp|gif)$/i.test(file.type || '')) {
     showBanner(t('msgCoverUploadInvalid'), 'error');
     return;
   }
+  const seq = ++currentCoverSeq;
   const dataUrl = await new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(String(reader.result || ''));
     reader.onerror = () => reject(new Error('File read error'));
     reader.readAsDataURL(file);
   });
+  if (seq !== currentCoverSeq) return;
   $('meta-cover-url').value = dataUrl;
   readMetadataFromUi();
   updateCoverPreview();
@@ -200,6 +204,7 @@ export function generateDefaultCoverDataUrl({ title = '', author = '' } = {}) {
 }
 
 export function handleGenerateCover() {
+  currentCoverSeq++;
   readMetadataFromUi();
   const title = state.metadata.title || $('meta-title').value.trim() || 'WebPullBook';
   const author =
@@ -236,10 +241,12 @@ function applyReloadedCover(originalUrl, thumbUrl) {
  */
 export async function handleReloadCover() {
   const btn = $('btn-reload-cover');
+  const seq = ++currentCoverSeq;
   const current = $('meta-cover-url').value.trim();
   const savedOriginal = state.metadata.originalCoverUrl || state.metadata.originalCoverThumbUrl || '';
+  const upgradedOriginal = isHttpUrl(savedOriginal) ? (toHighResCoverUrl(savedOriginal) || savedOriginal) : '';
 
-  if (isHttpUrl(savedOriginal) && savedOriginal !== current) {
+  if (isHttpUrl(savedOriginal) && savedOriginal !== current && upgradedOriginal !== current) {
     applyReloadedCover(savedOriginal, state.metadata.originalCoverThumbUrl);
     return;
   }
@@ -258,6 +265,7 @@ export async function handleReloadCover() {
       ...(state.seriesRequiresTab ? { renderWithTab: true } : {}),
       onLog: appendLog
     });
+    if (seq !== currentCoverSeq) return;
     const parser = parserRegistry.detect(doc, sourceUrl, state.options.parserId || 'auto');
     const meta = {
       ...parser.extractCommonMetadata(doc, sourceUrl),
@@ -272,9 +280,12 @@ export async function handleReloadCover() {
       showBanner(t('msgCoverReloadNotFound'), 'info');
     }
   } catch (err) {
+    if (seq !== currentCoverSeq) return;
     showBanner(err.message, 'error');
   } finally {
-    btn.disabled = false;
-    btn.textContent = t('btnReloadCover');
+    if (seq === currentCoverSeq) {
+      btn.disabled = false;
+      btn.textContent = t('btnReloadCover');
+    }
   }
 }

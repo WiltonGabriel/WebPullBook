@@ -41,7 +41,7 @@
       </form>
 
       <div class="topbar-right">
-        <nav class="tabs" role="tablist" aria-label="Seções / Sections">
+        <nav class="tabs" role="tablist" data-i18n-aria="ariaMainTabs" aria-label="Seções">
           <button type="button" id="tab-btn-main" class="tab-btn active" role="tab" aria-selected="true" tabindex="0" data-tab="main">
             <span data-i18n="tabMain">Obra</span>
           </button>
@@ -61,11 +61,11 @@
         </nav>
 
         <div class="topbar-selectors">
-          <select id="ui-lang-top" class="lang-select" aria-label="Idioma / Language">
+          <select id="ui-lang-top" class="lang-select" data-i18n-aria="ariaLangSelect" aria-label="Idioma">
             <option value="pt">Português</option>
             <option value="en">English</option>
           </select>
-          <select id="ui-theme-top" class="theme-select" aria-label="Tema / Theme" data-i18n-title="labelTheme" title="Tema da Interface">
+          <select id="ui-theme-top" class="theme-select" data-i18n-aria="ariaThemeSelect" aria-label="Tema da interface" data-i18n-title="labelTheme" title="Tema da Interface">
             <option value="system" data-i18n="themeSystemTop">Auto</option>
             <option value="light" data-i18n="themeLightTop">Claro</option>
             <option value="dark" data-i18n="themeDarkTop">Escuro</option>
@@ -89,7 +89,7 @@
         <aside class="card pack-card">
           <div class="pack-cover-col">
             <div class="cover-box">
-              <img id="cover-preview" alt="Prévia da capa" hidden>
+              <img id="cover-preview" data-i18n-alt="altCoverPreview" alt="Prévia da capa" hidden>
               <div id="cover-placeholder" class="cover-placeholder" data-i18n="noCover">Sem capa</div>
             </div>
             <div class="cover-actions">
@@ -100,7 +100,7 @@
               <input type="file" id="input-upload-cover" accept="image/jpeg,image/png,image/webp,image/gif" hidden>
             </div>
             <p id="cover-format-note" class="inline-warn-note hidden" role="note" data-i18n="coverWebpWarning">
-              ⚠️ Capa em formato WebP/AVIF pode falhar em alguns leitores EPUB. Ative "Converter capa para JPEG" em Opções Avançadas.
+              Capa em formato WebP/AVIF pode falhar em alguns leitores EPUB. Ative "Converter capa para JPEG" em Opções Avançadas.
             </p>
           </div>
 
@@ -117,7 +117,7 @@
                 <option value="custom" data-i18n="presetCustom">Personalizado</option>
               </select>
               <p id="legacy-preset-warning" class="inline-warn-note hidden" role="note" data-i18n="presetLegacyWarning">
-                ⚠️ Gera EPUB 2 clássico (recursos modernos limitados). Use apenas em leitores antigos.
+                Gera EPUB 2 clássico (recursos modernos limitados). Use apenas em leitores antigos.
               </p>
             </div>
 
@@ -161,7 +161,7 @@
               <button type="button" id="btn-pack-epub" class="btn primary lg" disabled data-i18n="btnPackEpub">Empacotar EPUB</button>
               <button type="button" id="btn-retry-failed" class="btn secondary hidden">Tentar Falhos (0)</button>
               <div id="run-controls" class="run-controls">
-                <button type="button" id="btn-pause" class="btn secondary" disabled data-i18n="btnPause">⏸ Pausar</button>
+                <button type="button" id="btn-pause" class="btn secondary" disabled data-i18n="btnPause">Pausar</button>
                 <button type="button" id="btn-cancel" class="btn danger" disabled data-i18n="btnCancel">Cancelar</button>
               </div>
             </div>
@@ -298,7 +298,7 @@
           <table class="chapters-table">
             <thead>
               <tr>
-                <th class="col-check"><input type="checkbox" id="master-checkbox" aria-label="Selecionar capítulos visíveis"></th>
+                <th class="col-check"><input type="checkbox" id="master-checkbox" data-i18n-aria="ariaMasterCheckbox" aria-label="Selecionar capítulos visíveis"></th>
                 <th class="col-idx">#</th>
                 <th class="col-vol" data-i18n="thVolume">Volume</th>
                 <th class="col-title" data-i18n="thChapter">Capítulo</th>
@@ -328,11 +328,11 @@
             </p>
           </div>
           <div class="row-gap">
-            <select id="opt-library-view-mode" class="lang-select" aria-label="Modo de organização da biblioteca">
+            <select id="opt-library-view-mode" class="lang-select" data-i18n-aria="ariaLibraryViewMode" aria-label="Modo de organização da biblioteca">
               <option value="unified" data-i18n="libraryViewUnified">Unificado (todos os sites)</option>
               <option value="by-site" data-i18n="libraryViewBySite">Separado por site</option>
             </select>
-            <select id="library-site-filter" class="lang-select" aria-label="Filtrar por site">
+            <select id="library-site-filter" class="lang-select" data-i18n-aria="ariaLibrarySiteFilter" aria-label="Filtrar por site">
               <option value="all" data-i18n="libraryFilterAllSites">Todos os sites</option>
             </select>
           </div>
@@ -349,7 +349,7 @@
           </div>
           <div class="row-gap">
             <span id="cache-stats-pill" class="pill">0 caps (0 KB)</span>
-            <select id="opt-cache-ttl" class="lang-select" aria-label="Expiração do cache">
+            <select id="opt-cache-ttl" class="lang-select" data-i18n-aria="ariaCacheTtl" aria-label="Expiração do cache">
               <option value="0" data-i18n="cacheTtlOff">Cache desativado</option>
               <option value="1" data-i18n="cacheTtl1d">Expira em 1 dia</option>
               <option value="3" data-i18n="cacheTtl3d">Expira em 3 dias</option>
@@ -372,7 +372,7 @@
           </div>
           <div class="row-gap">
             <button type="button" id="btn-check-all-library" class="btn secondary sm" data-i18n="btnCheckAllLibrary">Verificar Todas</button>
-            <button type="button" id="btn-download-library-updates" class="btn secondary sm" data-i18n="btnDownloadAllUpdates">⬇ Baixar Novidades</button>
+            <button type="button" id="btn-download-library-updates" class="btn secondary sm" data-i18n="btnDownloadAllUpdates">Baixar Novidades</button>
             <button type="button" id="btn-save-library-tab" class="btn primary sm" data-i18n="btnSaveCurrentToLib">+ Salvar Obra Atual</button>
           </div>
         </div>
@@ -403,7 +403,7 @@
                 <option value="custom" data-i18n="presetCustom">Personalizado</option>
               </select>
               <p id="adv-legacy-preset-warning" class="inline-warn-note hidden" role="note" data-i18n="presetLegacyWarning">
-                ⚠️ Gera EPUB 2 clássico (recursos modernos limitados). Use apenas em leitores antigos.
+                Gera EPUB 2 clássico (recursos modernos limitados). Use apenas em leitores antigos.
               </p>
             </div>
           </div>
@@ -578,21 +578,21 @@
               <label for="opt-list-selector" data-i18n="labelListSelector">Seletor CSS da lista de capítulos (opcional)</label>
               <div class="input-with-picker">
                 <input id="opt-list-selector" type="text" placeholder="Ex.: .chapter-list a">
-                <button type="button" id="btn-pick-list-selector" class="btn ghost sm" data-i18n="btnPickSelectorShort" data-i18n-title="btnPickSelectorTitle" title="Apontar e clicar diretamente na página aberta para capturar o seletor CSS">🎯 Apontar</button>
+                <button type="button" id="btn-pick-list-selector" class="btn ghost sm" data-i18n="btnPickSelectorShort" data-i18n-title="btnPickSelectorTitle" title="Apontar e clicar diretamente na página aberta para capturar o seletor CSS">Apontar</button>
               </div>
             </div>
             <div class="field">
               <label for="opt-content-selector" data-i18n="labelContentSelector">Seletor CSS do conteúdo do capítulo (opcional)</label>
               <div class="input-with-picker">
                 <input id="opt-content-selector" type="text" placeholder="Ex.: article .content">
-                <button type="button" id="btn-pick-content-selector" class="btn ghost sm" data-i18n="btnPickSelectorShort" data-i18n-title="btnPickSelectorTitle" title="Apontar e clicar diretamente na página aberta para capturar o seletor CSS">🎯 Apontar</button>
+                <button type="button" id="btn-pick-content-selector" class="btn ghost sm" data-i18n="btnPickSelectorShort" data-i18n-title="btnPickSelectorTitle" title="Apontar e clicar diretamente na página aberta para capturar o seletor CSS">Apontar</button>
               </div>
             </div>
             <div class="field span-2">
               <label for="opt-exclude-selector" data-i18n="labelExcludeSelector">Seletor CSS de elementos a excluir (opcional)</label>
               <div class="input-with-picker">
                 <input id="opt-exclude-selector" type="text" placeholder="Ex.: .ads, .author-note">
-                <button type="button" id="btn-pick-exclude-selector" class="btn ghost sm" data-i18n="btnPickSelectorShort" data-i18n-title="btnPickSelectorTitle" title="Apontar e clicar diretamente na página aberta para capturar o seletor CSS">🎯 Apontar</button>
+                <button type="button" id="btn-pick-exclude-selector" class="btn ghost sm" data-i18n="btnPickSelectorShort" data-i18n-title="btnPickSelectorTitle" title="Apontar e clicar diretamente na página aberta para capturar o seletor CSS">Apontar</button>
               </div>
             </div>
             <div class="field span-2">
@@ -817,7 +817,7 @@
     <div class="dialog-header">
       <h2 id="volume-modal-title" data-i18n="modalVolTitle">Definir Volumes Manualmente</h2>
       <form method="dialog">
-        <button type="submit" value="cancel" class="btn ghost sm" aria-label="Fechar">✕</button>
+        <button type="submit" value="cancel" class="btn ghost sm" data-i18n-aria="ariaCloseModal" aria-label="Fechar">&times;</button>
       </form>
     </div>
     <div class="dialog-body">
@@ -847,14 +847,14 @@
       <div class="modal-section">
         <h3 data-i18n="modalVolSec3">3. Atribuir aos capítulos marcados atualmente</h3>
         <div class="row-gap mt-sm">
-          <input id="vol-selected-name" type="text" value="Volume Extra" class="md-input" placeholder="Ex.: Volume 01">
+          <input id="vol-selected-name" type="text" value="Volume Extra" class="md-input" placeholder="Ex.: Volume 01" data-i18n-aria="modalVolSec3" aria-label="Atribuir aos capítulos marcados atualmente">
           <button type="button" id="btn-apply-selected-vol" class="btn secondary sm" data-i18n="btnApplySelectedVol">Aplicar nos Selecionados</button>
         </div>
       </div>
 
       <div class="modal-section">
         <h3 data-i18n="modalVolSec4">4. Definição em lote (1 regra por linha: inicio-fim: Nome)</h3>
-        <textarea id="vol-batch-rules" rows="5" class="code-area" placeholder="1-24: Volume 01&#10;25-49: Volume 02"></textarea>
+        <textarea id="vol-batch-rules" rows="5" class="code-area" placeholder="1-24: Volume 01&#10;25-49: Volume 02" data-i18n-aria="modalVolSec4" aria-label="Definição em lote"></textarea>
         <div class="mt-sm">
           <button type="button" id="btn-apply-batch-vols" class="btn secondary sm" data-i18n="btnApplyBatchVols">Aplicar Regras em Lote</button>
         </div>
@@ -872,12 +872,12 @@
     <div class="dialog-header">
       <h2 id="edit-urls-title" data-i18n="modalEditUrlsTitle">Editar Lista de Capítulos</h2>
       <form method="dialog">
-        <button type="submit" value="cancel" class="btn ghost sm" aria-label="Fechar">✕</button>
+        <button type="submit" value="cancel" class="btn ghost sm" data-i18n-aria="ariaCloseModal" aria-label="Fechar">&times;</button>
       </form>
     </div>
     <div class="dialog-body">
       <p class="muted sm" data-i18n="modalEditUrlsHint">Uma entrada por linha no formato: URL | Título (opcional) | Volume (opcional)</p>
-      <textarea id="edit-urls-textarea" class="code-area mt-sm" rows="16" spellcheck="false"></textarea>
+      <textarea id="edit-urls-textarea" class="code-area mt-sm" rows="16" spellcheck="false" data-i18n-aria="modalEditUrlsTitle" aria-label="Editar Lista de Capítulos"></textarea>
     </div>
     <div class="dialog-footer">
       <form method="dialog" class="row-gap">
@@ -895,7 +895,7 @@
         <p id="merge-tabs-summary" class="muted sm mt-xs"></p>
       </div>
       <form method="dialog">
-        <button type="submit" value="cancel" class="btn ghost sm" aria-label="Fechar">✕</button>
+        <button type="submit" value="cancel" class="btn ghost sm" data-i18n-aria="ariaCloseModal" aria-label="Fechar">&times;</button>
       </form>
     </div>
     <div class="dialog-body">
@@ -943,9 +943,9 @@
         <p id="preview-modal-meta" class="muted sm mt-xs"></p>
       </div>
       <div class="row-gap">
-        <button type="button" id="btn-preview-toggle-edit" class="btn secondary sm hidden" data-i18n="btnPreviewToggleEdit">✏️ Editar Capítulo</button>
+        <button type="button" id="btn-preview-toggle-edit" class="btn secondary sm hidden" data-i18n="btnPreviewToggleEdit">Editar Capítulo</button>
         <form method="dialog">
-          <button type="submit" value="cancel" class="btn ghost sm" aria-label="Fechar">✕</button>
+          <button type="submit" value="cancel" class="btn ghost sm" data-i18n-aria="ariaCloseModal" aria-label="Fechar">&times;</button>
         </form>
       </div>
     </div>
@@ -957,7 +957,7 @@
       <div id="preview-modal-content" class="preview-reading-pane"></div>
     </div>
     <div class="dialog-footer">
-      <button type="button" id="btn-preview-save-edit" class="btn primary hidden" data-i18n="btnPreviewSaveEdit">💾 Salvar Edição</button>
+      <button type="button" id="btn-preview-save-edit" class="btn primary hidden" data-i18n="btnPreviewSaveEdit">Salvar Edição</button>
       <form method="dialog">
         <button type="submit" value="close" class="btn secondary" autofocus data-i18n="btnDone">Concluir</button>
       </form>
@@ -969,7 +969,7 @@
     <div class="dialog-header">
       <h2 id="merge-chapters-title" data-i18n="modalMergeChaptersTitle">Mesclar Capítulos Selecionados</h2>
       <form method="dialog">
-        <button type="submit" value="cancel" class="btn ghost sm" aria-label="Fechar">✕</button>
+        <button type="submit" value="cancel" class="btn ghost sm" data-i18n-aria="ariaCloseModal" aria-label="Fechar">&times;</button>
       </form>
     </div>
     <div class="dialog-body">
@@ -992,7 +992,7 @@
     <div class="dialog-header">
       <h2 id="confirm-reset-title" data-i18n="modalResetTitle">Restaurar todas as opções?</h2>
       <form method="dialog">
-        <button type="submit" value="cancel" class="btn ghost sm" aria-label="Fechar">✕</button>
+        <button type="submit" value="cancel" class="btn ghost sm" data-i18n-aria="ariaCloseModal" aria-label="Fechar">&times;</button>
       </form>
     </div>
     <div class="dialog-body">
@@ -1010,7 +1010,7 @@
     <div class="dialog-header">
       <h2 id="confirm-cancel-title" data-i18n="modalCancelRunTitle">Cancelar a exportação?</h2>
       <form method="dialog">
-        <button type="submit" value="keep" class="btn ghost sm" aria-label="Fechar">✕</button>
+        <button type="submit" value="keep" class="btn ghost sm" data-i18n-aria="ariaCloseModal" aria-label="Fechar">&times;</button>
       </form>
     </div>
     <div class="dialog-body">

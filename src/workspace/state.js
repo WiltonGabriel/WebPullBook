@@ -230,9 +230,9 @@ export function getOriginDomain(rawUrl) {
   return host || 'local';
 }
 
-export function getCacheKey(chapterUrl) {
+export function getCacheKey(chapterUrl, parserId = state.activeParser?.id || 'auto') {
   const stripPatterns = String(state.options.customStripPatterns || '').trim();
-  const baseKey = `${normalizeUrl(chapterUrl)}|${state.activeParser?.id || 'auto'}|${Boolean(state.options.skipImages)}|${Boolean(state.options.removeNavLinks)}|${state.options.customContentSelector || ''}|${state.options.customExcludeSelector || ''}`;
+  const baseKey = `${normalizeUrl(chapterUrl)}|${parserId || 'auto'}|${Boolean(state.options.skipImages)}|${Boolean(state.options.removeNavLinks)}|${state.options.customContentSelector || ''}|${state.options.customExcludeSelector || ''}`;
   return stripPatterns ? `${baseKey}|${stripPatterns}` : baseKey;
 }
 

@@ -160,7 +160,8 @@ export function renderVolumeChips() {
   const toggleAllBtn = $('btn-toggle-all-volumes');
   if (toggleAllBtn) {
     toggleAllBtn.disabled = groups.length === 0;
-    toggleAllBtn.textContent = t('btnSelectAll');
+    const allSelected = state.chapters.length > 0 && state.chapters.every((c) => c.included);
+    toggleAllBtn.textContent = allSelected ? t('btnUnselectAll') : t('btnSelectAll');
   }
 
   if (groups.length === 0) {
@@ -243,7 +244,7 @@ export function renderVolumeChips() {
       const filterBtn = document.createElement('button');
       filterBtn.type = 'button';
       filterBtn.className = `vol-filter-btn${state.volumeFilter === grp.volume ? ' active' : ''}`;
-      filterBtn.textContent = '🔍';
+      filterBtn.textContent = t('btnVolFilterShort');
       filterBtn.title = t('volFilterBtnTitle');
       filterBtn.setAttribute('aria-label', `${t('volFilterBtnTitle')}: ${grp.volume}`);
       filterBtn.addEventListener('click', (e) => {
@@ -304,7 +305,7 @@ export function getVisibleChapters() {
 }
 
 function buildStatusPill(ch) {
-  const cached = state.chapterCache.has(getCacheKey(ch.url));
+  const cached = state.chapterCache.has(ch.pinnedCacheKey || getCacheKey(ch.url));
   const st = ch.status || (cached ? 'ok' : 'pending');
   const warnings = Array.isArray(ch.warnings) ? ch.warnings : [];
 
@@ -412,11 +413,14 @@ export function renderChaptersTable() {
             rangeChapters.push(visible[k].ch);
           }
         } else {
-          const s = Math.min(anchorIdx, idx);
-          const eIdx = Math.max(anchorIdx, idx);
-          for (let k = s; k <= eIdx; k++) {
-            rangeChapters.push(state.chapters[k]);
+          const minIdx = Math.min(anchorIdx, idx);
+          const maxIdx = Math.max(anchorIdx, idx);
+          for (const item of visible) {
+            if (item.idx >= minIdx && item.idx <= maxIdx) {
+              rangeChapters.push(item.ch);
+            }
           }
+          if (rangeChapters.length === 0) rangeChapters.push(ch);
         }
         let targetVal = fromCheckbox ? cb.checked : !ch.included;
         if (state.lastClickedChapState !== null && rangeChapters.length > 1) {
@@ -460,8 +464,16 @@ export function renderChaptersTable() {
     volInput.value = ch.volume;
     volInput.setAttribute('aria-label', `Volume ${idx + 1}`);
     volInput.addEventListener('change', () => {
+      const prevVol = ch.volume;
       ch.volume = volInput.value.trim() || 'Volume 01';
-      renderVolumeChips();
+      if (
+        state.volumeFilter &&
+        state.volumeFilter === prevVol &&
+        !state.chapters.some((c) => c.volume === state.volumeFilter)
+      ) {
+        state.volumeFilter = null;
+      }
+      renderAllChapterViews();
       populateRangeSelects();
     });
     tdVol.appendChild(volInput);
@@ -520,7 +532,7 @@ export function renderChaptersTable() {
     const previewBtn = document.createElement('button');
     previewBtn.type = 'button';
     previewBtn.className = 'btn ghost sm chap-preview-btn';
-    previewBtn.textContent = '👁';
+    previewBtn.textContent = t('btnPreviewShort');
     previewBtn.title = t('btnPreviewTitle');
     previewBtn.setAttribute('aria-label', `${t('btnPreviewTitle')}: ${ch.displayTitle}`);
     previewBtn.addEventListener('click', () => state.onOpenChapterPreview?.(idx));
@@ -551,32 +563,35 @@ export async function persistSessionSnapshot() {
 }
 
 export async function getChapterFromCaches(ch, cacheKey) {
-  let rec = state.chapterCache.get(cacheKey);
+  const resolvedKey = ch?.pinnedCacheKey || cacheKey;
+  let rec = state.chapterCache.get(resolvedKey);
   if (!rec && state.options.cacheTtlDays > 0) {
-    const diskRec = await cacheStore.getChapter(cacheKey);
+    const diskRec = await cacheStore.getChapter(resolvedKey);
     if (diskRec) {
       rec = {
         chapterTitle: diskRec.chapterTitle,
         subtitle: diskRec.subtitle,
-        contentXml: diskRec.contentXml
+        contentXml: diskRec.contentXml,
+        ...(diskRec.imageFallbacks ? { imageFallbacks: diskRec.imageFallbacks } : {})
       };
-      state.chapterCache.set(cacheKey, rec);
+      state.chapterCache.set(resolvedKey, rec);
     }
   }
   return rec ? hydrateCachedChapter(ch, rec) : null;
 }
 
 export async function hydrateChaptersFromCache(chapters) {
-  const keys = chapters.map((ch) => getCacheKey(ch.url));
+  const keys = chapters.map((ch) => ch.pinnedCacheKey || getCacheKey(ch.url));
   const diskMap = await cacheStore.hasChapters(keys);
   return chapters.map((ch) => {
-    const key = getCacheKey(ch.url);
+    const key = ch.pinnedCacheKey || getCacheKey(ch.url);
     const diskRec = diskMap.get(key);
     if (diskRec) {
       state.chapterCache.set(key, {
         chapterTitle: diskRec.chapterTitle,
         subtitle: diskRec.subtitle,
-        contentXml: diskRec.contentXml
+        contentXml: diskRec.contentXml,
+        ...(diskRec.imageFallbacks ? { imageFallbacks: diskRec.imageFallbacks } : {})
       });
     }
     return {

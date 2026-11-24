@@ -1,7 +1,8 @@
-import { downloadAndParseChapter, normalizeSpaces } from '../core/parser-engine.js';
+import { downloadAndParseChapter, normalizeSpaces, resolveSafeHttpUrl } from '../core/parser-engine.js';
 import { cacheStore, serializeNodesForCache } from '../core/cache-store.js';
 import { sanitizeChapterContent } from '../core/sanitizer.js';
 import { genericHtmlParser } from '../parsers/generic-html.js';
+import { resolveParserForChapterUrl } from '../parsers/index.js';
 import { $, getCacheKey, getCurrentSeriesKey, state, t } from './state.js';
 import { appendLog, showBanner } from './logger.js';
 import { readOptionsFromUi } from './options-storage.js';
@@ -14,13 +15,82 @@ import {
   renderChaptersTable
 } from './chapters-ui.js';
 
-export function setPreviewEditMode(editable) {
+let previewSeq = 0;
+let previewOriginalTitle = '';
+let previewOriginalNodes = null;
+
+function buildImageFallbacksMap(images = [], existingFallbacks = null) {
+  const out = existingFallbacks && typeof existingFallbacks === 'object' ? { ...existingFallbacks } : {};
+  for (const img of images || []) {
+    if (img?.originalUrl && img?.fallbackUrl) {
+      out[img.originalUrl] = img.fallbackUrl;
+    }
+  }
+  return out;
+}
+
+function buildSafePreviewFragment(nodes, baseUrl) {
+  const frag = document.createDocumentFragment();
+  const base = /^https?:\/\//i.test(baseUrl || '') ? baseUrl : state.metadata.startingUrl || 'https://webpullbook.invalid/';
+  for (const node of nodes || []) {
+    const imported = document.importNode(node, true);
+    const imgs = [];
+    if (imported.matches?.('img[src]')) imgs.push(imported);
+    if (imported.querySelectorAll) imgs.push(...imported.querySelectorAll('img[src]'));
+    for (const img of imgs) {
+      const rawSrc = (img.getAttribute('src') || '').trim();
+      if (/^data:image\/(?:png|jpeg|jpg|gif|webp|avif);base64,[a-z0-9+/=]+$/i.test(rawSrc)) {
+        img.src = rawSrc;
+      } else {
+        const safeImgUrl = resolveSafeHttpUrl(rawSrc, base);
+        if (safeImgUrl) {
+          img.src = safeImgUrl;
+        } else {
+          img.removeAttribute('src');
+        }
+      }
+    }
+
+    const anchors = [];
+    if (imported.matches?.('a[href]')) anchors.push(imported);
+    if (imported.querySelectorAll) anchors.push(...imported.querySelectorAll('a[href]'));
+    for (const anchor of anchors) {
+      const rawHref = (anchor.getAttribute('href') || '').trim();
+      if (!rawHref || rawHref.startsWith('#')) continue;
+      const safeHref = resolveSafeHttpUrl(rawHref, base);
+      if (safeHref) {
+        anchor.setAttribute('href', safeHref);
+        anchor.setAttribute('target', '_blank');
+        anchor.setAttribute('rel', 'noopener noreferrer');
+      } else {
+        anchor.removeAttribute('href');
+      }
+    }
+    frag.appendChild(imported);
+  }
+  return frag;
+}
+
+export function setPreviewEditMode(editable, { restoreSnapshot = editable === false } = {}) {
+  const wasEditable = state.activePreviewEditable;
   state.activePreviewEditable = Boolean(editable);
   const contentEl = $('preview-modal-content');
   const titleWrap = $('preview-edit-title-wrap');
   const toggleBtn = $('btn-preview-toggle-edit');
   const saveBtn = $('btn-preview-save-edit');
   const titleInput = $('preview-edit-title-input');
+
+  if (!wasEditable && state.activePreviewEditable) {
+    previewOriginalTitle = $('preview-modal-title').textContent || '';
+    previewOriginalNodes = Array.from(contentEl.childNodes, (n) => n.cloneNode(true));
+  } else if (!state.activePreviewEditable) {
+    if (restoreSnapshot && Array.isArray(previewOriginalNodes)) {
+      contentEl.replaceChildren(...previewOriginalNodes.map((n) => n.cloneNode(true)));
+      $('preview-modal-title').textContent = previewOriginalTitle;
+    }
+    previewOriginalNodes = null;
+    previewOriginalTitle = '';
+  }
 
   contentEl.contentEditable = state.activePreviewEditable ? 'true' : 'false';
   contentEl.setAttribute('spellcheck', state.activePreviewEditable ? 'true' : 'false');
@@ -35,17 +105,27 @@ export function setPreviewEditMode(editable) {
 
 export async function handleSavePreviewEdit() {
   const ch = state.activePreviewChapter;
-  if (!ch) return;
+  if (!ch || ch.readOnlyPreview) return;
 
   const newTitle = normalizeSpaces($('preview-edit-title-input').value) || ch.displayTitle || ch.title || 'Capítulo';
   const baseUrl = /^https?:\/\//i.test(ch.url) ? ch.url : state.metadata.startingUrl || 'https://webpullbook.invalid/';
   const cleaned = sanitizeChapterContent($('preview-modal-content'), baseUrl, state.options);
-  const key = getCacheKey(ch.url);
+  const chParser = resolveParserForChapterUrl(
+    ch.url,
+    state.activeParser,
+    state.options.parserId,
+    state.metadata.startingUrl
+  );
+  const key = ch.pinnedCacheKey || getCacheKey(ch.url, chParser?.id || state.activeParser?.id || 'auto');
+  ch.pinnedCacheKey = key;
   const serializedNodes = serializeNodesForCache(cleaned.nodes);
+  const prevFallbacks = state.chapterCache.get(key)?.imageFallbacks || null;
+  const imageFallbacks = buildImageFallbacksMap(cleaned.images, prevFallbacks);
   const rec = {
     chapterTitle: newTitle,
     subtitle: '',
-    contentXml: serializedNodes
+    contentXml: serializedNodes,
+    ...(Object.keys(imageFallbacks).length > 0 ? { imageFallbacks } : {})
   };
 
   state.chapterCache.set(key, rec);
@@ -57,6 +137,7 @@ export async function handleSavePreviewEdit() {
       chapterTitle: newTitle,
       subtitle: '',
       nodes: cleaned.nodes,
+      imageFallbacks,
       ttlDays: state.options.cacheTtlDays
     });
   }
@@ -67,8 +148,17 @@ export async function handleSavePreviewEdit() {
   ch.status = 'ok';
   ch.errorMsg = '';
 
+  const contentEl = $('preview-modal-content');
+  const renderedFrag = buildSafePreviewFragment(cleaned.nodes, baseUrl);
+  if (!renderedFrag.hasChildNodes()) {
+    const empty = document.createElement('p');
+    empty.className = 'muted';
+    empty.textContent = t('previewEmpty');
+    renderedFrag.appendChild(empty);
+  }
+  contentEl.replaceChildren(renderedFrag);
   $('preview-modal-title').textContent = newTitle;
-  setPreviewEditMode(false);
+  setPreviewEditMode(false, { restoreSnapshot: false });
   renderChaptersTable();
   await persistSessionSnapshot();
   await state.onCacheChanged?.();
@@ -77,6 +167,10 @@ export async function handleSavePreviewEdit() {
 }
 
 export function openMergeChaptersModal() {
+  if (state.running || state.batchRunning) {
+    showBanner(t('msgLoadBlockedExportRunning'), 'error');
+    return;
+  }
   const selected = state.chapters.filter((c) => c.included);
   if (selected.length < 2) {
     showBanner(t('msgMergeChaptersNeedTwo'), 'error');
@@ -90,6 +184,10 @@ export function openMergeChaptersModal() {
 }
 
 export async function applyMergeSelectedChapters() {
+  if (state.running || state.batchRunning) {
+    showBanner(t('msgLoadBlockedExportRunning'), 'error');
+    return;
+  }
   const checkedEntries = state.chapters
     .map((ch, idx) => ({ ch, idx }))
     .filter(({ ch }) => ch.included);
@@ -107,7 +205,7 @@ export async function applyMergeSelectedChapters() {
       normalizeSpaces($('merge-chapters-title-input').value) ||
       `${checkedEntries[0].ch.displayTitle} (${checkedEntries.length})`;
     const container = document.createElement('div');
-    const parser = state.activeParser || genericHtmlParser;
+    const collectedFallbacks = {};
     const effectiveOptions = {
       ...state.options,
       renderWithTab: state.options.renderWithTab || state.seriesRequiresTab,
@@ -115,10 +213,16 @@ export async function applyMergeSelectedChapters() {
     };
 
     for (const { ch } of checkedEntries) {
-      let parsed = await getChapterFromCaches(ch, getCacheKey(ch.url));
+      const chParser =
+        resolveParserForChapterUrl(ch.url, state.activeParser, state.options.parserId, state.metadata.startingUrl) ||
+        genericHtmlParser;
+      const chKey = ch.pinnedCacheKey || getCacheKey(ch.url, chParser?.id || state.activeParser?.id || 'auto');
+      let parsed = await getChapterFromCaches(ch, chKey);
       if (!parsed) {
-        parsed = await downloadAndParseChapter(ch, parser, effectiveOptions);
+        parsed = await downloadAndParseChapter(ch, chParser, effectiveOptions);
       }
+      const cachedFallbacks = state.chapterCache.get(chKey)?.imageFallbacks || null;
+      Object.assign(collectedFallbacks, buildImageFallbacksMap(parsed.images, cachedFallbacks));
       const subHeading = document.createElement('h3');
       subHeading.textContent = parsed.chapterTitle || ch.displayTitle || ch.url;
       container.appendChild(subHeading);
@@ -129,13 +233,15 @@ export async function applyMergeSelectedChapters() {
 
     const baseUrl = checkedEntries[0].ch.url || state.metadata.startingUrl || 'https://webpullbook.invalid/';
     const cleaned = sanitizeChapterContent(container, baseUrl, state.options);
+    const imageFallbacks = buildImageFallbacksMap(cleaned.images, collectedFallbacks);
     const mergedUrl = `urn:webpullbook:merged:${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const key = getCacheKey(mergedUrl);
     const serializedNodes = serializeNodesForCache(cleaned.nodes);
     const rec = {
       chapterTitle: mergedTitle,
       subtitle: '',
-      contentXml: serializedNodes
+      contentXml: serializedNodes,
+      ...(Object.keys(imageFallbacks).length > 0 ? { imageFallbacks } : {})
     };
 
     state.chapterCache.set(key, rec);
@@ -147,6 +253,7 @@ export async function applyMergeSelectedChapters() {
         chapterTitle: mergedTitle,
         subtitle: '',
         nodes: cleaned.nodes,
+        imageFallbacks,
         ttlDays: state.options.cacheTtlDays
       });
     }
@@ -157,6 +264,8 @@ export async function applyMergeSelectedChapters() {
       ...firstCh,
       id: `merged_${Date.now()}`,
       url: mergedUrl,
+      pinnedCacheKey: key,
+      readOnlyPreview: false,
       titleText: mergedTitle,
       displayTitle: mergedTitle,
       included: true,
@@ -176,6 +285,11 @@ export async function applyMergeSelectedChapters() {
       c.index = idx + 1;
     });
     state.chapters = nextChapters;
+    state.volumeFilter = null;
+    state.lastClickedIdx = -1;
+    state.lastClickedChapState = null;
+    state.lastClickedVolIdx = -1;
+    state.lastClickedVolState = null;
 
     $('merge-chapters-modal').close('confirm');
     populateRangeSelects();
@@ -192,9 +306,15 @@ export async function applyMergeSelectedChapters() {
   }
 }
 
-export async function openChapterPreviewForTarget(ch, parser = state.activeParser, { bypassCache = false } = {}) {
+export async function openChapterPreviewForTarget(
+  ch,
+  parser = state.activeParser,
+  { bypassCache = false, readOnly = false } = {}
+) {
   if (!ch) return;
 
+  const seq = ++previewSeq;
+  const effectiveReadOnly = Boolean(readOnly || ch.readOnlyPreview);
   const dialog = $('preview-modal');
   const titleEl = $('preview-modal-title');
   const metaEl = $('preview-modal-meta');
@@ -202,7 +322,7 @@ export async function openChapterPreviewForTarget(ch, parser = state.activeParse
   const toggleBtn = $('btn-preview-toggle-edit');
 
   state.activePreviewChapter = ch;
-  setPreviewEditMode(false);
+  setPreviewEditMode(false, { restoreSnapshot: false });
   toggleBtn.classList.add('hidden');
   titleEl.textContent = ch.displayTitle || ch.title || ch.url;
   metaEl.textContent = t('previewLoading');
@@ -211,14 +331,20 @@ export async function openChapterPreviewForTarget(ch, parser = state.activeParse
 
   try {
     readOptionsFromUi();
-    let parsed = bypassCache ? null : await getChapterFromCaches(ch, getCacheKey(ch.url));
+    const effectiveParser =
+      resolveParserForChapterUrl(ch.url, parser || state.activeParser, state.options.parserId, state.metadata.startingUrl) ||
+      genericHtmlParser;
+    const cacheKey = ch.pinnedCacheKey || getCacheKey(ch.url, effectiveParser?.id || state.activeParser?.id || 'auto');
+    let parsed = bypassCache ? null : await getChapterFromCaches(ch, cacheKey);
+    if (seq !== previewSeq || state.activePreviewChapter !== ch) return;
     if (!parsed) {
       const effectiveOptions = {
         ...state.options,
         renderWithTab: state.options.renderWithTab || state.seriesRequiresTab,
         onLog: appendLog
       };
-      parsed = await downloadAndParseChapter(ch, parser || genericHtmlParser, effectiveOptions);
+      parsed = await downloadAndParseChapter(ch, effectiveParser, effectiveOptions);
+      if (seq !== previewSeq || state.activePreviewChapter !== ch) return;
     }
 
     titleEl.textContent = parsed.chapterTitle || ch.displayTitle || ch.title || ch.url;
@@ -228,24 +354,10 @@ export async function openChapterPreviewForTarget(ch, parser = state.activeParse
     metaEl.textContent = t('previewMetaInfo', {
       words,
       images,
-      parser: (parser || genericHtmlParser)?.name || 'Universal Smart Extractor'
+      parser: effectiveParser?.name || 'Universal Smart Extractor'
     });
 
-    const frag = document.createDocumentFragment();
-    for (const node of parsed.nodes || []) {
-      const imported = document.importNode(node, true);
-      if (imported.querySelectorAll) {
-        for (const img of imported.querySelectorAll('img[src]')) {
-          const rawSrc = img.getAttribute('src') || '';
-          try {
-            img.src = new URL(rawSrc, ch.url).toString();
-          } catch {
-            // keep src
-          }
-        }
-      }
-      frag.appendChild(imported);
-    }
+    const frag = buildSafePreviewFragment(parsed.nodes, ch.url);
     if (!frag.hasChildNodes()) {
       const empty = document.createElement('p');
       empty.className = 'muted';
@@ -253,8 +365,9 @@ export async function openChapterPreviewForTarget(ch, parser = state.activeParse
       frag.appendChild(empty);
     }
     contentEl.replaceChildren(frag);
-    toggleBtn.classList.remove('hidden');
+    toggleBtn.classList.toggle('hidden', effectiveReadOnly);
   } catch (err) {
+    if (seq !== previewSeq || state.activePreviewChapter !== ch) return;
     metaEl.textContent = t('msgPreviewError', { error: err.message });
     const errP = document.createElement('p');
     errP.className = 'muted';

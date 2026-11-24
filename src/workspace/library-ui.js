@@ -11,7 +11,8 @@ import {
   t
 } from './state.js';
 import { appendLog, showBanner } from './logger.js';
-import { readMetadataFromUi, saveLibrary } from './options-storage.js';
+import { readMetadataFromUi, sanitizeCoverPreviewUrl, saveLibrary, stripSiteScopedOptions } from './options-storage.js';
+import { ensureCustomDirWritable } from './download-storage.js';
 import { populateRangeSelects, renderAllChapterViews } from './chapters-ui.js';
 import { handleLoadSeries } from './series-loader.js';
 import { handlePackEpub, waitWhilePaused } from './export-runner.js';
@@ -36,10 +37,11 @@ export function renderLibrary() {
     card.className = 'lib-card';
     card.dataset.origin = origin.domain;
 
-    if (item.coverUrl) {
+    const safeCoverUrl = sanitizeCoverPreviewUrl(item.coverUrl);
+    if (safeCoverUrl) {
       const img = document.createElement('img');
       img.className = 'lib-cover';
-      img.src = item.coverUrl;
+      img.src = safeCoverUrl;
       img.alt = '';
       card.appendChild(img);
     } else {
@@ -195,11 +197,15 @@ export async function updateLibraryAfterExport(packagedChapters) {
   await saveLibrary({ upsertEntry: updatedEntry }, renderLibrary);
 }
 
-export async function handleCheckLibrarySeries(entry, selectOnlyNew = true) {
+export async function handleCheckLibrarySeries(
+  entry,
+  selectOnlyNew = true,
+  { fallbackSelectAll = true, allowDuringBatch = false } = {}
+) {
   switchTab('main');
   if (!entry.startingUrl) return;
   $('starting-url').value = entry.startingUrl;
-  await handleLoadSeries(entry.startingUrl);
+  await handleLoadSeries(entry.startingUrl, { allowDuringBatch });
 
   if (!selectOnlyNew || state.chapters.length === 0) return;
 
@@ -221,9 +227,11 @@ export async function handleCheckLibrarySeries(entry, selectOnlyNew = true) {
     renderAllChapterViews();
     showBanner(t('msgNewChaptersFound', { newCount }), 'success');
   } else {
-    state.chapters.forEach((ch) => {
-      ch.included = true;
-    });
+    if (fallbackSelectAll) {
+      state.chapters.forEach((ch) => {
+        ch.included = true;
+      });
+    }
     populateRangeSelects();
     renderAllChapterViews();
     showBanner(t('msgNoNewChapters', { total: state.chapters.length }), 'info');
@@ -243,22 +251,27 @@ export async function handleCheckAllLibrary() {
   let totalNew = 0;
 
   try {
+    const baseOpts = stripSiteScopedOptions(state.options);
     for (let i = 0; i < entries.length; i++) {
       const entry = entries[i];
       btn.textContent = t('btnCheckingAllLibrary', { done: i + 1, total: entries.length });
       try {
         const domain = normalizeRuleDomain(entry.startingUrl);
-        const rule = domain ? state.domainRules[domain] : null;
-        const effectiveOpts = rule
-          ? {
-              ...state.options,
-              customListSelector: rule.listSelector || state.options.customListSelector,
-              customContentSelector: rule.contentSelector || state.options.customContentSelector,
-              customExcludeSelector: rule.excludeSelector || state.options.customExcludeSelector,
-              renderWithTab: typeof rule.renderWithTab === 'boolean' ? rule.renderWithTab : false,
-              onLog: appendLog
-            }
-          : { ...state.options, renderWithTab: false, onLog: appendLog };
+        const rule = domain && Object.hasOwn(state.domainRules || {}, domain) ? state.domainRules[domain] : null;
+        const effectiveOpts = {
+          ...baseOpts,
+          parserId: entry.parserId || 'auto',
+          ...(rule
+            ? {
+                customListSelector: rule.listSelector || '',
+                customContentSelector: rule.contentSelector || '',
+                customExcludeSelector: rule.excludeSelector || '',
+                customStripPatterns: rule.stripPatterns || '',
+                renderWithTab: typeof rule.renderWithTab === 'boolean' ? rule.renderWithTab : false
+              }
+            : { renderWithTab: false }),
+          onLog: appendLog
+        };
 
         const { series } = await loadSeriesWithParser(entry.startingUrl, effectiveOpts);
         const knownSet = new Set((entry.knownUrls || []).map((u) => normalizeUrl(u)));
@@ -311,7 +324,7 @@ export async function handleDownloadLibraryUpdates() {
   }
 
   const batchBtn = $('btn-download-library-updates');
-  const originalTab = $('tab-library').classList.contains('active') ? 'library' : 'main';
+  const originalTab = !$('tab-library').classList.contains('hidden') ? 'library' : 'main';
   state.batchRunning = true;
   state.paused = false;
   state.abortController = new AbortController();
@@ -326,6 +339,8 @@ export async function handleDownloadLibraryUpdates() {
   let chaptersUpdated = 0;
 
   try {
+    const batchDirHandle = await ensureCustomDirWritable();
+    const baseOpts = stripSiteScopedOptions(state.options);
     const queue = [];
     for (let i = 0; i < entries.length; i++) {
       await waitWhilePaused(signal);
@@ -334,17 +349,21 @@ export async function handleDownloadLibraryUpdates() {
       const entry = entries[i];
       batchBtn.textContent = t('btnDownloadingUpdates', { done: i + 1, total: entries.length });
       const domain = normalizeRuleDomain(entry.startingUrl);
-      const rule = domain ? state.domainRules[domain] : null;
-      const effectiveOpts = rule
-        ? {
-            ...state.options,
-            customListSelector: rule.listSelector || state.options.customListSelector,
-            customContentSelector: rule.contentSelector || state.options.customContentSelector,
-            customExcludeSelector: rule.excludeSelector || state.options.customExcludeSelector,
-            renderWithTab: typeof rule.renderWithTab === 'boolean' ? rule.renderWithTab : false,
-            onLog: appendLog
-          }
-        : { ...state.options, onLog: appendLog };
+      const rule = domain && Object.hasOwn(state.domainRules || {}, domain) ? state.domainRules[domain] : null;
+      const effectiveOpts = {
+        ...baseOpts,
+        parserId: entry.parserId || 'auto',
+        ...(rule
+          ? {
+              customListSelector: rule.listSelector || '',
+              customContentSelector: rule.contentSelector || '',
+              customExcludeSelector: rule.excludeSelector || '',
+              customStripPatterns: rule.stripPatterns || '',
+              renderWithTab: typeof rule.renderWithTab === 'boolean' ? rule.renderWithTab : false
+            }
+          : { renderWithTab: false }),
+        onLog: appendLog
+      };
 
       try {
         const { series } = await loadSeriesWithParser(entry.startingUrl, effectiveOpts, signal);
@@ -377,13 +396,18 @@ export async function handleDownloadLibraryUpdates() {
       if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
       const { entry } = queue[q];
       batchBtn.textContent = t('btnDownloadingUpdates', { done: q + 1, total: queue.length });
-      await handleCheckLibrarySeries(entry, true);
+      await handleCheckLibrarySeries(entry, true, { fallbackSelectAll: false, allowDuringBatch: true });
       const selectedNew = state.chapters.filter((c) => c.included);
       if (selectedNew.length === 0) continue;
 
-      await handlePackEpub({ externalSignal: signal });
-      booksUpdated++;
-      chaptersUpdated += selectedNew.length;
+      const packResult = await handlePackEpub({ externalSignal: signal, dirHandle: batchDirHandle });
+      if (signal.aborted || packResult?.cancelled) {
+        throw new DOMException('Aborted', 'AbortError');
+      }
+      if (packResult?.filesGenerated > 0) {
+        booksUpdated++;
+        chaptersUpdated += packResult.totalOkChapters || selectedNew.length;
+      }
     }
 
     showBanner(

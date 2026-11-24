@@ -6,7 +6,7 @@ import {
   resolveSafeHttpUrl,
   sanitizeFilename
 } from '../core/parser-engine.js';
-import { loadSeriesWithParser, parserRegistry } from '../parsers/index.js';
+import { loadSeriesWithParser, parserRegistry, resolveParserForChapterUrl } from '../parsers/index.js';
 import { genericHtmlParser } from '../parsers/generic-html.js';
 import { $, normalizeRuleDomain, state, t } from './state.js';
 import { appendLog, hideBanner, showBanner } from './logger.js';
@@ -14,6 +14,8 @@ import { readOptionsFromUi, saveOptions, syncMetadataToUi } from './options-stor
 import { applyDomainRuleForUrl } from './domain-rules-ui.js';
 import { getVolumeGroups, hydrateChaptersFromCache, populateRangeSelects, renderAllChapterViews } from './chapters-ui.js';
 import { generateDefaultCoverDataUrl } from './cover-ui.js';
+
+let currentLoadSeq = 0;
 
 export function setLoadingOverlay(visible, detailText = '') {
   const overlay = $('loading-overlay');
@@ -34,11 +36,19 @@ export function setLoadingOverlay(visible, detailText = '') {
   }
 }
 
-export async function handleLoadSeries(url, { sourceTabId = null } = {}) {
+export async function handleLoadSeries(url, { sourceTabId = null, allowDuringBatch = false } = {}) {
+  if (state.running || (state.batchRunning && !allowDuringBatch)) {
+    showBanner(t('msgLoadBlockedExportRunning'), 'error');
+    return;
+  }
+  const loadSeq = ++currentLoadSeq;
   hideBanner();
   setLoadingOverlay(true, url);
   const loadStartedAt = Date.now();
   const currentDomain = normalizeRuleDomain(url);
+  if (!state.metadata?.startingUrl || normalizeUrl(state.metadata.startingUrl) !== normalizeUrl(url)) {
+    state.seriesRequiresTab = false;
+  }
   if (state.lastLoadedDomain && currentDomain && state.lastLoadedDomain !== currentDomain) {
     $('opt-list-selector').value = '';
     $('opt-content-selector').value = '';
@@ -59,24 +69,33 @@ export async function handleLoadSeries(url, { sourceTabId = null } = {}) {
 
   applyDomainRuleForUrl(url);
   readOptionsFromUi();
+  const initialUseTab = Boolean(state.options.renderWithTab || state.seriesRequiresTab);
   const btn = $('btn-load-series');
   btn.disabled = true;
   btn.textContent = t('btnLoadingSeries');
   const extVer = typeof chrome !== 'undefined' && chrome.runtime?.getManifest ? chrome.runtime.getManifest().version : '';
   const customSelNote = state.options.customListSelector ? `, listSelector="${state.options.customListSelector}"` : '';
   appendLog(
-    `[LOAD] Carregando URL: ${url} | WebPullBook v${extVer || 'dev'} | parser=${state.options.parserId}, spa=${state.options.renderWithTab}${customSelNote}`,
+    `[LOAD] Carregando URL: ${url} | WebPullBook v${extVer || 'dev'} | parser=${state.options.parserId}, spa=${initialUseTab}${customSelNote}`,
     'info'
   );
 
   try {
     const { parser, series, initialDoc, usedAutoSpa } = await loadSeriesWithParser(url, {
       ...state.options,
+      renderWithTab: initialUseTab,
       sourceTabId,
       onLog: appendLog
     });
+    if (loadSeq !== currentLoadSeq) return;
+
     state.activeParser = parser;
-    state.seriesRequiresTab = Boolean(series.requiresTabRender || usedAutoSpa);
+    const domainRuleTab = Boolean(
+      state.appliedRuleDomain &&
+        Object.hasOwn(state.domainRules || {}, state.appliedRuleDomain) &&
+        state.domainRules[state.appliedRuleDomain]?.renderWithTab
+    );
+    state.seriesRequiresTab = Boolean(series.requiresTabRender || usedAutoSpa || domainRuleTab);
     state.pageDomCache.clear();
     if (initialDoc) {
       state.pageDomCache.set(url, initialDoc);
@@ -99,12 +118,13 @@ export async function handleLoadSeries(url, { sourceTabId = null } = {}) {
         if (needContent && sampleUrl && sampleUrl !== url && /^https?:\/\//i.test(sampleUrl)) {
           try {
             sampleChapterDoc = await fetchDocumentWithOptions(sampleUrl, {
-              renderWithTab: Boolean(series.requiresTabRender || state.options.renderWithTab),
+              renderWithTab: Boolean(series.requiresTabRender || state.seriesRequiresTab || state.options.renderWithTab),
               onLog: appendLog
             });
           } catch {
             sampleChapterDoc = null;
           }
+          if (loadSeq !== currentLoadSeq) return;
         } else if (series.chapters.length <= 1) {
           sampleChapterDoc = initialDoc;
         }
@@ -155,6 +175,9 @@ export async function handleLoadSeries(url, { sourceTabId = null } = {}) {
       appendLog('[IMG] Capa original não detectada na página — capa padrão aplicada automaticamente.', 'debug');
     }
 
+    const hydratedChapters = await hydrateChaptersFromCache(series.chapters);
+    if (loadSeq !== currentLoadSeq) return;
+
     state.metadata = {
       ...series,
       coverUrl: resolvedCoverUrl,
@@ -163,7 +186,7 @@ export async function handleLoadSeries(url, { sourceTabId = null } = {}) {
       originalCoverThumbUrl: series.coverThumbUrl || series.coverUrl || '',
       filename: sanitizeFilename(series.title, true)
     };
-    state.chapters = await hydrateChaptersFromCache(series.chapters);
+    state.chapters = hydratedChapters;
     state.volumeFilter = null;
     state.lastClickedIdx = -1;
     state.lastClickedChapState = null;
@@ -184,7 +207,7 @@ export async function handleLoadSeries(url, { sourceTabId = null } = {}) {
     );
     if (series.chapters.length === 0) {
       appendLog(
-        `Aviso: nenhum capítulo localizado em ${url}. Tente Modo SPA ou 🎯 Apontar nas Opções Avançadas.`,
+        `Aviso: nenhum capítulo localizado em ${url}. Tente Modo SPA ou Apontar nas Opções Avançadas.`,
         'warn'
       );
       showBanner(t('msgLoadedZero'), 'info');
@@ -199,6 +222,7 @@ export async function handleLoadSeries(url, { sourceTabId = null } = {}) {
       );
     }
   } catch (err) {
+    if (loadSeq !== currentLoadSeq) return;
     appendLog(`ERRO ao carregar obra (${url}): ${err.message}`, 'error');
     showBanner(
       t('msgLoadError', { error: err.message }),
@@ -206,9 +230,11 @@ export async function handleLoadSeries(url, { sourceTabId = null } = {}) {
       err.isAntiBotChallenge ? { label: t('btnOpenVerifyPage'), url } : null
     );
   } finally {
-    setLoadingOverlay(false);
-    btn.disabled = false;
-    btn.textContent = t('btnLoadSeries');
+    if (loadSeq === currentLoadSeq) {
+      setLoadingOverlay(false);
+      btn.disabled = false;
+      btn.textContent = t('btnLoadSeries');
+    }
   }
 }
 
@@ -220,17 +246,21 @@ export async function handleAutoDetectSelectors() {
   }
 
   readOptionsFromUi();
+  const isSameActiveSeries = Boolean(
+    state.metadata?.startingUrl && normalizeUrl(state.metadata.startingUrl) === normalizeUrl(url)
+  );
+  const useTab = Boolean(state.options.renderWithTab || (isSameActiveSeries && state.seriesRequiresTab));
   const btn = $('btn-auto-detect-selectors');
   btn.disabled = true;
   btn.textContent = t('btnAutoDetectingSelectors');
 
   try {
     let indexDoc = await fetchDocumentWithOptions(url, {
-      renderWithTab: state.options.renderWithTab,
+      renderWithTab: useTab,
       onLog: appendLog
     });
     let scan = genericHtmlParser.suggestSelectors({ indexDoc, targetUrl: url });
-    if (scan.listCount === 0 && !state.options.renderWithTab) {
+    if (scan.listCount === 0 && !useTab) {
       try {
         const renderedDoc = await fetchDocumentWithOptions(url, { renderWithTab: true, onLog: appendLog });
         const renderedScan = genericHtmlParser.suggestSelectors({ indexDoc: renderedDoc, targetUrl: url });
@@ -243,12 +273,12 @@ export async function handleAutoDetectSelectors() {
       }
     }
 
-    const sampleUrl = state.chapters?.[0]?.url || scan.sampleChapterUrl || '';
+    const sampleUrl = (isSameActiveSeries ? state.chapters?.[0]?.url : '') || scan.sampleChapterUrl || '';
     let chapterDoc = null;
     if (sampleUrl && sampleUrl !== url) {
       try {
         chapterDoc = await fetchDocumentWithOptions(sampleUrl, {
-          renderWithTab: state.options.renderWithTab,
+          renderWithTab: useTab,
           onLog: appendLog
         });
       } catch {
@@ -322,14 +352,32 @@ export async function handleTestSelectors() {
       return;
     }
   }
+  for (const rawLine of String(state.options.customStripPatterns || '').split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line || !line.startsWith('/')) continue;
+    const rxMatch = line.match(/^\/(.+)\/([a-z]*)$/i);
+    if (!rxMatch) {
+      setTestResult(t('msgTestSelectorsInvalidRegex', { error: line }));
+      return;
+    }
+    try {
+      new RegExp(rxMatch[1], rxMatch[2]);
+    } catch (err) {
+      setTestResult(t('msgTestSelectorsInvalidRegex', { error: err.message }));
+      return;
+    }
+  }
 
   btn.disabled = true;
   btn.textContent = t('btnTestingSelectors');
 
   try {
-    const useTab = Boolean(state.options.renderWithTab || state.seriesRequiresTab);
+    const isSameActiveSeries = Boolean(
+      state.metadata?.startingUrl && normalizeUrl(state.metadata.startingUrl) === normalizeUrl(url)
+    );
+    const useTab = Boolean(state.options.renderWithTab || (isSameActiveSeries && state.seriesRequiresTab));
     const indexDoc = await fetchDocumentWithOptions(url, { renderWithTab: useTab, onLog: appendLog });
-    const parser = state.activeParser || parserRegistry.detect(indexDoc, url, state.options.parserId || 'auto');
+    const parser = parserRegistry.detect(indexDoc, url, state.options.parserId || 'auto');
 
     let listCount = 0;
     let sampleChapter = null;
@@ -353,22 +401,25 @@ export async function handleTestSelectors() {
       if (collected.length > 0) {
         listCount = collected.length;
         sampleChapter = collected[0];
-      } else if (
-        state.chapters?.length > 0 &&
-        normalizeUrl(state.activeSeries?.startingUrl || '') === normalizeUrl(url)
-      ) {
+      } else if (state.chapters?.length > 0 && isSameActiveSeries) {
         listCount = state.chapters.length;
         sampleChapter = state.chapters[0];
       }
     }
 
     const sampleTarget = sampleChapter || { url, displayTitle: url };
+    const sampleParser = resolveParserForChapterUrl(
+      sampleTarget.url,
+      parser || genericHtmlParser,
+      state.options.parserId || 'auto',
+      url
+    );
     const effectiveOptions = {
       ...state.options,
       renderWithTab: useTab,
       onLog: appendLog
     };
-    const parsed = await downloadAndParseChapter(sampleTarget, parser || genericHtmlParser, effectiveOptions);
+    const parsed = await downloadAndParseChapter(sampleTarget, sampleParser, effectiveOptions);
     const words = normalizeSpaces((parsed.nodes || []).map((n) => n.textContent || '').join(' '))
       .split(' ')
       .filter(Boolean).length;
