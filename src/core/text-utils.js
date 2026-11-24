@@ -37,7 +37,7 @@ function parseChapterOrderNum(ch) {
   for (const text of candidates) {
     if (!text) continue;
     const m =
-      String(text).match(/(?:cap(?:[íi]tulo)?|chapter|ch\.?|ep\.?|#|parte)\s*(\d+(?:\.\d+)?)/i) ||
+      String(text).match(/(?:\b(?:cap(?:[íi]tulo)?|chapter|ch\.?|ep\.?|parte)|#)\s*(\d+(?:\.\d+)?)/i) ||
       String(text).match(/^\s*(\d+(?:\.\d+)?)\b/);
     if (m) return parseFloat(m[1]);
   }
@@ -48,11 +48,27 @@ function parseChapterOrderNum(ch) {
 export function ensureAscendingChapterOrder(chapters, defaultReversed = false) {
   if (!Array.isArray(chapters) || chapters.length < 2) return chapters;
   const nums = chapters.map(parseChapterOrderNum).filter((n) => n !== null && Number.isFinite(n));
-  if (nums.length >= 2 && nums[0] !== nums[nums.length - 1]) {
+  if (nums.length >= 2) {
+    let ascSteps = 0;
+    let descSteps = 0;
+    for (let i = 1; i < nums.length; i++) {
+      if (nums[i] > nums[i - 1]) ascSteps++;
+      else if (nums[i] < nums[i - 1]) descSteps++;
+    }
+    if (descSteps > ascSteps) {
+      chapters.reverse();
+      return chapters;
+    }
+    if (ascSteps > descSteps) {
+      return chapters;
+    }
     if (nums[0] > nums[nums.length - 1]) {
       chapters.reverse();
+      return chapters;
     }
-    return chapters;
+    if (nums[0] < nums[nums.length - 1]) {
+      return chapters;
+    }
   }
   if (defaultReversed) chapters.reverse();
   return chapters;
@@ -82,14 +98,32 @@ export const FOLDER_LAYOUT_TEMPLATES = {
 export function sanitizePathSegment(name, removeIllegal = true) {
   let out = normalizeSpaces(name);
   if (removeIllegal) {
+    // eslint-disable-next-line no-control-regex
     out = out.replace(/[<>:"/\\|?*\x00-\x1f]/g, '_').replace(/\s+/g, ' ').trim();
+  } else {
+    // Always strip path separators and control characters even when removeIllegal=false to prevent traversal
+    // eslint-disable-next-line no-control-regex
+    out = out.replace(/[/\\\x00-\x1f]/g, '_').replace(/\s+/g, ' ').trim();
   }
   out = out.replace(/^[\s.]+|[\s.]+$/g, '');
   if (!out || out === '.' || out === '..') return '';
-  if (removeIllegal && /^(?:CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])$/i.test(out)) {
+  if (removeIllegal && /^(?:CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(?:\.|$)/i.test(out)) {
     out = `_${out}`;
   }
+  if (out.length > 160) {
+    out = out.slice(0, 160).replace(/[\s.]+$/g, '');
+  }
   return out;
+}
+
+function replacePathTokens(template, tokenMap) {
+  return String(template || '').replace(
+    /%(Filename|Title|Author|Volume|Root|Format|Language)%/gi,
+    (full, key) => {
+      const k = key.toLowerCase();
+      return Object.prototype.hasOwnProperty.call(tokenMap, k) ? tokenMap[k] : full;
+    }
+  );
 }
 
 /**
@@ -107,11 +141,12 @@ export function buildOutputPath({
 } = {}) {
   const removeIllegal = options.removeIllegal !== false;
   const filenameTemplate = options.customFilename || '%Filename%';
-  let rawFile = filenameTemplate
-    .replace(/%Filename%/gi, baseFilename || title || 'webpullbook-ebook')
-    .replace(/%Title%/gi, title || baseFilename || 'WebPullBook')
-    .replace(/%Author%/gi, author || '')
-    .replace(/%Volume%/gi, volumeLabel || '');
+  let rawFile = replacePathTokens(filenameTemplate, {
+    filename: baseFilename || title || 'webpullbook-ebook',
+    title: title || baseFilename || 'WebPullBook',
+    author: author || '',
+    volume: volumeLabel || ''
+  });
 
   if (volumeLabel && !/%Volume%/i.test(filenameTemplate)) {
     rawFile = `${rawFile} - ${volumeLabel}`;
@@ -157,6 +192,16 @@ export function buildOutputPath({
   const safeFormat = sanitizePathSegment(cleanExt.toUpperCase(), true);
   const safeLang = sanitizePathSegment(language || '', true);
 
+  const folderTokenMap = {
+    root: rootSegments.join('_'),
+    title: safeTitle,
+    filename: safeFilename,
+    author: safeAuthor,
+    volume: safeVolume,
+    format: safeFormat,
+    language: safeLang
+  };
+
   const folderSegments = [];
   for (const part of folderTemplate.split(/[/\\]+/)) {
     const trimmed = part.trim();
@@ -165,14 +210,7 @@ export function buildOutputPath({
       folderSegments.push(...rootSegments);
       continue;
     }
-    const expanded = trimmed
-      .replace(/%Root%/gi, rootSegments.join('_'))
-      .replace(/%Title%/gi, safeTitle)
-      .replace(/%Filename%/gi, safeFilename)
-      .replace(/%Author%/gi, safeAuthor)
-      .replace(/%Volume%/gi, safeVolume)
-      .replace(/%Format%/gi, safeFormat)
-      .replace(/%Language%/gi, safeLang);
+    const expanded = replacePathTokens(trimmed, folderTokenMap);
 
     const cleanSeg = sanitizePathSegment(expanded, true);
     if (cleanSeg) {
@@ -213,7 +251,7 @@ export function extractVolumeLabel(rawLabel, numText = '', href = '') {
   const sources = [rawLabel, numText, href];
   for (const src of sources) {
     if (!src) continue;
-    const match = String(src).match(/(?:\bvol(?:ume)?[.\s_-]*|\blivro\s*|\bbook\s*|\btome\s*|[-/]volume-)(\d+)/i);
+    const match = String(src).match(/(?:\bvol(?:ume)?[.\s_-]*|\blivro[.\s_-]*|\bbook[.\s_-]*|\btome[.\s_-]*|[-/]volume-)(\d+)/i);
     if (match) {
       const n = parseInt(match[1], 10);
       if (!Number.isNaN(n)) {
@@ -247,22 +285,32 @@ export function extractCleanSynopsis(container) {
   }
 
   const lines = [];
-  for (const child of clone.children) {
-    const tag = child.tagName.toLowerCase();
-    if (tag === 'hr') break;
-    if (child.querySelector('hr')) break;
-    if (/^(aviso|notice|disclaimer)$/i.test(normalizeSpaces(child.textContent))) break;
-
-    if (tag === 'p') {
-      const txt = normalizeSpaces(child.textContent);
-      if (txt) lines.push(txt);
-    } else {
-      for (const p of child.querySelectorAll('p')) {
-        const txt = normalizeSpaces(p.textContent);
+  let stop = false;
+  const walk = (root) => {
+    for (const child of root.children || []) {
+      if (stop) break;
+      const tag = child.tagName?.toLowerCase();
+      if (tag === 'hr') {
+        stop = true;
+        break;
+      }
+      if (/^(aviso|notice|disclaimer)$/i.test(normalizeSpaces(child.textContent))) {
+        stop = true;
+        break;
+      }
+      if (tag === 'p') {
+        if (child.querySelector('hr')) {
+          stop = true;
+          break;
+        }
+        const txt = normalizeSpaces(child.textContent);
         if (txt) lines.push(txt);
+      } else {
+        walk(child);
       }
     }
-  }
+  };
+  walk(clone);
 
   if (lines.length === 0) {
     return normalizeSpaces(clone.textContent);

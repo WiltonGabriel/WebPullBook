@@ -77,27 +77,41 @@ export class NovelManiaParser extends BaseParser {
       return { targetUrl, doc };
     }
 
-    const candidates = [];
-    for (const a of doc.querySelectorAll('nav a[href*="/novels/"], a[href*="/novels/"]')) {
-      const href = a.getAttribute('href') || '';
-      if (!href || /\/capitulos\//i.test(href)) continue;
-      try {
-        const abs = normalizeUrl(new URL(href, targetUrl).toString());
-        if (extractNovelSlug(abs)) candidates.push(abs);
-      } catch {
-        // Ignore malformed URL
-      }
-    }
+    const prioritized = [];
+    const secondary = [];
+    const seen = new Set([targetUrl]);
 
     if (slug) {
       try {
-        const canonical = new URL(`/novels/${slug}`, targetUrl).toString();
-        if (!candidates.includes(canonical)) candidates.push(canonical);
+        const canonical = normalizeUrl(new URL(`/novels/${slug}`, targetUrl).toString());
+        if (!seen.has(canonical)) {
+          seen.add(canonical);
+          prioritized.push(canonical);
+        }
       } catch {
         // Ignore
       }
     }
 
+    for (const a of doc.querySelectorAll('nav a[href*="/novels/"], a[href*="/novels/"]')) {
+      const href = a.getAttribute('href') || '';
+      if (!href || /\/capitulos\//i.test(href)) continue;
+      try {
+        const abs = normalizeUrl(new URL(href, targetUrl).toString());
+        const candSlug = extractNovelSlug(abs);
+        if (!candSlug || seen.has(abs)) continue;
+        seen.add(abs);
+        if (slug && candSlug === slug) {
+          prioritized.push(abs);
+        } else if (!slug) {
+          secondary.push(abs);
+        }
+      } catch {
+        // Ignore malformed URL
+      }
+    }
+
+    const candidates = [...prioritized, ...secondary].slice(0, 3);
     for (const candidateUrl of candidates) {
       if (candidateUrl === targetUrl) continue;
       try {
@@ -129,7 +143,11 @@ export class NovelManiaParser extends BaseParser {
 
     for (const dt of doc.querySelectorAll('dl dt')) {
       const label = normalizeSpaces(dt.textContent).toLowerCase();
-      const dd = dt.parentElement?.querySelector('dd');
+      let dd = dt.nextElementSibling;
+      if (dd && dd.tagName?.toLowerCase() !== 'dd') dd = null;
+      if (!dd && dt.parentElement?.tagName?.toLowerCase() !== 'dl') {
+        dd = dt.parentElement?.querySelector('dd') || null;
+      }
       const value = normalizeSpaces(dd?.textContent);
       if (!value) continue;
       if (label === 'autor' && !out.author) {
@@ -241,22 +259,34 @@ export class NovelManiaParser extends BaseParser {
       const firstPage = await this._fetchJson(`${baseApi}?page=1&items=50&sort=asc`, signal);
 
       if (firstPage?.success && Array.isArray(firstPage.data) && firstPage.data.length > 0) {
-        const totalPages = Math.max(1, Number(firstPage.meta?.pages) || 1);
+        const totalPages = Math.min(200, Math.max(1, Number(firstPage.meta?.pages) || 1));
         const rawItems = [...firstPage.data];
+        const failedPages = [];
 
         const batchSize = 4;
         for (let start = 2; start <= totalPages; start += batchSize) {
           if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
           const batchPages = [];
+          const pageNums = [];
           for (let p = start; p < start + batchSize && p <= totalPages; p++) {
+            pageNums.push(p);
             batchPages.push(this._fetchJson(`${baseApi}?page=${p}&items=50&sort=asc`, signal));
           }
           const results = await Promise.all(batchPages);
-          for (const pageRes of results) {
+          for (let idx = 0; idx < results.length; idx++) {
+            const pageRes = results[idx];
             if (pageRes?.success && Array.isArray(pageRes.data)) {
               rawItems.push(...pageRes.data);
+            } else {
+              failedPages.push(pageNums[idx]);
             }
           }
+        }
+        if (failedPages.length > 0) {
+          options.onLog?.(
+            `[NOVELMANIA] Falha ao carregar página(s) da API (${failedPages.join(', ')} de ${totalPages}); alguns capítulos podem estar ausentes.`,
+            'warn'
+          );
         }
 
         const mapped = this._mapApiChapters(rawItems, targetUrl, slug);
@@ -352,12 +382,16 @@ export class NovelManiaParser extends BaseParser {
             const cleanSyn = extractCleanSynopsis(synDoc.body);
             if (cleanSyn) series.synopsis = cleanSyn;
           }
-          if (data.cover?.original) {
-            series.coverUrl = data.cover.original;
-            series.coverThumbUrl = data.cover.large || data.cover.small || series.coverThumbUrl || data.cover.original;
-          } else if (data.cover?.large && !series.coverUrl) {
-            series.coverUrl = data.cover.large;
-            series.coverThumbUrl = data.cover.small || data.cover.large;
+          const baseCoverUrl = series.startingUrl || inputUrl;
+          const origCover = resolveAbsoluteUrl(data.cover?.original, baseCoverUrl);
+          const largeCover = resolveAbsoluteUrl(data.cover?.large, baseCoverUrl);
+          const smallCover = resolveAbsoluteUrl(data.cover?.small, baseCoverUrl);
+          if (origCover) {
+            series.coverUrl = origCover;
+            series.coverThumbUrl = largeCover || smallCover || series.coverThumbUrl || origCover;
+          } else if (largeCover && !series.coverUrl) {
+            series.coverUrl = largeCover;
+            series.coverThumbUrl = smallCover || largeCover;
           }
         }
       } catch (err) {

@@ -24,9 +24,16 @@ export function serializeNodesForCache(nodes) {
 }
 
 export function hydrateCachedChapter(chapter, record) {
+  if (!record) return null;
   const parser = new DOMParser();
   const wrapped = `<?xml version="1.0" encoding="utf-8"?><html xmlns="${XHTML_NS}"><body>${record.contentXml || ''}</body></html>`;
   const xmlDoc = parser.parseFromString(wrapped, 'application/xhtml+xml');
+  const parserErr =
+    xmlDoc.getElementsByTagName?.('parsererror')?.length > 0 ||
+    Boolean(xmlDoc.querySelector?.('parsererror'));
+  if (parserErr) {
+    return null;
+  }
   const bodyEl =
     xmlDoc.getElementsByTagNameNS(XHTML_NS, 'body')[0] ||
     xmlDoc.documentElement?.lastElementChild ||
@@ -36,11 +43,17 @@ export function hydrateCachedChapter(chapter, record) {
   const rawImgEls = bodyEl ? Array.from(bodyEl.getElementsByTagNameNS(XHTML_NS, 'img')) : [];
   const imgEls =
     rawImgEls.length > 0 ? rawImgEls : bodyEl ? Array.from(bodyEl.getElementsByTagName('img')) : [];
+  const fallbacks = record.imageFallbacks && typeof record.imageFallbacks === 'object' ? record.imageFallbacks : {};
   const images = imgEls
-    .map((el) => ({
-      originalUrl: (el.getAttribute('src') || '').trim(),
-      element: el
-    }))
+    .map((el) => {
+      const originalUrl = (el.getAttribute('src') || '').trim();
+      const fallbackUrl = originalUrl && typeof fallbacks[originalUrl] === 'string' ? fallbacks[originalUrl] : null;
+      return {
+        originalUrl,
+        ...(fallbackUrl ? { fallbackUrl } : {}),
+        element: el
+      };
+    })
     .filter((entry) => Boolean(entry.originalUrl));
 
   return {
@@ -67,6 +80,7 @@ export function hydrateCachedChapter(chapter, record) {
 class CacheStore {
   constructor() {
     this._dbPromise = null;
+    this._capPromise = null;
   }
 
   isSupported() {
@@ -99,10 +113,21 @@ class CacheStore {
             db.close();
             this._dbPromise = null;
           };
+          db.onclose = () => {
+            this._dbPromise = null;
+          };
           resolve(db);
         };
-        req.onerror = () => resolve(null);
+        req.onerror = () => {
+          this._dbPromise = null;
+          resolve(null);
+        };
+        req.onblocked = () => {
+          this._dbPromise = null;
+          resolve(null);
+        };
       } catch {
+        this._dbPromise = null;
         resolve(null);
       }
     });
@@ -143,6 +168,8 @@ class CacheStore {
           resolve(rec);
         };
         req.onerror = () => resolve(null);
+        tx.onerror = () => resolve(null);
+        tx.onabort = () => resolve(null);
       } catch {
         resolve(null);
       }
@@ -169,6 +196,7 @@ class CacheStore {
         }
         tx.oncomplete = () => resolve();
         tx.onerror = () => resolve();
+        tx.onabort = () => resolve();
       } catch {
         resolve();
       }
@@ -183,6 +211,7 @@ class CacheStore {
     chapterTitle,
     subtitle,
     nodes,
+    imageFallbacks = null,
     ttlDays = DEFAULT_CACHE_TTL_DAYS
   }) {
     const ttlMs = ttlMsFromDays(ttlDays);
@@ -196,13 +225,15 @@ class CacheStore {
       chapterTitle,
       subtitle: subtitle || '',
       contentXml,
+      ...(imageFallbacks && Object.keys(imageFallbacks).length > 0 ? { imageFallbacks } : {}),
       byteSize: estimateBytes(contentXml) + 200,
       savedAt: now,
       expiresAt: now + ttlMs
     };
-    await this._tx([STORE_CHAPTERS], 'readwrite', (tx) => {
+    const ok = await this._tx([STORE_CHAPTERS], 'readwrite', (tx) => {
       tx.objectStore(STORE_CHAPTERS).put(record);
     });
+    if (!ok) return false;
     await this.enforceStorageCap();
     return true;
   }
@@ -243,7 +274,9 @@ class CacheStore {
         coverThumbUrl: metadata.coverThumbUrl || '',
         genres: Array.isArray(metadata.genres) ? metadata.genres : [],
         synopsis: metadata.synopsis || '',
-        status: metadata.status || ''
+        status: metadata.status || '',
+        requiresTabRender: Boolean(metadata.requiresTabRender),
+        separateBooksMode: Boolean(metadata.separateBooksMode)
       },
       parserId: parserId || 'auto',
       chapters: compactChapters,
@@ -298,6 +331,7 @@ class CacheStore {
 
         tx.oncomplete = () => resolve();
         tx.onerror = () => resolve();
+        tx.onabort = () => resolve();
       } catch {
         resolve();
       }
@@ -334,6 +368,7 @@ class CacheStore {
         };
         tx.oncomplete = () => resolve();
         tx.onerror = () => resolve();
+        tx.onabort = () => resolve();
       } catch {
         resolve();
       }
@@ -365,6 +400,7 @@ class CacheStore {
         };
         tx.oncomplete = () => resolve();
         tx.onerror = () => resolve();
+        tx.onabort = () => resolve();
       } catch {
         resolve();
       }
@@ -374,44 +410,45 @@ class CacheStore {
   }
 
   async enforceStorageCap(maxBytes = MAX_CACHE_BYTES) {
-    const db = await this.open();
-    if (!db) return;
+    if (this._capPromise) return this._capPromise;
+    this._capPromise = (async () => {
+      const db = await this.open();
+      if (!db) return;
 
-    const entries = [];
-    let totalBytes = 0;
-    await new Promise((resolve) => {
-      try {
-        const tx = db.transaction(STORE_CHAPTERS, 'readonly');
-        tx.objectStore(STORE_CHAPTERS).openCursor().onsuccess = (e) => {
-          const cursor = e.target.result;
-          if (!cursor) return;
-          const sz = cursor.value.byteSize || 0;
-          totalBytes += sz;
-          entries.push({ key: cursor.value.key, savedAt: cursor.value.savedAt || 0, byteSize: sz });
-          cursor.continue();
-        };
-        tx.oncomplete = () => resolve();
-        tx.onerror = () => resolve();
-      } catch {
-        resolve();
-      }
-    });
-
-    if (totalBytes <= maxBytes) return;
-    entries.sort((a, b) => a.savedAt - b.savedAt);
-
-    const toDelete = [];
-    for (const item of entries) {
-      if (totalBytes <= maxBytes * 0.85) break;
-      toDelete.push(item.key);
-      totalBytes -= item.byteSize;
-    }
-
-    if (toDelete.length > 0) {
-      await this._tx([STORE_CHAPTERS], 'readwrite', (tx) => {
-        const store = tx.objectStore(STORE_CHAPTERS);
-        for (const k of toDelete) store.delete(k);
+      await new Promise((resolve) => {
+        try {
+          const tx = db.transaction(STORE_CHAPTERS, 'readwrite');
+          const store = tx.objectStore(STORE_CHAPTERS);
+          const entries = [];
+          let totalBytes = 0;
+          store.index('savedAt').openCursor().onsuccess = (e) => {
+            const cursor = e.target.result;
+            if (cursor) {
+              const sz = cursor.value.byteSize || 0;
+              totalBytes += sz;
+              entries.push({ key: cursor.value.key, byteSize: sz });
+              cursor.continue();
+              return;
+            }
+            if (totalBytes <= maxBytes) return;
+            for (const item of entries) {
+              if (totalBytes <= maxBytes * 0.85) break;
+              store.delete(item.key);
+              totalBytes -= item.byteSize;
+            }
+          };
+          tx.oncomplete = () => resolve();
+          tx.onerror = () => resolve();
+          tx.onabort = () => resolve();
+        } catch {
+          resolve();
+        }
       });
+    })();
+    try {
+      await this._capPromise;
+    } finally {
+      this._capPromise = null;
     }
   }
 

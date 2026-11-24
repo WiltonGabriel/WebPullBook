@@ -68,7 +68,13 @@ function applyCustomTextStripPatterns(nodes, rawPatterns) {
   for (let i = nodes.length - 1; i >= 0; i--) {
     const node = nodes[i];
     stripTextNodes(node);
-    const hasMedia = Boolean(node.querySelector?.('img, svg, hr, br'));
+    const tag = node?.tagName?.toLowerCase() || '';
+    const hasMedia =
+      tag === 'img' ||
+      tag === 'svg' ||
+      tag === 'hr' ||
+      tag === 'br' ||
+      Boolean(node.querySelector?.('img, svg, hr, br'));
     if (!hasMedia && !normalizeSpaces(node.textContent || '')) {
       nodes.splice(i, 1);
     }
@@ -123,28 +129,69 @@ export class BaseParser {
           : Array.isArray(parsed['@graph'])
             ? parsed['@graph']
             : [parsed];
+        const idLookup = new Map();
         for (const item of nodes) {
+          if (item && typeof item === 'object' && typeof item['@id'] === 'string') {
+            idLookup.set(item['@id'], item);
+          }
+        }
+        const resolvePersonName = (entry) => {
+          if (typeof entry === 'string') return normalizeSpaces(entry);
+          if (!entry || typeof entry !== 'object') return '';
+          if (typeof entry.name === 'string') return normalizeSpaces(entry.name);
+          if (typeof entry['@id'] === 'string' && idLookup.has(entry['@id'])) {
+            const target = idLookup.get(entry['@id']);
+            if (typeof target?.name === 'string') return normalizeSpaces(target.name);
+          }
+          return '';
+        };
+        const resolveImageUrlField = (imgField) => {
+          if (typeof imgField === 'string') return imgField.trim();
+          if (Array.isArray(imgField)) {
+            for (const entry of imgField) {
+              const found = resolveImageUrlField(entry);
+              if (found) return found;
+            }
+            return '';
+          }
+          if (imgField && typeof imgField === 'object') {
+            const raw = imgField.url || imgField.contentUrl;
+            if (typeof raw === 'string') return raw.trim();
+            if (typeof imgField['@id'] === 'string' && idLookup.has(imgField['@id'])) {
+              const target = idLookup.get(imgField['@id']);
+              if (target && target !== imgField) return resolveImageUrlField(target);
+            }
+          }
+          return '';
+        };
+        for (const item of nodes) {
+          if (!item || typeof item !== 'object') continue;
           const typeStr = String(item?.['@type'] || '');
           if (/Book|Novel|CreativeWork|Article|WebPage/i.test(typeStr)) {
-            if (!result.title && item.name) result.title = normalizeSpaces(item.name);
+            if (!result.title && typeof item.name === 'string') {
+              result.title = normalizeSpaces(item.name);
+            }
             if (!result.author && item.author) {
               const authors = Array.isArray(item.author) ? item.author : [item.author];
-              const names = authors.map((a) => normalizeSpaces(a?.name || a)).filter(Boolean);
+              const names = authors.map(resolvePersonName).filter(Boolean);
               if (names.length) result.author = names.join(', ');
             }
-            if (!result.synopsis && item.description) {
+            if (!result.synopsis && typeof item.description === 'string') {
               result.synopsis = normalizeSpaces(item.description);
             }
             if (!result.coverUrl && item.image) {
-              const imgVal = typeof item.image === 'string' ? item.image : item.image?.url;
+              const imgVal = resolveImageUrlField(item.image);
               if (imgVal) result.coverUrl = imgVal;
             }
-            if (!result.status && item.creativeWorkStatus) {
+            if (!result.status && typeof item.creativeWorkStatus === 'string') {
               result.status = normalizeSpaces(item.creativeWorkStatus);
             }
             if ((!result.genres || result.genres.length === 0) && item.genre) {
               const rawGenres = Array.isArray(item.genre) ? item.genre : [item.genre];
-              const genres = rawGenres.map((g) => normalizeSpaces(g)).filter(Boolean);
+              const genres = rawGenres
+                .filter((g) => typeof g === 'string')
+                .map((g) => normalizeSpaces(g))
+                .filter(Boolean);
               if (genres.length > 0) result.genres = genres;
             }
           }
@@ -160,7 +207,13 @@ export class BaseParser {
     const out = {};
     for (const dt of doc.querySelectorAll('dl dt')) {
       const label = normalizeSpaces(dt.textContent).toLowerCase();
-      const dd = dt.parentElement?.querySelector('dd') || dt.nextElementSibling;
+      let dd = dt.nextElementSibling;
+      if (dd && dd.tagName?.toLowerCase() !== 'dd') {
+        dd = null;
+      }
+      if (!dd && dt.parentElement?.tagName?.toLowerCase() !== 'dl') {
+        dd = dt.parentElement?.querySelector('dd') || null;
+      }
       const value = normalizeSpaces(dd?.textContent);
       if (!value) continue;
       if (!out.author && /^(?:autor|author|writer|escritor)$/i.test(label)) {
@@ -179,7 +232,7 @@ export class BaseParser {
     const h1Title = doc.querySelector('h1')?.textContent;
     const title = normalizeSpaces(h1Title || jsonLd.title || ogTitle || doc.title) || 'WebPullBook';
 
-    const langAttr = (doc.documentElement.getAttribute('lang') || 'pt-BR').trim();
+    const langAttr = (doc.documentElement?.getAttribute?.('lang') || 'pt-BR').trim().replace(/_/g, '-');
     const language = langAttr.split('-')[0].toLowerCase() || 'pt';
 
     const ogSiteName = normalizeSpaces(doc.querySelector('meta[property="og:site_name"]')?.getAttribute('content') || '');
@@ -215,14 +268,7 @@ export class BaseParser {
       jsonLd.coverUrl ||
       doc.querySelector('.cover img, .thumb img, .book-cover img, main img')?.getAttribute('src') ||
       '';
-    let coverUrl = '';
-    if (rawCover) {
-      try {
-        coverUrl = new URL(rawCover, targetUrl).toString();
-      } catch {
-        coverUrl = '';
-      }
-    }
+    const coverUrl = rawCover ? resolveSafeHttpUrl(rawCover, targetUrl) || '' : '';
 
     const synContainer = doc.querySelector(
       '.synopsis, .description, .summary, [itemprop="description"], [data-testid*="synopsis"], [data-testid*="description"], .entry-content'
@@ -295,10 +341,14 @@ export class BaseParser {
       'a[rel="next"], .pagination a.next, .nav-links a.next, a.next.page-numbers'
     );
     const href = (nextEl?.getAttribute('href') || '').trim();
-    if (!href || href.startsWith('#') || /^javascript:/i.test(href)) return null;
+    const nextAbs = resolveSafeHttpUrl(href, currentUrl);
+    if (!nextAbs) return null;
     try {
-      const nextAbs = normalizeUrl(new URL(href, currentUrl).toString());
-      return nextAbs !== normalizeUrl(currentUrl) ? nextAbs : null;
+      const curParsed = new URL(currentUrl);
+      const nextParsed = new URL(nextAbs);
+      if (nextParsed.origin !== curParsed.origin) return null;
+      const normNext = normalizeUrl(nextAbs);
+      return normNext !== normalizeUrl(currentUrl) ? normNext : null;
     } catch {
       return null;
     }
@@ -335,6 +385,9 @@ export class BaseParser {
             );
             pageItems = nativeItems;
             activeListSelector = '';
+            if (options && typeof options === 'object') {
+              options._usedCustomListFallback = true;
+            }
           }
         }
       } else {
@@ -364,7 +417,16 @@ export class BaseParser {
       if (!normNext || visitedPages.has(normNext)) break;
       visitedPages.add(normNext);
       pageUrl = normNext;
-      pageDoc = await fetchDocumentWithOptions(normNext, options, signal);
+      try {
+        pageDoc = await fetchDocumentWithOptions(normNext, options, signal);
+      } catch (err) {
+        if (err?.name === 'AbortError') throw err;
+        onLog?.(
+          `[PARSER] Paginação interrompida em ${normNext} (${err.message}); preservando ${allChapters.length} capítulo(s) coletados.`,
+          'warn'
+        );
+        break;
+      }
     }
 
     return allChapters;
@@ -408,7 +470,9 @@ export class BaseParser {
     }
 
     // Automatic SPA / dynamic DOM fallback if static HTML yielded 0 chapters (at most once)
+    const deferFallback = Boolean(options._deferTabFallbackToRegistry);
     if (
+      !deferFallback &&
       allChapters.length === 0 &&
       !usedTabFallback &&
       options.autoFallbackTab !== false &&
@@ -420,6 +484,7 @@ export class BaseParser {
           waitMs: options.renderWaitMs ?? 1100,
           preferOpenTab: options.preferOpenTabDom !== false,
           waitForSelector: this.getIndexWaitSelector(),
+          onLog: options.onLog,
           signal
         });
         const retryChapters = await this.collectAllChapters(
@@ -433,7 +498,8 @@ export class BaseParser {
           allChapters = retryChapters;
           usedTabFallback = true;
         }
-      } catch {
+      } catch (err) {
+        if (err?.name === 'AbortError') throw err;
         // Keep empty list if fallback tab rendering fails
       }
     }
@@ -502,9 +568,12 @@ export class BaseParser {
     const onLog = typeof options.onLog === 'function' ? options.onLog : null;
     const preferOpenTab = options.preferOpenTabDom !== false;
     const useTabFirst = Boolean(options.renderWithTab || (chapter.tabId && preferOpenTab));
-    let doc = options.pageDomCache?.get(chapter.url) || null;
+    let doc = null;
+    let docFromCache = false;
+    doc = options.pageDomCache?.get(chapter.url) || null;
     const chapterWaitSelector = this.getChapterWaitSelector();
     if (doc) {
+      docFromCache = true;
       onLog?.(`[NET] Reaproveitado DOM em memória: ${chapter.url}`, 'debug');
     } else if (useTabFirst) {
       onLog?.(`[SPA] Capturando capítulo via aba: ${chapter.url}`, 'debug');
@@ -514,6 +583,7 @@ export class BaseParser {
         preferOpenTab,
         tabPool: options.tabPool || null,
         waitForSelector: chapterWaitSelector,
+        onLog,
         signal
       });
     } else {
@@ -536,6 +606,7 @@ export class BaseParser {
             preferOpenTab,
             tabPool: options.tabPool || null,
             waitForSelector: chapterWaitSelector,
+            onLog,
             signal
           });
         } else {
@@ -544,17 +615,15 @@ export class BaseParser {
       }
     }
 
-    if (doc && options.pageDomCache) {
-      options.pageDomCache.set(chapter.url, doc);
-    }
-
     let extracted = this.extractChapter(doc, chapter, options);
 
     // Automatic SPA / dynamic DOM fallback if static fetch found no readable contentRoot (only once)
-    const hasReadableText =
-      extracted?.contentRoot && normalizeSpaces(extracted.contentRoot.textContent).length >= 25;
+    const hasReadableTextOrMedia =
+      extracted?.contentRoot &&
+      (normalizeSpaces(extracted.contentRoot.textContent).length >= 25 ||
+        Boolean(extracted.contentRoot.querySelector('img')));
     if (
-      !hasReadableText &&
+      !hasReadableTextOrMedia &&
       !useTabFirst &&
       !doc?._wpbRenderedByTab &&
       options.autoFallbackTab !== false &&
@@ -568,6 +637,7 @@ export class BaseParser {
           preferOpenTab,
           tabPool: options.tabPool || null,
           waitForSelector: chapterWaitSelector,
+          onLog,
           signal
         });
         const retryExtracted = this.extractChapter(renderedDoc, chapter, options);
@@ -575,7 +645,10 @@ export class BaseParser {
           doc = renderedDoc;
           extracted = retryExtracted;
         }
-      } catch {
+      } catch (err) {
+        if (err?.name === 'AbortError' || err?.isAntiBotChallenge || err?.isRateLimit) {
+          throw err;
+        }
         // Proceed to error check below
       }
     }
@@ -598,6 +671,10 @@ export class BaseParser {
       const err = new Error(`Conteúdo do capítulo não encontrado em ${chapter.url}`);
       err.isNoContent = true;
       throw err;
+    }
+
+    if (doc && !docFromCache && options.pageDomCache) {
+      options.pageDomCache.set(chapter.url, doc);
     }
 
     const hiddenClasses = extractHiddenClassesFromStyles(doc);

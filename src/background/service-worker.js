@@ -45,6 +45,30 @@ chrome.runtime?.onInstalled?.addListener(() => {
 chrome.runtime?.onStartup?.addListener(() => {
   setupCrossOriginHeaderWorkaroundForFirefox();
 });
+chrome.permissions?.onAdded?.addListener(() => {
+  setupCrossOriginHeaderWorkaroundForFirefox();
+});
+
+async function cleanupOrphanedSessionDnrRules() {
+  try {
+    if (!chrome?.tabs?.query || !chrome?.declarativeNetRequest?.updateSessionRules) return;
+    const workspacePrefix = chrome.runtime.getURL('src/workspace/workspace.html');
+    const tabs = await chrome.tabs.query({});
+    const hasWorkspaceTab = (tabs || []).some((tb) => String(tb?.url || '').startsWith(workspacePrefix));
+    if (hasWorkspaceTab) return;
+    const existing = (await chrome.declarativeNetRequest.getSessionRules?.()) || [];
+    const removeRuleIds = existing.map((r) => r.id).filter((id) => id >= 100 && id <= 129);
+    if (removeRuleIds.length > 0) {
+      await chrome.declarativeNetRequest.updateSessionRules({ removeRuleIds });
+    }
+  } catch {
+    // Ignore cleanup errors when tabs/DNR are restricted
+  }
+}
+
+chrome.tabs?.onRemoved?.addListener(() => {
+  cleanupOrphanedSessionDnrRules();
+});
 
 chrome.action.onClicked.addListener(async (tab) => {
   try {

@@ -1,8 +1,11 @@
 import {
   BaseParser,
+  assertSafeHttpUrl,
   canUseTabScripting,
+  ensureAscendingChapterOrder,
   extractVolumeLabel,
   fetchDocumentWithOptions,
+  isSpaDomainCircuitOpen,
   normalizeSpaces,
   normalizeUrl,
   resolveSafeHttpUrl,
@@ -217,8 +220,10 @@ export class ScribbleHubParser extends BaseParser {
       if (nextParsed.origin !== curParsed.origin || nextParsed.pathname !== curParsed.pathname) {
         return null;
       }
-      const curToc = parseInt(curParsed.searchParams.get('toc') || '1', 10) || 1;
-      const nextToc = parseInt(nextParsed.searchParams.get('toc') || '0', 10);
+      const curTocRaw = parseInt(curParsed.searchParams.get('toc') || '1', 10);
+      const curToc = Number.isFinite(curTocRaw) ? curTocRaw : 1;
+      const nextTocRaw = parseInt(nextParsed.searchParams.get('toc') || '0', 10);
+      const nextToc = Number.isFinite(nextTocRaw) ? nextTocRaw : 0;
       if (nextParsed.searchParams.has('toc') && nextToc <= curToc) {
         return null;
       }
@@ -328,7 +333,11 @@ export class ScribbleHubParser extends BaseParser {
     // 3. Last resort: open a single background tab, fetch full TOC in one POST, and close it
     let createdTab = null;
     try {
-      createdTab = await chrome.tabs.create({ url: targetUrl, active: false });
+      const safeTabUrl = assertSafeHttpUrl(targetUrl);
+      if (isSpaDomainCircuitOpen(safeTabUrl)) {
+        return null;
+      }
+      createdTab = await chrome.tabs.create({ url: safeTabUrl, active: false });
       const targetTabId = createdTab.id;
 
       await waitForTabComplete(targetTabId, createdTab, signal, 12000);
@@ -355,7 +364,7 @@ export class ScribbleHubParser extends BaseParser {
     if (allNumericOrder) {
       return [...chapters].sort((a, b) => parseInt(a.numText, 10) - parseInt(b.numText, 10));
     }
-    return [...chapters].reverse();
+    return ensureAscendingChapterOrder([...chapters], true);
   }
 
   collectChapterNodes(doc, targetUrl, _options = {}, context = {}) {
@@ -417,8 +426,10 @@ export class ScribbleHubParser extends BaseParser {
       }
     }
 
-    const collected = await super.collectAllChapters(indexDoc, targetUrl, options, signal);
-    if (customListSelector) return collected;
+    const superOpts = { ...options, _usedCustomListFallback: false };
+    const collected = await super.collectAllChapters(indexDoc, targetUrl, superOpts, signal);
+    const usedCustom = Boolean(customListSelector) && !superOpts._usedCustomListFallback;
+    if (usedCustom) return collected;
     return this._sortChaptersChronological(collected);
   }
 

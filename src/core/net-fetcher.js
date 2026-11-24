@@ -68,7 +68,7 @@ export class PageDomCache {
     }
     try {
       const u = new URL(url);
-      this._lastPath = `${u.origin}${u.pathname}`;
+      this._lastPath = `${u.origin}${u.pathname}${u.search}`;
       this._lastDoc = doc;
     } catch {
       // ignore invalid URL
@@ -91,7 +91,7 @@ export class PageDomCache {
     }
     try {
       const u = new URL(url);
-      const pathKey = `${u.origin}${u.pathname}`;
+      const pathKey = `${u.origin}${u.pathname}${u.search}`;
       if (this._lastDoc && this._lastPath === pathKey && u.hash) {
         return this._cloneSafe(this._lastDoc);
       }
@@ -108,60 +108,95 @@ export class PageDomCache {
   }
 }
 
-export async function fetchHtmlDocument(url, signal, onLog = null) {
+export async function fetchHtmlDocument(url, signal, onLog = null, { timeoutMs = 30000 } = {}) {
   const safeUrl = assertSafeHttpUrl(url);
+  if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+  const reqController = new AbortController();
+  let timedOut = false;
+  const onCallerAbort = () => reqController.abort(signal?.reason);
+  if (signal) signal.addEventListener('abort', onCallerAbort, { once: true });
+  const reqTimer =
+    timeoutMs > 0
+      ? setTimeout(() => {
+          timedOut = true;
+          reqController.abort(new Error(`Timeout after ${timeoutMs}ms`));
+        }, timeoutMs)
+      : null;
+
   const startedAt = Date.now();
-  const response = await fetch(safeUrl, {
-    credentials: 'include',
-    signal
-  });
-  const elapsedMs = Date.now() - startedAt;
-  if (!response.ok) {
-    let bodySnippet = '';
-    try {
-      bodySnippet = (await response.text()).slice(0, 2500);
-    } catch {
-      bodySnippet = '';
-    }
-    const err = new Error(`HTTP ${response.status} ao carregar ${safeUrl}`);
-    err.status = response.status;
-    const retryAfterRaw = response.headers?.get?.('Retry-After');
-    if (retryAfterRaw && /^\d+$/.test(retryAfterRaw.trim())) {
-      err.retryAfterSec = parseInt(retryAfterRaw.trim(), 10);
-    }
-    err.isRateLimit =
-      response.status === 429 ||
-      response.status === 509 ||
-      (response.status === 503 && RATE_LIMIT_TEXT_RX.test(bodySnippet));
-    onLog?.(`[NET] HTTP ${response.status} (${elapsedMs} ms) -> ${safeUrl}`, err.isRateLimit ? 'warn' : 'debug');
-    throw err;
-  }
+  let response;
   let html;
-  if (typeof response.arrayBuffer === 'function') {
-    const rawBytes = new Uint8Array(await response.arrayBuffer());
-    html = decodeHtmlBytes(rawBytes, response.headers);
-  } else {
-    html = await response.text();
+  try {
+    response = await fetch(safeUrl, {
+      credentials: 'include',
+      signal: reqController.signal
+    });
+    const elapsedMs = Date.now() - startedAt;
+    if (!response.ok) {
+      let bodySnippet = '';
+      try {
+        bodySnippet = (await response.text()).slice(0, 2500);
+      } catch {
+        bodySnippet = '';
+      }
+      const err = new Error(`HTTP ${response.status} ao carregar ${safeUrl}`);
+      err.status = response.status;
+      const retryAfterRaw = response.headers?.get?.('Retry-After')?.trim();
+      if (retryAfterRaw) {
+        if (/^\d+$/.test(retryAfterRaw)) {
+          err.retryAfterSec = parseInt(retryAfterRaw, 10);
+        } else {
+          const parsedDate = Date.parse(retryAfterRaw);
+          if (Number.isFinite(parsedDate)) {
+            const deltaSec = Math.ceil((parsedDate - Date.now()) / 1000);
+            if (deltaSec > 0) err.retryAfterSec = deltaSec;
+          }
+        }
+      }
+      err.isRateLimit =
+        response.status === 429 ||
+        response.status === 509 ||
+        (response.status === 503 && RATE_LIMIT_TEXT_RX.test(bodySnippet));
+      onLog?.(`[NET] HTTP ${response.status} (${elapsedMs} ms) -> ${safeUrl}`, err.isRateLimit ? 'warn' : 'debug');
+      throw err;
+    }
+    if (typeof response.arrayBuffer === 'function') {
+      const rawBytes = new Uint8Array(await response.arrayBuffer());
+      html = decodeHtmlBytes(rawBytes, response.headers);
+    } else {
+      html = await response.text();
+    }
+    const kb = (html.length / 1024).toFixed(1);
+    const redirectedNote = response.url && response.url !== url ? ` -> redirecionado para ${response.url}` : '';
+    onLog?.(`[NET] HTTP ${response.status} (${kb} KB, ${elapsedMs} ms) ${url}${redirectedNote}`, 'debug');
+  } catch (err) {
+    if (timedOut && !signal?.aborted) {
+      throw new Error(`Tempo limite HTTP (${timeoutMs} ms) excedido ao carregar ${safeUrl}`);
+    }
+    throw err;
+  } finally {
+    if (reqTimer) clearTimeout(reqTimer);
+    if (signal) signal.removeEventListener('abort', onCallerAbort);
   }
-  const kb = (html.length / 1024).toFixed(1);
-  const redirectedNote = response.url && response.url !== url ? ` -> redirecionado para ${response.url}` : '';
-  onLog?.(`[NET] HTTP ${response.status} (${kb} KB, ${elapsedMs} ms) ${url}${redirectedNote}`, 'debug');
   return new DOMParser().parseFromString(html, 'text/html');
 }
 
 export function sleep(ms, signal) {
+  if (signal?.aborted) {
+    return Promise.reject(new DOMException('Aborted', 'AbortError'));
+  }
   if (!ms || ms <= 0) return Promise.resolve();
   return new Promise((resolve, reject) => {
-    const timer = setTimeout(resolve, ms);
+    const onAbort = () => {
+      clearTimeout(timer);
+      reject(new DOMException('Aborted', 'AbortError'));
+    };
+    const timer = setTimeout(() => {
+      if (signal) signal.removeEventListener('abort', onAbort);
+      resolve();
+    }, ms);
     if (signal) {
-      signal.addEventListener(
-        'abort',
-        () => {
-          clearTimeout(timer);
-          reject(new DOMException('Aborted', 'AbortError'));
-        },
-        { once: true }
-      );
+      signal.addEventListener('abort', onAbort, { once: true });
     }
   });
 }
@@ -173,8 +208,8 @@ export async function fetchWithRetry(url, { retries = 2, signal, onLog = null } 
       return await fetchHtmlDocument(url, signal, onLog);
     } catch (err) {
       if (err.name === 'AbortError') throw err;
-      // Do not hammer rate-limiting firewalls with rapid retries
-      if (err.isRateLimit) throw err;
+      // Do not hammer rate-limiting firewalls or retry deterministic validation errors
+      if (err.isRateLimit || err.nonRetryable) throw err;
       const retryable = !err.status || err.status >= 500 || RETRYABLE_HTTP_STATUSES.has(err.status);
       if (!retryable || attempt >= retries) throw err;
       attempt += 1;
@@ -196,7 +231,9 @@ export function canUseTabScripting() {
 
 export function isAntiBotChallengeDocument(doc) {
   if (!doc) return false;
-  const hasContent = Boolean(doc.querySelector('#chp_raw, .epcontent, .reading-content, ol.toc_ol'));
+  const hasContent = Boolean(
+    doc.querySelector('#chp_raw, .epcontent, .reading-content, ol.toc_ol, .chapter-inner, #chr-content, #chapter-content')
+  );
   if (hasContent) return false;
 
   const title = normalizeSpaces(doc.title || '');
@@ -205,11 +242,16 @@ export function isAntiBotChallengeDocument(doc) {
       '#challenge-running, #cf-challenge-running, #challenge-stage, #challenge-error-text, form#challenge-form, iframe[src*="challenges.cloudflare.com"]'
     )
   );
+  if (hasChallengeEl) return true;
+
+  const fullTextLen = (doc.body?.textContent || '').trim().length;
+  if (fullTextLen > 4000) return false;
+
   const isChallengeTitle =
     /^(?:just a moment|um momento|un momento|un instant|einen moment|un attimo|checking your browser|verificação de segurança)\b|^attention required!\s*\|\s*cloudflare|^ddos-guard/i.test(
       title
     );
-  if (hasChallengeEl || isChallengeTitle) return true;
+  if (isChallengeTitle) return true;
 
   const bodyText = normalizeSpaces((doc.body?.textContent || '').slice(0, 2000));
   return /este site utiliza um serviço de segurança para proteção contra bots|this website is using a security service to protect itself from online attacks|performing security verification|executando verificação de segurança|enable javascript and cookies to continue|ative o javascript e os cookies para continuar/i.test(
@@ -219,8 +261,12 @@ export function isAntiBotChallengeDocument(doc) {
 
 export function isRateLimitDocument(doc) {
   if (!doc) return false;
-  const hasContent = Boolean(doc.querySelector('#chp_raw, .epcontent, .reading-content, ol.toc_ol'));
+  const hasContent = Boolean(
+    doc.querySelector('#chp_raw, .epcontent, .reading-content, ol.toc_ol, .chapter-inner, #chr-content, #chapter-content')
+  );
   if (hasContent) return false;
+  const fullTextLen = (doc.body?.textContent || '').trim().length;
+  if (fullTextLen > 4000) return false;
   const text = normalizeSpaces(`${doc.title || ''} ${(doc.body?.textContent || '').slice(0, 2000)}`);
   return RATE_LIMIT_TEXT_RX.test(text) || /\berror\s*1015\b|you are being rate limited/i.test(text);
 }
@@ -245,6 +291,7 @@ export async function waitForTabComplete(
   timeoutMs = 12000,
   navOpts = {}
 ) {
+  if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
   if (isTabNavigationComplete(initialTab, navOpts)) return;
 
   await new Promise((resolve, reject) => {
@@ -318,10 +365,14 @@ export function assertSafeHttpUrl(rawUrl) {
   try {
     parsed = new URL(String(rawUrl || '').trim());
   } catch {
-    throw new Error(`URL inválida para captura SPA: ${rawUrl}`);
+    const err = new Error(`URL inválida para captura SPA: ${rawUrl}`);
+    err.nonRetryable = true;
+    throw err;
   }
   if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
-    throw new Error(`Protocolo bloqueado na captura SPA (${parsed.protocol}): apenas HTTP/HTTPS é permitido.`);
+    const err = new Error(`Protocolo bloqueado na captura SPA (${parsed.protocol}): apenas HTTP/HTTPS é permitido.`);
+    err.nonRetryable = true;
+    throw err;
   }
   return parsed.toString();
 }
@@ -386,14 +437,31 @@ export class TabRenderPool {
     if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
     if (typeof this._tabId === 'number' && chrome?.tabs?.update) {
       try {
-        const prevUrl = this._lastUrl;
+        let prevUrl = this._lastUrl;
+        if (chrome.tabs.get) {
+          try {
+            const cur = await chrome.tabs.get(this._tabId);
+            if (cur?.url) prevUrl = cur.url;
+          } catch {
+            // keep _lastUrl fallback
+          }
+        }
         const updated = await chrome.tabs.update(this._tabId, { url: safeUrl, active: false });
         if (updated?.id !== undefined) {
           await waitForTabComplete(this._tabId, null, signal, 12000, {
             expectedUrl: safeUrl,
             previousUrl: prevUrl
           });
-          this._lastUrl = safeUrl;
+          let actualUrl = safeUrl;
+          if (chrome.tabs.get) {
+            try {
+              const info = await chrome.tabs.get(this._tabId);
+              if (info?.url) actualUrl = info.url;
+            } catch {
+              // ignore
+            }
+          }
+          this._lastUrl = actualUrl;
           return this._tabId;
         }
       } catch (err) {
@@ -401,15 +469,28 @@ export class TabRenderPool {
           await this.close();
           throw err;
         }
+        const staleId = this._tabId;
         this._tabId = null;
         this._lastUrl = '';
+        if (typeof staleId === 'number' && chrome?.tabs?.remove) {
+          chrome.tabs.remove(staleId).catch(() => {});
+        }
       }
     }
     const created = await chrome.tabs.create({ url: safeUrl, active: false });
     this._tabId = created.id;
     try {
       await waitForTabComplete(this._tabId, created, signal, 12000, { expectedUrl: safeUrl });
-      this._lastUrl = safeUrl;
+      let actualUrl = safeUrl;
+      if (chrome.tabs.get) {
+        try {
+          const info = await chrome.tabs.get(this._tabId);
+          if (info?.url) actualUrl = info.url;
+        } catch {
+          // ignore
+        }
+      }
+      this._lastUrl = actualUrl;
     } catch (err) {
       if (err?.name === 'AbortError') {
         await this.close();
@@ -438,12 +519,13 @@ export class TabRenderPool {
  * instead of blindly sleeping for a fixed interval. Exits immediately if an anti-bot challenge is detected.
  */
 async function waitForDomStabilityInTab(tabId, waitMs, signal, waitForSelector = '') {
-  if (!waitMs || waitMs <= 0) return;
   if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+  if (!waitMs || waitMs <= 0) return;
   const selectorStr = String(waitForSelector || '').trim();
   const maxWaitMs = selectorStr ? Math.max(waitMs, 6000) : Math.max(waitMs, 2600);
+  let abortListener = null;
   try {
-    const res = await chrome.scripting.executeScript({
+    const scriptPromise = chrome.scripting.executeScript({
       target: { tabId },
       args: [maxWaitMs, selectorStr],
       func: (timeoutMs, targetSelector) =>
@@ -522,9 +604,23 @@ async function waitForDomStabilityInTab(tabId, waitMs, signal, waitForSelector =
           check();
         })
     });
+    const res = signal
+      ? await Promise.race([
+          scriptPromise,
+          new Promise((_, reject) => {
+            abortListener = () => reject(new DOMException('Aborted', 'AbortError'));
+            signal.addEventListener('abort', abortListener, { once: true });
+          })
+        ])
+      : await scriptPromise;
     if (res?.[0]?.result === true) return;
-  } catch {
+  } catch (err) {
+    if (err?.name === 'AbortError') throw err;
     // Fall back to bounded sleep if script injection cannot run async waiter
+  } finally {
+    if (signal && abortListener) {
+      signal.removeEventListener('abort', abortListener);
+    }
   }
   await sleep(waitMs, signal);
 }
@@ -545,7 +641,22 @@ export async function fetchRenderedTabDocument(
   }
 
   // Try reading an already-open tab (explicit tabId or matching open tab URL) before spawning a background tab
-  let candidateTabId = typeof tabId === 'number' ? tabId : null;
+  const hasExplicitTabId = typeof tabId === 'number';
+  let candidateTabId = hasExplicitTabId ? tabId : null;
+  if (hasExplicitTabId && chrome?.tabs?.get) {
+    try {
+      const tb = await chrome.tabs.get(candidateTabId);
+      if (
+        !tb?.url ||
+        (tb.status && tb.status !== 'complete') ||
+        normalizeUrl(tb.url) !== normalizeUrl(safeUrl)
+      ) {
+        candidateTabId = null;
+      }
+    } catch {
+      candidateTabId = null;
+    }
+  }
   if (candidateTabId === null && preferOpenTab && chrome?.tabs?.query) {
     try {
       const normTarget = normalizeUrl(safeUrl);
@@ -591,15 +702,19 @@ export async function fetchRenderedTabDocument(
     }
   }
 
+  const assertCircuitClosed = () => {
+    if (isSpaDomainCircuitOpen(safeUrl)) {
+      const err = new Error(
+        `Proteção SPA ativa: novas abas em segundo plano pausadas temporariamente para ${getHostKey(safeUrl)} devido a verificação anti-bot recente. Conclua a verificação em uma aba normal e retome.`
+      );
+      err.status = 403;
+      err.isAntiBotChallenge = true;
+      throw err;
+    }
+  };
+
   // Circuit breaker: refuse to spawn new background tabs against a domain currently showing Cloudflare/rate-limit
-  if (isSpaDomainCircuitOpen(safeUrl)) {
-    const err = new Error(
-      `Proteção SPA ativa: novas abas em segundo plano pausadas temporariamente para ${getHostKey(safeUrl)} devido a verificação anti-bot recente. Conclua a verificação em uma aba normal e retome.`
-    );
-    err.status = 403;
-    err.isAntiBotChallenge = true;
-    throw err;
-  }
+  assertCircuitClosed();
 
   const expectedHost = getHostKey(safeUrl);
 
@@ -651,6 +766,7 @@ export async function fetchRenderedTabDocument(
 
   if (tabPool) {
     return tabPool.runExclusive(async () => {
+      assertCircuitClosed();
       const targetTabId = await tabPool.navigate(safeUrl, signal);
       return extractFromTab(targetTabId);
     });
@@ -760,6 +876,7 @@ export async function fetchDocumentWithOptions(url, options = {}, signal) {
       tabId: options.tabId ?? null,
       preferOpenTab,
       waitForSelector: options.waitForSelector || '',
+      onLog,
       signal
     });
   }
@@ -781,6 +898,7 @@ export async function fetchDocumentWithOptions(url, options = {}, signal) {
         tabId: options.tabId ?? null,
         preferOpenTab,
         waitForSelector: options.waitForSelector || '',
+        onLog,
         signal
       });
     }

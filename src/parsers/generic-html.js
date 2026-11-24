@@ -120,8 +120,13 @@ export class GenericHtmlParser extends BaseParser {
   }
 
   _selectListCandidate(doc, targetUrl, context = {}) {
-    const baseOrigin = new URL(targetUrl).origin;
-    const explicit = doc.querySelector('.chapter-list, .chapters, #chapter-list, .toc');
+    let baseOrigin = '';
+    try {
+      baseOrigin = new URL(targetUrl).origin;
+    } catch {
+      return { container: doc?.body || null, links: [], score: 0 };
+    }
+    const explicit = doc?.querySelector?.('.chapter-list, .chapters, #chapter-list, .toc');
     if (explicit) {
       const directLinks = this._extractSameOriginLinks(explicit, targetUrl, baseOrigin);
       if (directLinks.length > 0) {
@@ -129,7 +134,8 @@ export class GenericHtmlParser extends BaseParser {
       }
     }
 
-    const root = doc.querySelector('main, article') || doc.body;
+    const root = doc?.querySelector?.('main, article') || doc?.body;
+    if (!root) return { container: null, links: [], score: 0 };
     const candidates = Array.from(root.querySelectorAll('ul, ol, table, div, section'));
     const scored = [];
 
@@ -338,6 +344,9 @@ export class GenericHtmlParser extends BaseParser {
       volume: this._inferVolumeFromAncestors(l.el, selected.container, l.text, l.url),
       included: true
     }));
+    if (context?.pageIndex !== undefined) {
+      return chapters;
+    }
     return ensureAscendingChapterOrder(chapters, false);
   }
 
@@ -385,6 +394,9 @@ export class GenericHtmlParser extends BaseParser {
     for (let step = 0; step < maxCrawl; step++) {
       if (!curUrl || visited.has(curUrl)) break;
       visited.add(curUrl);
+      if (curDoc && options.pageDomCache) {
+        options.pageDomCache.set(curUrl, curDoc);
+      }
 
       const { chapterTitle } = this.extractChapterHeading(curDoc, {
         url: curUrl,
@@ -453,8 +465,10 @@ export class GenericHtmlParser extends BaseParser {
       }
     }
 
-    const collected = await super.collectAllChapters(indexDoc, targetUrl, options, signal);
-    return customListSelector ? collected : ensureAscendingChapterOrder(collected, false);
+    const superOpts = { ...options, _usedCustomListFallback: false };
+    const collected = await super.collectAllChapters(indexDoc, targetUrl, superOpts, signal);
+    const usedCustom = Boolean(customListSelector) && !superOpts._usedCustomListFallback;
+    return usedCustom ? collected : ensureAscendingChapterOrder(collected, false);
   }
 
   /**

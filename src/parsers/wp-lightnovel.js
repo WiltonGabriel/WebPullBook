@@ -1,14 +1,16 @@
 import {
   BaseParser,
-  ensureAscendingChapterOrder,
   extractCleanSynopsis,
   extractUniqueTexts,
   extractVolumeLabel,
-  fetchWithRetry,
+  fetchDocumentWithOptions,
   normalizeSpaces,
   normalizeUrl,
+  resolveAbsoluteUrl,
+  resolveSafeHttpUrl,
   toHighResCoverUrl
 } from '../core/parser-engine.js';
+import { normalizeGroupedChaptersAscending } from '../core/parser-helpers.js';
 
 /**
  * Adapter for serialized fiction sites using WordPress light-novel themes
@@ -43,25 +45,21 @@ export class WpNovelThemeParser extends BaseParser {
       for (const seriesLink of seriesLinks) {
         const rawHref = (seriesLink.getAttribute('href') || '').trim();
         if (!rawHref || rawHref.startsWith('#') || /^javascript:/i.test(rawHref)) continue;
-        let resolved;
+        const resolved = resolveSafeHttpUrl(rawHref, targetUrl);
+        if (!resolved) continue;
         try {
-          const u = new URL(rawHref, targetUrl);
+          const u = new URL(resolved);
           if (!u.pathname || u.pathname === '/') continue;
-          u.hash = '';
-          resolved = normalizeUrl(u.toString());
         } catch {
           continue;
         }
-        if (tried.has(resolved)) continue;
-        tried.add(resolved);
+        const normResolved = normalizeUrl(resolved);
+        if (tried.has(normResolved)) continue;
+        tried.add(normResolved);
         try {
-          const candidateDoc = await fetchWithRetry(resolved, {
-            retries: options.maxRetries ?? 2,
-            signal,
-            onLog: options.onLog
-          });
+          const candidateDoc = await fetchDocumentWithOptions(normResolved, options, signal);
           if (candidateDoc.querySelector('.eplister') || candidateDoc.querySelector('.ts-chl-collapsible')) {
-            targetUrl = resolved;
+            targetUrl = normResolved;
             activeDoc = candidateDoc;
             break;
           }
@@ -82,7 +80,8 @@ export class WpNovelThemeParser extends BaseParser {
   extractSiteMetadata(doc, targetUrl) {
     const out = {};
     const titleEl = doc.querySelector('h1.entry-title, .infox h1');
-    if (titleEl) out.title = normalizeSpaces(titleEl.textContent);
+    const h1Title = normalizeSpaces(titleEl?.textContent);
+    if (h1Title) out.title = h1Title;
 
     for (const span of doc.querySelectorAll('.spe span')) {
       const txt = normalizeSpaces(span.textContent);
@@ -90,7 +89,8 @@ export class WpNovelThemeParser extends BaseParser {
         const author = normalizeSpaces(txt.replace(/^(?:autor|author)\s*:/i, ''));
         if (author) out.author = author;
       } else if (/^status\s*:/i.test(txt)) {
-        out.status = normalizeSpaces(txt.replace(/^status\s*:/i, ''));
+        const status = normalizeSpaces(txt.replace(/^status\s*:/i, ''));
+        if (status) out.status = status;
       }
     }
 
@@ -108,8 +108,8 @@ export class WpNovelThemeParser extends BaseParser {
       coverImg?.getAttribute('data-lazy-src') ||
       coverImg?.getAttribute('data-src') ||
       coverImg?.getAttribute('src');
-    if (rawCoverSrc) {
-      const thumb = new URL(rawCoverSrc, targetUrl).toString();
+    const thumb = resolveAbsoluteUrl(rawCoverSrc, targetUrl);
+    if (thumb) {
       out.coverThumbUrl = thumb;
       out.coverUrl = toHighResCoverUrl(thumb) || thumb;
     }
@@ -118,25 +118,26 @@ export class WpNovelThemeParser extends BaseParser {
   }
 
   collectChapterNodes(doc, targetUrl) {
-    const rawChapters = [];
     const seenUrls = new Set();
 
-    const addLi = (li, sectionVolLabel = '') => {
+    const buildEntry = (li, sectionVolLabel = '') => {
       const a = li.querySelector('a[href]:not(.dlpdf)');
-      if (!a) return;
+      if (!a) return null;
       const rawHref = a.getAttribute('href') || '';
-      if (!rawHref || /\/pdf\/?$/i.test(rawHref)) return;
+      if (!rawHref || /\/pdf\/?$/i.test(rawHref)) return null;
 
-      const absUrl = normalizeUrl(new URL(rawHref, targetUrl).toString());
-      if (seenUrls.has(absUrl)) return;
-      seenUrls.add(absUrl);
+      const absUrl = resolveSafeHttpUrl(rawHref, targetUrl);
+      if (!absUrl) return null;
+      const norm = normalizeUrl(absUrl);
+      if (seenUrls.has(norm)) return null;
+      seenUrls.add(norm);
 
       const numText = normalizeSpaces(a.querySelector('.epl-num')?.textContent || '');
       const titleText = normalizeSpaces(a.querySelector('.epl-title')?.textContent || '');
       const dateText = normalizeSpaces(a.querySelector('.epl-date')?.textContent || '');
       const fallbackText = normalizeSpaces(a.textContent);
 
-      const volume = extractVolumeLabel(sectionVolLabel, numText, absUrl);
+      const volume = extractVolumeLabel(sectionVolLabel, numText, norm);
 
       let displayTitle = '';
       if (numText && titleText) {
@@ -144,37 +145,45 @@ export class WpNovelThemeParser extends BaseParser {
       } else if (numText || titleText) {
         displayTitle = numText || titleText;
       } else {
-        displayTitle = fallbackText || absUrl;
+        displayTitle = fallbackText || norm;
       }
 
-      rawChapters.push({
-        url: absUrl,
+      return {
+        url: norm,
         numText,
         titleText,
         dateText,
         displayTitle,
         volume,
         included: true
-      });
+      };
     };
 
+    const groups = [];
     const collapsibles = Array.from(doc.querySelectorAll('.ts-chl-collapsible'));
     if (collapsibles.length > 0) {
       for (const header of collapsibles) {
         const volText = normalizeSpaces(header.textContent);
         const next = header.nextElementSibling;
         const list = next?.querySelectorAll('.eplister li') || [];
+        const groupChapters = [];
         for (const li of list) {
-          addLi(li, volText);
+          const item = buildEntry(li, volText);
+          if (item) groupChapters.push(item);
+        }
+        if (groupChapters.length > 0) {
+          groups.push({ label: volText, chapters: groupChapters });
         }
       }
     }
 
+    const ungrouped = [];
     for (const li of doc.querySelectorAll('.eplister li')) {
-      addLi(li, '');
+      const item = buildEntry(li, '');
+      if (item) ungrouped.push(item);
     }
 
-    return ensureAscendingChapterOrder(rawChapters, true);
+    return normalizeGroupedChaptersAscending(groups, ungrouped);
   }
 
   findChapterContentRoot(doc) {

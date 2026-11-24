@@ -1,8 +1,37 @@
-import { normalizeSpaces } from './text-utils.js';
+import { ensureAscendingChapterOrder, extractVolumeNumber, normalizeSpaces } from './text-utils.js';
 
 /**
  * Shared DOM, JSON, and URL helpers reused across parser adapters and selector utilities.
  */
+
+export function normalizeGroupedChaptersAscending(groups, ungroupedChapters = []) {
+  const normalizedGroups = (groups || [])
+    .filter((g) => Array.isArray(g?.chapters) && g.chapters.length > 0)
+    .map((g) => ({
+      label: String(g.label || ''),
+      chapters: ensureAscendingChapterOrder([...g.chapters], true)
+    }));
+
+  if (normalizedGroups.length >= 2) {
+    const firstNum = extractVolumeNumber(normalizedGroups[0].label);
+    const lastNum = extractVolumeNumber(normalizedGroups[normalizedGroups.length - 1].label);
+    if (firstNum > lastNum) {
+      normalizedGroups.reverse();
+    } else if (firstNum === lastNum) {
+      const sample = normalizedGroups.map((g) => g.chapters[0]);
+      const ordered = ensureAscendingChapterOrder([...sample], false);
+      if (ordered[0] !== sample[0]) {
+        normalizedGroups.reverse();
+      }
+    }
+  }
+
+  const out = normalizedGroups.flatMap((g) => g.chapters);
+  if (ungroupedChapters.length > 0) {
+    out.push(...ensureAscendingChapterOrder([...ungroupedChapters], true));
+  }
+  return out;
+}
 
 export function resolveAbsoluteUrl(rawUrl, baseUrl) {
   const raw = String(rawUrl || '').trim();

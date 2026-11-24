@@ -22,6 +22,9 @@ export class AdaptiveRateLimiter {
   recordSuccess(latencyMs = 0) {
     const now = Date.now();
     this.timestamps.push(now);
+    while (this.timestamps.length > 0 && now - this.timestamps[0] >= 60000) {
+      this.timestamps.shift();
+    }
     if (Number.isFinite(latencyMs) && latencyMs >= 0) {
       this.recentLatencies.push(latencyMs);
       if (this.recentLatencies.length > 8) this.recentLatencies.shift();
@@ -29,7 +32,10 @@ export class AdaptiveRateLimiter {
 
     const avgLatency = this.getAverageLatency();
     if (avgLatency >= 3500) {
-      this.backoffFactor = Math.min(3.0, Number((this.backoffFactor * 1.25).toFixed(2)));
+      this.backoffFactor = Math.max(
+        this.backoffFactor,
+        Math.min(3.0, Number((this.backoffFactor * 1.25).toFixed(2)))
+      );
       this.consecutiveFastOk = 0;
     } else if (avgLatency <= 1800) {
       this.consecutiveFastOk += 1;
@@ -88,7 +94,7 @@ export class AdaptiveRateLimiter {
     now = Date.now(),
     randomFn = Math.random
   }) {
-    const effectiveBase = Math.max(Number(baseDelayMs) || 0, Number(minParserDelayMs) || 0);
+    const effectiveBase = Math.max(0, Number(baseDelayMs) || 0, Number(minParserDelayMs) || 0);
 
     // Honor server Retry-After even if Safe Mode is off
     if (this.retryAfterUntil > now) {
@@ -158,7 +164,10 @@ export class AdaptiveRateLimiter {
    * Cooperative sleep: if the user unchecks Safe Mode mid-wait during a long rest/RPM pause,
    * wakes up cleanly within ~400ms instead of blocking the user.
    */
-  async waitCooperatively(waitMs, { isSafeModeActive, signal, onTick = null } = {}) {
+  async waitCooperatively(
+    waitMs,
+    { isSafeModeActive, signal, onTick = null, allowSafeModeEarlyExit = true } = {}
+  ) {
     if (!waitMs || waitMs <= 0) return;
     const started = Date.now();
     const deadline = started + waitMs;
@@ -167,7 +176,7 @@ export class AdaptiveRateLimiter {
     while (true) {
       const remaining = deadline - Date.now();
       if (remaining <= 0) return;
-      if (wasSafeMode && isSafeModeActive && !isSafeModeActive()) {
+      if (allowSafeModeEarlyExit && wasSafeMode && isSafeModeActive && !isSafeModeActive()) {
         return;
       }
       onTick?.(remaining);

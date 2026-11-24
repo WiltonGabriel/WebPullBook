@@ -4,7 +4,7 @@ import {
   extractUniqueTexts,
   extractVolumeLabel,
   extractWindowJsonArray,
-  fetchWithRetry,
+  fetchDocumentWithOptions,
   normalizeSpaces,
   normalizeUrl,
   resolveAbsoluteUrl,
@@ -12,7 +12,7 @@ import {
 } from '../core/parser-engine.js';
 
 const STATUS_RX = /^(ONGOING|COMPLETED|HIATUS|INACTIVE|STUB|DROPPED)$/i;
-const FICTION_PATH_RX = /^\/fiction\/\d+(?:\/[^/?#]+)?\/?$/i;
+const FICTION_PATH_RX = /^\/fiction\/(\d+)(?:\/[^/?#]+)?\/?$/i;
 
 function formatRoyalRoadVolume(vol) {
   const title = normalizeSpaces(vol?.title || '');
@@ -43,15 +43,23 @@ export class RoyalRoadParser extends BaseParser {
 
   matchScore(doc, url = '') {
     let score = 0;
+    let isRoyalRoadHost = false;
     try {
       const host = new URL(url).hostname;
-      if (/(?:^|\.)royalroad\.com$/i.test(host)) score += 45;
+      if (/(?:^|\.)royalroad\.com$/i.test(host)) {
+        score += 45;
+        isRoyalRoadHost = true;
+      }
     } catch {
       // ignore invalid/empty URL
     }
 
     if (doc.querySelector('meta[property="og:site_name"][content="Royal Road"]')) score += 30;
-    if (doc.querySelector('table#chapters tr.chapter-row, table#chapters')) score += 45;
+    if (doc.querySelector('table#chapters tr.chapter-row')) {
+      score += 45;
+    } else if (isRoyalRoadHost && doc.querySelector('table#chapters')) {
+      score += 45;
+    }
     if (doc.querySelector('.chapter-inner.chapter-content')) score += 45;
     if (doc.querySelector('.cover-art-container') && doc.querySelector('.fiction-tag')) score += 20;
 
@@ -62,37 +70,73 @@ export class RoyalRoadParser extends BaseParser {
     return extractWindowJsonArray(doc, varName);
   }
 
-  async resolveIndexDocument(inputUrl, doc, signal) {
+  async resolveIndexDocument(inputUrl, doc, signal, options = {}) {
     const targetUrl = normalizeUrl(inputUrl);
     if (doc.querySelector('table#chapters') || this._extractWindowJsonArray(doc, 'chapters').length > 0) {
       return { targetUrl, doc };
     }
 
+    const expectedMatch = targetUrl.match(/\/fiction\/(\d+)(?:\/|$)/i);
+    const expectedFictionId = expectedMatch ? expectedMatch[1] : '';
+    const prioritized = [];
+    const secondary = [];
     const tried = new Set([targetUrl]);
-    for (const a of doc.querySelectorAll('a[href*="/fiction/"]')) {
+
+    const considerAnchor = (a, isPrimary) => {
       const rawHref = a.getAttribute('href') || '';
-      if (!rawHref) continue;
-      let resolvedUrl;
+      if (!rawHref) return;
       try {
         const u = new URL(rawHref, targetUrl);
-        if (!FICTION_PATH_RX.test(u.pathname)) continue;
+        const m = u.pathname.match(FICTION_PATH_RX);
+        if (!m) return;
         u.hash = '';
         u.search = '';
-        resolvedUrl = u.toString();
+        const abs = u.toString();
+        if (tried.has(abs)) return;
+        tried.add(abs);
+        if (expectedFictionId && m[1] === expectedFictionId) {
+          prioritized.push(abs);
+        } else if (!expectedFictionId && isPrimary) {
+          prioritized.push(abs);
+        } else if (!expectedFictionId) {
+          secondary.push(abs);
+        }
       } catch {
-        continue;
+        // ignore invalid href
       }
-      if (tried.has(resolvedUrl)) continue;
-      tried.add(resolvedUrl);
+    };
 
-      const candidateDoc = await fetchWithRetry(resolvedUrl, { retries: 2, signal });
-      if (
-        candidateDoc.querySelector('table#chapters') ||
-        this._extractWindowJsonArray(candidateDoc, 'chapters').length > 0
-      ) {
-        return { targetUrl: resolvedUrl, doc: candidateDoc };
+    for (const a of doc.querySelectorAll('.fic-header a[href*="/fiction/"], .portlet-title a[href*="/fiction/"]')) {
+      considerAnchor(a, true);
+    }
+    for (const a of doc.querySelectorAll('a[href*="/fiction/"]')) {
+      considerAnchor(a, false);
+    }
+    if (expectedFictionId) {
+      try {
+        const canonical = new URL(`/fiction/${expectedFictionId}/`, targetUrl).toString();
+        if (!tried.has(canonical)) {
+          tried.add(canonical);
+          prioritized.push(canonical);
+        }
+      } catch {
+        // ignore
       }
-      if (tried.size >= 3) break;
+    }
+
+    const candidates = [...prioritized, ...secondary].slice(0, 3);
+    for (const resolvedUrl of candidates) {
+      try {
+        const candidateDoc = await fetchDocumentWithOptions(resolvedUrl, options, signal);
+        if (
+          candidateDoc.querySelector('table#chapters') ||
+          this._extractWindowJsonArray(candidateDoc, 'chapters').length > 0
+        ) {
+          return { targetUrl: resolvedUrl, doc: candidateDoc };
+        }
+      } catch (err) {
+        if (err?.name === 'AbortError') throw err;
+      }
     }
 
     return { targetUrl, doc };

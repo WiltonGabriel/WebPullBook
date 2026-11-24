@@ -201,11 +201,13 @@ export async function loadSeriesWithParser(inputUrl, options = {}, signal) {
       effectiveOptions.autoFallbackTab !== false &&
       canUseTabScripting() &&
       !err.isRateLimit &&
+      !err.isAntiBotChallenge &&
       (err.status === 403 || err.status === 503)
     ) {
       initialDoc = await fetchRenderedTabDocument(initialUrl, {
         waitMs: effectiveOptions.renderWaitMs ?? 1100,
         preferOpenTab: effectiveOptions.preferOpenTabDom !== false,
+        onLog: effectiveOptions.onLog,
         signal
       });
       effectiveOptions = { ...effectiveOptions, renderWithTab: true, _usedTabFallback: true };
@@ -230,12 +232,14 @@ export async function loadSeriesWithParser(inputUrl, options = {}, signal) {
       initialDoc = await fetchRenderedTabDocument(initialUrl, {
         waitMs: effectiveOptions.renderWaitMs ?? 1100,
         preferOpenTab: effectiveOptions.preferOpenTabDom !== false,
+        onLog: effectiveOptions.onLog,
         signal
       });
       effectiveOptions = { ...effectiveOptions, renderWithTab: true, _usedTabFallback: true };
       usedAutoSpa = true;
       ranked = parserRegistry.detectWithScores(initialDoc, initialUrl, effectiveOptions.parserId || 'auto');
-    } catch {
+    } catch (err) {
+      if (err?.name === 'AbortError') throw err;
       // Continue with static document if tab render fails
     }
   }
@@ -246,9 +250,42 @@ export async function loadSeriesWithParser(inputUrl, options = {}, signal) {
     .map((s) => `${s.id}=${s.score}`)
     .join(', ');
   effectiveOptions.onLog?.(`[PARSER] Selecionado "${parser.name}" (${scoreSummary})`, 'debug');
-  let series = await parser.loadSeries(initialUrl, effectiveOptions, signal, initialDoc);
 
-  // Intelligent SPA fallback: if static parse yielded 0 chapters and BaseParser did NOT already try tab rendering, retry once
+  let series = await parser.loadSeries(
+    initialUrl,
+    { ...effectiveOptions, _deferTabFallbackToRegistry: true },
+    signal,
+    initialDoc
+  );
+
+  // If pre-detection tab render lacked a parser-specific wait selector (e.g. NovelBin skeleton), retry once with waitForSelector
+  const indexWaitSelector = parser.getIndexWaitSelector?.() || '';
+  if (
+    (series.chapters || []).length === 0 &&
+    usedAutoSpa &&
+    indexWaitSelector &&
+    canUseTabScripting()
+  ) {
+    try {
+      const waitedDoc = await fetchRenderedTabDocument(series.startingUrl || initialUrl, {
+        waitMs: Math.max(effectiveOptions.renderWaitMs ?? 1100, 1500),
+        preferOpenTab: effectiveOptions.preferOpenTabDom !== false,
+        waitForSelector: indexWaitSelector,
+        onLog: effectiveOptions.onLog,
+        signal
+      });
+      const waitedOpts = { ...effectiveOptions, renderWithTab: true, _usedTabFallback: true };
+      const waitedSeries = await parser.loadSeries(series.startingUrl || initialUrl, waitedOpts, signal, waitedDoc);
+      if ((waitedSeries.chapters || []).length > 0) {
+        initialDoc = waitedDoc;
+        series = { ...waitedSeries, requiresTabRender: true };
+      }
+    } catch (err) {
+      if (err?.name === 'AbortError') throw err;
+    }
+  }
+
+  // Intelligent SPA fallback: if static parse yielded 0 chapters, render via tab and re-detect parser on hydrated DOM
   if (
     (series.chapters || []).length === 0 &&
     !effectiveOptions.renderWithTab &&
@@ -263,6 +300,8 @@ export async function loadSeriesWithParser(inputUrl, options = {}, signal) {
       const renderedDoc = await fetchRenderedTabDocument(initialUrl, {
         waitMs: Math.max(effectiveOptions.renderWaitMs ?? 1100, 1200),
         preferOpenTab: effectiveOptions.preferOpenTabDom !== false,
+        waitForSelector: indexWaitSelector,
+        onLog: effectiveOptions.onLog,
         signal
       });
       const renderedOpts = { ...effectiveOptions, renderWithTab: true, _usedTabFallback: true };
@@ -274,7 +313,8 @@ export async function loadSeriesWithParser(inputUrl, options = {}, signal) {
         series = { ...renderedSeries, requiresTabRender: true };
         usedAutoSpa = true;
       }
-    } catch {
+    } catch (err) {
+      if (err?.name === 'AbortError') throw err;
       // Keep initial static result if rendered fallback fails
     }
   }

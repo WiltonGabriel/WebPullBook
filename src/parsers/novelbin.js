@@ -248,7 +248,7 @@ export class NovelBinParser extends BaseParser {
   findChapterContentRoot(doc) {
     const root = doc.querySelector('.reader-content');
     if (!root || root.querySelector('.skeleton')) return null;
-    if (root.querySelector('p') || normalizeSpaces(root.textContent).length >= 25) {
+    if (root.querySelector('p, img') || normalizeSpaces(root.textContent).length >= 25) {
       return root;
     }
     return null;

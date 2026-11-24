@@ -6,18 +6,38 @@ import { isDescendantOf } from './parser-helpers.js';
 
 const STATE_CLASS_RX = /^(?:active|selected|current|open|closed|show|hide|hidden|hover|focus|wpb-)/i;
 const UTILITY_CLASS_RX =
-  /^(?:flex|inline-flex|grid|block|inline-block|hidden|relative|absolute|fixed|sticky|prose|container|mx-auto|(?:m|p|px|py|pt|pb|pl|pr|mt|mb|ml|mr|gap|space-[xy]|w|h|min-w|min-h|max-w|max-h|text|bg|border|rounded|shadow|overflow|items|justify|self|col|row|z)-.+|_[a-zA-Z0-9_-]{4,}|[a-zA-Z0-9-]+_[a-zA-Z0-9]{5,})$/;
+  /^(?:flex|inline-flex|grid|block|inline-block|hidden|relative|absolute|fixed|sticky|container|mx-auto|(?:m|p|px|py|pt|pb|pl|pr|mt|mb|ml|mr|gap|space-[xy]|w|h|min-w|min-h|max-w|max-h|bg|border|rounded|shadow|overflow|items|justify|self|col|row|z)-.+|text-(?:xs|sm|base|lg|xl|\d+xl|left|center|right|justify|start|end|wrap|nowrap|balance|pretty|truncate|ellipsis|clip|transparent|current|black|white|(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)(?:-\d{2,3})?(?:\/\d+)?|\[.+\])|_[a-zA-Z0-9-]+_(?=[^_]*\d)[a-zA-Z0-9]{4,}|_(?=.*\d)[a-zA-Z0-9_-]{4,}|[a-zA-Z0-9-]+_(?=[^_]*\d)[a-zA-Z0-9]{5,})$/;
 
 export function escapeCssIdent(ident) {
   const s = String(ident || '');
   if (typeof globalThis.CSS !== 'undefined' && typeof globalThis.CSS.escape === 'function') {
     return globalThis.CSS.escape(s);
   }
-  return s.replace(/([^\w-])/g, '\\$1');
+  if (!s) return '';
+  if (s === '-') return '\\-';
+  let out = '';
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+    const code = s.charCodeAt(i);
+    if (i === 0 && code >= 0x30 && code <= 0x39) {
+      out += `\\${code.toString(16)} `;
+      continue;
+    }
+    if (i === 1 && s[0] === '-' && code >= 0x30 && code <= 0x39) {
+      out += `\\${code.toString(16)} `;
+      continue;
+    }
+    if (/[\w-]/.test(ch)) {
+      out += ch;
+    } else {
+      out += `\\${ch}`;
+    }
+  }
+  return out;
 }
 
 export function isStableCssId(id) {
-  return Boolean(id) && !/^\d/.test(id) && !/^:?r\d+:?$/i.test(id) && !/\d{5,}|_[a-zA-Z0-9]{6,}$/.test(id);
+  return Boolean(id) && !/^\d/.test(id) && !/^:?r\d+:?$/i.test(id) && !/\d{5,}|_(?=.*\d)[a-zA-Z0-9]{5,}$/.test(id);
 }
 
 export function isStableCssClass(cls) {
@@ -103,8 +123,12 @@ export function generateCssSelector(targetEl, mode = 'content') {
         const tag = cur.tagName?.toLowerCase();
         if (tag === 'ul' || tag === 'ol' || cur.querySelectorAll('a[href]').length >= 3) {
           const base = describeSingleElement(cur);
-          if (base !== tag || tag === 'nav' || tag === 'ul' || tag === 'ol') {
+          if (base !== tag) {
             return `${base} a`;
+          }
+          const readable = buildReadableSelector(cur, doc, 'a');
+          if (readable && readable !== `${tag} a`) {
+            return readable;
           }
         }
         cur = cur.parentElement;
@@ -126,7 +150,7 @@ export function generateCssSelector(targetEl, mode = 'content') {
         return candidate;
       }
       if (mode === 'exclude' && matched.length >= 1 && seg.includes('.')) {
-        return seg;
+        return depth === 0 ? seg : candidate;
       }
     } catch {
       // ignore invalid selector attempt
