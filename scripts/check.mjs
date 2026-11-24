@@ -98,11 +98,13 @@ try {
   fail(`manifest.json error: ${err.message}`);
 }
 
-// 2. JS syntax checks across src/, tests/, scripts/
+// 2. JS syntax checks across src/, tests/, scripts/, website/assets/js/
+const websiteJsPath = path.join('website', 'assets', 'js', 'site.js');
 const jsFiles = [
   ...walk('src').filter((f) => f.endsWith('.js') || f.endsWith('.mjs')),
   ...walk('tests').filter((f) => f.endsWith('.js') || f.endsWith('.mjs')),
-  ...walk('scripts').filter((f) => f.endsWith('.js') || f.endsWith('.mjs'))
+  ...walk('scripts').filter((f) => f.endsWith('.js') || f.endsWith('.mjs')),
+  ...(fs.existsSync(websiteJsPath) ? [websiteJsPath] : [])
 ];
 for (const file of jsFiles) {
   try {
@@ -250,7 +252,8 @@ if (fixedFiles.length > 0) {
 // 8. Official website & SEO static synchronization and verification
 if (fs.existsSync(path.join('scripts', 'sync-website.mjs'))) {
   try {
-    execFileSync(process.execPath, [path.join('scripts', 'sync-website.mjs')], {
+    const syncArgs = [path.join('scripts', 'sync-website.mjs'), ...(fixMode ? [] : ['--check'])];
+    execFileSync(process.execPath, syncArgs, {
       encoding: 'utf8',
       stdio: 'pipe'
     });

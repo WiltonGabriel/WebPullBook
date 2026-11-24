@@ -32,7 +32,7 @@ Ler obras longas, artigos ou séries com muitos capítulos em abas do navegador 
 
 ### Principais Funcionalidades
 
-- **Extração Automática & Modo SPA:** Captura o DOM direto da aba ativa, detecta capítulos e volumes em adaptadores estruturais ou páginas HTML genéricas, suporta **Modo SPA / JavaScript** com pausa automática em desafios anti-bot e oferece seletor visual **`🎯 Apontar`** com regras salvas por domínio.
+- **Extração Automática & Modo SPA:** Captura o DOM direto da aba ativa, detecta capítulos e volumes em adaptadores estruturais ou páginas HTML genéricas, suporta **Modo SPA / JavaScript** com pausa automática em desafios anti-bot e oferece seletor visual **`Apontar`** com regras salvas por domínio.
 - **Perfis de Leitor & Estrutura do Livro:** Predefinições para **Kindle (Moderno / Antigo)**, **Kobo**, **Padrão Moderno**, **Somente Texto** e **Padrão Antigo** ([guia](docs/READER_PRESETS.pt.md)), com **Sumário** no início do livro, **Página de Informações**, **Página Final do Livro (Colofão)** configurável e **Notas Pop-up EPUB 3**.
 - **Pré-visualização, Edição, Mesclagem & Pipeline de Imagens:** Pré-visualize e edite capítulos antes de exportar, mescle capítulos selecionados, envie uma capa ou utilize a capa padrão gerada automaticamente (com o emblema do WebPullBook e o título da obra quando nenhuma capa é detectada na página) e empacote imagens com detecção por *magic bytes*, deduplicação por hash de conteúdo e fallback automático.
 - **Seleção por Volumes/Intervalos & Juntar Abas:** Marque ou desmarque todos os volumes de uma vez, use **`Ctrl+Clique`** e **`Shift+Clique`** para selecionar volumes e capítulos em intervalo, ou combine abas abertas (**Juntar Abas**) em um único livro ou livros separados.
@@ -97,7 +97,7 @@ Não é necessário compilar código nem instalar pacotes.
 
 ### Configurando Layouts Desconhecidos sem Programar
 
-Ao abrir um site desconhecido, o WebPullBook verifica automaticamente se o **Modo SPA / JavaScript** é necessário e sugere seletores CSS quando possível. Para ajustar manualmente em **Opções Avançadas**, use **🎯 Apontar** diretamente na página ou clique em **Auto-detectar seletores**:
+Ao abrir um site desconhecido, o WebPullBook verifica automaticamente se o **Modo SPA / JavaScript** é necessário e sugere seletores CSS quando possível. Para ajustar manualmente em **Opções Avançadas**, use **Apontar** diretamente na página ou clique em **Auto-detectar seletores**:
 
 ```text
 Seleção de Parser:                   Genérico (Qualquer página HTML)
@@ -157,7 +157,7 @@ Para detalhes do pipeline em 5 etapas, mapa de módulos e guia passo a passo de 
 
 - **Funciona no Kindle e no Kobo?** Sim. Escolha **Kindle (Antigo)** (EPUB 2 clássico compatível com envio pelo *Send to Kindle* da Amazon), **Kindle (Moderno)** (EPUB 3 a 1200px para conversão via Calibre/USB) ou **Kobo e Leitores Digitais** (EPUB 3 a 1080px mantendo as cores originais). Veja detalhes em [docs/READER_PRESETS.pt.md](docs/READER_PRESETS.pt.md).
 - **Como o WebPullBook lida com meus dados e requisições de rede?** O WebPullBook não possui servidores intermediários, telemetria ou análise de uso. Toda a análise de HTML, sanitização XHTML, conversão de imagens e empacotamento ZIP/EPUB acontece localmente dentro do seu navegador, e suas preferências/biblioteca/cache ficam salvos localmente no dispositivo (`chrome.storage.local` e `IndexedDB`). Seu navegador realiza apenas requisições HTTP/HTTPS diretas aos sites e CDNs das obras que você escolheu baixar (utilizando os cookies da sua sessão aberta quando necessário, com fallback anônimo em erros de CDN). Consulte a [Política de Privacidade](https://wiltongabriel.github.io/WebPullBook/pt/privacy.html).
-- **Um site específico não carregou os capítulos. O que fazer?** O WebPullBook tenta renderização SPA e detecção heurística automaticamente; para ajustes em layouts personalizados, use **🎯 Apontar** nas **Opções Avançadas**, clique em **Auto-detectar seletores** e salve uma **Regra por Domínio** — ou abra uma issue utilizando o modelo de suporte a sites.
+- **Um site específico não carregou os capítulos. O que fazer?** O WebPullBook tenta renderização SPA e detecção heurística automaticamente; para ajustes em layouts personalizados, use **Apontar** nas **Opções Avançadas**, clique em **Auto-detectar seletores** e salve uma **Regra por Domínio** — ou abra uma issue utilizando o modelo de suporte a sites.
 
 ---
 

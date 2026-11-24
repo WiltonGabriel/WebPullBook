@@ -107,8 +107,8 @@ const PT_TRANSLATIONS = {
   // Tier 3
   'Static HTML chapter indexes, blogs & paginated lists (`rel="next"`)':
     'Índices HTML estáticos, blogs e listas paginadas (`rel="next"`)',
-  'Uses link-cluster scoring, prose density extraction, heuristic selector assistant, and 🎯 visual picker.':
-    'Usa pontuação de clusters de links, extração por densidade de prosa, assistente heurístico de seletores e seletor visual 🎯 Apontar.',
+  'Uses link-cluster scoring, prose density extraction, heuristic selector assistant, and visual picker.':
+    'Usa pontuação de clusters de links, extração por densidade de prosa, assistente heurístico de seletores e seletor visual Apontar.',
   'Sequential chapters without a TOC page':
     'Capítulos sequenciais sem página de sumário',
   '`generic-html` ("Next Chapter" crawl)':
@@ -282,7 +282,7 @@ function replaceSyncedTbody(html, syncId, newInnerRows) {
     `(<tbody[^>]*data-sync-table="${syncId}"[^>]*>)([\\s\\S]*?)(<\\/tbody>)`,
     'g'
   );
-  return html.replace(pattern, `$1\n${newInnerRows}\n            $3`);
+  return html.replace(pattern, (_full, open, _inner, close) => `${open}\n${newInnerRows}\n            ${close}`);
 }
 
 function replaceSyncedLimitationsSummary(html, compatData, isPt) {
@@ -294,7 +294,7 @@ function replaceSyncedLimitationsSummary(html, compatData, isPt) {
 
   return html.replace(
     /(<p[^>]*data-sync-compat-summary[^>]*>)([\s\S]*?)(<\/p>)/g,
-    `$1${summaryHtml}$3`
+    (_full, open, _inner, close) => `${open}${summaryHtml}${close}`
   );
 }
 
@@ -319,7 +319,7 @@ export function syncGoatCounterScript(html, analyticsConfig) {
   const tag = `<script data-goatcounter="${escapeHtml(analyticsConfig.endpoint)}" async src="${escapeHtml(analyticsConfig.scriptSrc)}"></script>`;
   return withoutExisting.replace(
     /^([ \t]*)(<script\b[^>]*\bsrc="[^"]*assets\/js\/site\.js"[^>]*><\/script>)/m,
-    `$1$2\n$1${tag}`
+    (_full, indent, baseTag) => `${indent}${baseTag}\n${indent}${tag}`
   );
 }
 
@@ -335,29 +335,38 @@ function syncConfiguredLinks(html, siteConfig) {
   return String(html || '').replace(/<a\b[^>]*\bdata-wpb-link="([^"]+)"[^>]*>/gi, (tag, key) => {
     const nextHref = linkMap[key];
     if (!nextHref) return tag;
-    return tag.replace(/\bhref="[^"]*"/i, `href="${escapeHtml(nextHref)}"`);
+    return tag.replace(/\bhref="[^"]*"/i, () => `href="${escapeHtml(nextHref)}"`);
   });
 }
 
-function syncIndexJsonLd(html, siteConfig) {
-  if (!siteConfig || !/"@type":\s*"SoftwareApplication"/.test(html)) return html;
-  let out = html;
-  if (siteConfig.firefoxAddonsUrl) {
-    out = out.replace(/"installUrl":\s*"[^"]+"/, `"installUrl": "${siteConfig.firefoxAddonsUrl}"`);
-  }
-  if (siteConfig.releasesUrl) {
-    out = out.replace(/"downloadUrl":\s*"[^"]+"/, `"downloadUrl": "${siteConfig.releasesUrl}"`);
-  }
-  if (siteConfig.repositoryUrl) {
-    out = out.replace(/"codeRepository":\s*"[^"]+"/, `"codeRepository": "${siteConfig.repositoryUrl}"`);
-  }
-  if (siteConfig.firefoxAddonsUrl && siteConfig.repositoryUrl) {
-    out = out.replace(
-      /"sameAs":\s*\[\s*[\s\S]*?\s*\]/,
-      `"sameAs": [\n      "${siteConfig.firefoxAddonsUrl}",\n      "${siteConfig.repositoryUrl}"\n    ]`
-    );
-  }
-  return out;
+function syncIndexJsonLd(html, siteConfig, softwareVersion = '') {
+  if (!siteConfig || !/"@type"\s*:\s*"SoftwareApplication"/.test(html)) return html;
+  return String(html || '').replace(
+    /([ \t]*)(<script\s+type="application\/ld\+json">)([\s\S]*?)(<\/script>)/gi,
+    (full, indent, openTag, rawJson, closeTag) => {
+      let data;
+      try {
+        data = JSON.parse(rawJson);
+      } catch {
+        return full;
+      }
+      if (!data || typeof data !== 'object' || data['@type'] !== 'SoftwareApplication') {
+        return full;
+      }
+      if (softwareVersion) data.softwareVersion = softwareVersion;
+      if (siteConfig.firefoxAddonsUrl) data.installUrl = siteConfig.firefoxAddonsUrl;
+      if (siteConfig.releasesUrl) data.downloadUrl = siteConfig.releasesUrl;
+      if (siteConfig.repositoryUrl) data.codeRepository = siteConfig.repositoryUrl;
+      if (siteConfig.firefoxAddonsUrl && siteConfig.repositoryUrl) {
+        data.sameAs = [siteConfig.firefoxAddonsUrl, siteConfig.repositoryUrl];
+      }
+      const formattedJson = JSON.stringify(data, null, 2)
+        .split('\n')
+        .map((line) => `${indent}${line}`)
+        .join('\n');
+      return `${indent}${openTag}\n${formattedJson}\n${indent}${closeTag}`;
+    }
+  );
 }
 
 function resolveGitLastmodDate(relRepoPath) {
@@ -377,7 +386,7 @@ function resolveGitLastmodDate(relRepoPath) {
   return /^\d{4}-\d{2}-\d{2}$/.test(commitDate) ? commitDate : '';
 }
 
-function syncSitemapLastmod(siteConfig) {
+function syncSitemapLastmod(siteConfig, writeOrCheck) {
   const sitemapPath = path.join(WEBSITE_DIR, 'sitemap.xml');
   if (!siteConfig) return;
 
@@ -414,30 +423,43 @@ function syncSitemapLastmod(siteConfig) {
     try {
       const lastmod = resolveGitLastmodDate(repoRel);
       if (!lastmod) return block;
-      return block.replace(/<lastmod>[^<]*<\/lastmod>/, `<lastmod>${lastmod}</lastmod>`);
+      return block.replace(/<lastmod>[^<]*<\/lastmod>/, () => `<lastmod>${lastmod}</lastmod>`);
     } catch {
       return block;
     }
   });
-  if (updated !== original) {
-    fs.writeFileSync(sitemapPath, updated, 'utf8');
-  }
+  writeOrCheck(sitemapPath, original, updated);
 }
 
-export function syncWebsite() {
+export function syncWebsite({ checkOnly = false } = {}) {
   const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'manifest.json'), 'utf8'));
   const compatMd = fs.readFileSync(path.join(ROOT, 'docs', 'COMPATIBILITY.md'), 'utf8');
   const presetsEnMd = fs.readFileSync(path.join(ROOT, 'docs', 'READER_PRESETS.md'), 'utf8');
   const presetsPtMd = fs.readFileSync(path.join(ROOT, 'docs', 'READER_PRESETS.pt.md'), 'utf8');
 
-  const versionLabel = `v${manifest.version_name || manifest.version}`;
+  const drifted = [];
+  const updated = [];
+  const writeOrCheck = (filePath, prevContent, nextContent) => {
+    if (nextContent === prevContent) return;
+    const rel = path.relative(ROOT, filePath);
+    if (checkOnly) {
+      drifted.push(rel);
+    } else {
+      fs.writeFileSync(filePath, nextContent, 'utf8');
+      updated.push(rel);
+    }
+  };
+
+  const softwareVersion = manifest.version_name || manifest.version;
+  const versionLabel = `v${softwareVersion}`;
   const siteConfigPath = path.join(WEBSITE_DIR, 'site.config.json');
   let siteConfig = null;
   try {
-    siteConfig = JSON.parse(fs.readFileSync(siteConfigPath, 'utf8'));
+    const rawConfig = fs.readFileSync(siteConfigPath, 'utf8');
+    siteConfig = JSON.parse(rawConfig);
     siteConfig.version = manifest.version;
-    siteConfig.versionName = manifest.version_name || manifest.version;
-    fs.writeFileSync(siteConfigPath, `${JSON.stringify(siteConfig, null, 2)}\n`, 'utf8');
+    siteConfig.versionName = softwareVersion;
+    writeOrCheck(siteConfigPath, rawConfig, `${JSON.stringify(siteConfig, null, 2)}\n`);
   } catch (err) {
     if (err.code !== 'ENOENT') throw err;
   }
@@ -466,15 +488,17 @@ export function syncWebsite() {
       const filePath = isPt
         ? path.join(WEBSITE_DIR, 'pt', page)
         : path.join(WEBSITE_DIR, page);
-      let html;
+      let prevHtml;
       try {
-        html = fs.readFileSync(filePath, 'utf8');
+        prevHtml = fs.readFileSync(filePath, 'utf8');
       } catch (err) {
         if (err.code === 'ENOENT') continue;
         throw err;
       }
 
-      // 1. Sync version labels in [data-wpb-version] and JSON-LD softwareVersion
+      let html = prevHtml;
+
+      // 1. Sync version labels in [data-wpb-version]
       html = html.replace(
         /(<span[^>]*data-wpb-version[^>]*>)(?:Versão\s+|Version\s+)?v[0-9A-Za-z.-]+(<\/span>)/g,
         (_, open, close) => {
@@ -482,10 +506,6 @@ export function syncWebsite() {
           const prefix = prefixMatch ? prefixMatch[1] : '';
           return `${open}${prefix}${versionLabel}${close}`;
         }
-      );
-      html = html.replace(
-        /"softwareVersion":\s*"[^"]+"/,
-        `"softwareVersion": "${manifest.version_name || manifest.version}"`
       );
 
       // 2. Sync compatibility & limitations tables (compatibility.html)
@@ -505,17 +525,17 @@ export function syncWebsite() {
         : `<span>Created and maintained by <a href="https://github.com/WiltonGabriel">Wilton Gabriel</a> &amp; contributors • <a href="https://github.com/WiltonGabriel/WebPullBook/blob/main/LICENSE">GNU AGPLv3 License</a> • <span data-wpb-version data-wpb-version-prefix="Version ">Version ${versionLabel}</span></span>`;
       html = html.replace(
         /(<div class="footer-bottom">\s*)<span>[\s\S]*?<\/span><\/span>/,
-        `$1${footerLine}`
+        (_full, indent) => `${indent}${footerLine}`
       );
 
       // 6. Sync [data-wpb-link] official links and JSON-LD metadata from website/site.config.json
       html = syncConfiguredLinks(html, siteConfig);
-      html = syncIndexJsonLd(html, siteConfig);
+      html = syncIndexJsonLd(html, siteConfig, softwareVersion);
 
       // 7. Sync optional GoatCounter analytics script tag from website/site.config.json
       html = syncGoatCounterScript(html, goatCounterConfig);
 
-      fs.writeFileSync(filePath, html, 'utf8');
+      writeOrCheck(filePath, prevHtml, html);
     }
   }
 
@@ -523,17 +543,27 @@ export function syncWebsite() {
   try {
     const raw404 = fs.readFileSync(notFoundPath, 'utf8');
     const synced404 = syncConfiguredLinks(raw404, siteConfig);
-    if (synced404 !== raw404) {
-      fs.writeFileSync(notFoundPath, synced404, 'utf8');
-    }
+    writeOrCheck(notFoundPath, raw404, synced404);
   } catch (err) {
     if (err.code !== 'ENOENT') throw err;
   }
 
-  syncSitemapLastmod(siteConfig);
+  syncSitemapLastmod(siteConfig, writeOrCheck);
+  return { drifted, updated };
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  syncWebsite();
-  console.log('[OK] Synchronized website/ from docs/COMPATIBILITY.md, docs/READER_PRESETS*.md, and manifest.json.');
+  const checkOnly = process.argv.includes('--check');
+  const { drifted, updated } = syncWebsite({ checkOnly });
+  if (checkOnly) {
+    if (drifted.length > 0) {
+      console.error(`Website files out of sync with docs/manifest:\n  - ${drifted.join('\n  - ')}`);
+      process.exit(1);
+    }
+    console.log('[OK] Website is synchronized with docs/COMPATIBILITY.md, docs/READER_PRESETS*.md, and manifest.json.');
+  } else {
+    console.log(
+      `[OK] Synchronized website/ (${updated.length} file(s) updated) from docs/COMPATIBILITY.md, docs/READER_PRESETS*.md, and manifest.json.`
+    );
+  }
 }

@@ -28,7 +28,7 @@ After confirming that `https://wiltongabriel.github.io/WebPullBook/` is live:
 
 ### A. Repository About Box (Description, Homepage & Topics)
 
-1. On the main repository page (`https://github.com/WiltonGabriel/WebPullBook`), click the gear icon (**⚙️ Edit repository details**) in the top-right **About** section.
+1. On the main repository page (`https://github.com/WiltonGabriel/WebPullBook`), click the gear icon (**Edit repository details**) in the top-right **About** section.
 2. **Description:**
    ```text
    Manifest V3 browser extension (Chrome & Firefox 128+) to extract web novels, light novels, serialized fiction, articles, and open tabs into volume-organized EPUB 2/3, HTML, Markdown, and TXT files.

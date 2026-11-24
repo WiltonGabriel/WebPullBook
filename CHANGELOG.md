@@ -4,6 +4,18 @@
 
 All notable changes to **WebPullBook** are documented in this file.
 
+## [1.7.1] - 2026-11-23 (Beta)
+
+### Security, Integrity & EPUB/Export Reliability
+- **Sanitization, XHTML & EPUB 2/3 Compliance (`src/core/sanitizer.js`, `src/core/xhtml-serializer.js`, `src/core/epub-builder.js`, `src/core/epub-templates.js`):** Stripped XML 1.0 illegal control chars and unpaired surrogates (`stripInvalidXmlChars`), made `serializeChapterXhtml` idempotent via node cloning, normalized EPUB 2 markup (`<figure>`, `<figcaption>`, `<blockquote>`), guarded pop-up footnotes, decoded UTF-8 `__cf_email__`, parsed comma-safe `srcset`, mapped `<u>`/`<s>` to `wpb-*` spans, pruned dangling `#fragment` links, normalized BCP-47 languages, converted `image/bmp` covers/images, and localized generated book labels (`Cover`, `Author`, `Synopsis`, `Table of Contents`, `Start`, `Information`, `End of Book`) across EPUB, HTML, Markdown, and TXT exporters.
+- **Image & Archive Hardening (`src/core/image-processor.js`, `src/core/zip.js`, `src/exporters/html-exporter.js`):** Expanded 512-byte magic-byte MIME sniffing (skipping UTF-8 BOM/comments and rejecting SVG/HTML payloads), added white `#ffffff` JPEG canvas flattening, enforced ZIP32 bounds/path-traversal/duplicate-entry checks with `deflate-raw` error fallback, escaped `</style` in `HtmlExporter`, scoped per-chapter HTML IDs, and embedded chapter images as offline `data:` URIs.
+- **Storage, Workspace & Import Security (`src/workspace/`, `src/core/text-utils.js`):** Added `sanitizeImportedOptions()`, `sanitizeDomainRules()`, `sanitizeCoverPreviewUrl()`, and path-traversal guards in `sanitizePathSegment()`, `buildOutputPath()`, and `writeBlobToDirectoryHandle()`; fixed Blob URL lifecycle revocation via `chrome.downloads.onChanged`.
+
+### Concurrency, Networking, Parsers & CI
+- **DNR, SPA & Cache Concurrency (`src/core/dnr-rules.js`, `src/core/net-fetcher.js`, `src/core/cache-store.js`, `src/core/rate-limiter.js`, `src/background/service-worker.js`):** Serialized DNR mutations with `withDnrLock` and ref-counted image slots (`120..129`) while preserving Firefox rule ID `1` and cleaning orphaned workspace rules; added 30s HTTP timeouts, RFC 9110 HTTP-date `Retry-After`, post-redirect URL verification in `TabRenderPool`, query-aware `PageDomCache`, single-flight `enforceStorageCap()`, `<parsererror>` cache rejection, and monotonic UI sequence guards.
+- **Parser & Selector Fixes (`src/core/base-parser.js`, `src/core/parser-helpers.js`, `src/core/selector-utils.js`, `src/parsers/`):** Added `MadaraThemeParser` `POST /ajax/chapters/` pre-SPA extraction, RoyalRoad `expectedFictionId` validation, ScribbleHub `?toc=` `NaN` guards, NovelMania `<dl>` & pagination cap fixes, image-only chapter support, and prefix-safe multi-digit chapter ordering (`ensureAscendingChapterOrder`).
+- **UI Hygiene, Test Shims & CI Hardening:** Removed emojis across docs, website, and extension UI; improved `data-i18n-aria`/`data-i18n-alt` parity; strengthened `dom-shim` and `idb-shim` fidelity; and pinned `addons-linter` + EPUBCheck SHA-256 verification in CI/Release workflows.
+
 ## [1.7.0] - 2026-11-23 (Beta)
 
 ### Firefox MV3, Localization & Store Readiness
@@ -58,9 +70,9 @@ All notable changes to **WebPullBook** are documented in this file.
 - **Loading Overlay & Active-Tab Live DOM Capture:** Instant loading overlay (`#loading-overlay`) on workspace launch and live DOM capture directly from the active tab (`sourceTabId`) via `service-worker.js` + `PageDomCache`, avoiding cold `fetch()` calls on SPAs and authenticated sessions.
 - **Resilient Image Pipeline & `[IMG]` Logs:** Binary magic-byte MIME sniffing (fixes `octet-stream` and rejects HTML 200 error pages disguised as images), automatic fallback to raw bytes if canvas conversion fails, anonymous retry (`credentials: 'omit'`) on HTTP errors, content-hash deduplication across distinct URLs, animated GIF/APNG/WebP preservation, `srcset`/`<picture>`/`data-orig-file` resolution, and detailed `[IMG]` logging.
 - **`GenericHtmlParser` & XHTML Sanitizer Upgrades:** Added `<br>`-separated prose support, TOC vs. chapter classification (`isTableOfContents`), explicit TOC link discovery, automatic ascending order normalization, exact adjacent `nextPrevUrls` removal, `__cf_email__` decoding, `wp-block-spacer` → `<hr>` conversion, inline-wrapped block unwrapping, leading duplicate heading removal, and internal cross-chapter EPUB link rewriting.
-- **Adaptive Safe Mode, Manual Delay & SPA Security:** `AdaptiveRateLimiter` with dynamic latency/error backoff, `Retry-After` compliance, and cooperative waiting; reusable `TabRenderPool` (1 background worker tab per queue), DOM stabilization wait, per-domain anti-bot circuit breaker, strict `http(s):` validation, and **"Open page to verify ↗"** banner button.
+- **Adaptive Safe Mode, Manual Delay & SPA Security:** `AdaptiveRateLimiter` with dynamic latency/error backoff, `Retry-After` compliance, and cooperative waiting; reusable `TabRenderPool` (1 background worker tab per queue), DOM stabilization wait, per-domain anti-bot circuit breaker, strict `http(s):` validation, and **"Open page to verify"** banner button.
 - **Library & Batch Updates:** Added **Download All Updates** to check and export newly published chapters across saved works, plus optional unified vs. by-site grouping with domain filter and origin badges.
-- **Visual Selector Picker (`🎯 Pick`), Quick Edit & Merge:** Preview and inline quick-edit/merge chapters (with `Edited` badge), **EPUB 3 Pop-up Footnotes**, and `COMPATIBILITY.md` structured into 4 tiers.
+- **Visual Selector Picker (`Pick`), Quick Edit & Merge:** Preview and inline quick-edit/merge chapters (with `Edited` badge), **EPUB 3 Pop-up Footnotes**, and `COMPATIBILITY.md` structured into 4 tiers.
 - **Always-Visible Pause / Cancel Controls:** Cancel prompts for confirmation, and closing an active export tab triggers a browser confirmation prompt (Chrome and Firefox).
 - **Diagnostic Logs:** Structured prefixes (`[NET]`, `[TAB]`, `[SPA]`, `[IMG]`, `[SAFE]`, `[PARSER]`, `[BUILD]`, `[AUTO]`, `[CFG]`, `[DONE]`) with All/Warnings/Errors filters and **Copy Log** button.
 
@@ -95,7 +107,7 @@ All notable changes to **WebPullBook** are documented in this file.
 
 ### Improvements
 - **Clickable URLs in Logs:** `http(s)://` URLs inside the **Logs** tab open directly in a new tab (`rel="noopener noreferrer"`), making it easier to inspect chapters or media URLs that failed.
-- **Direct Links in Report & Table:** Post-export report displays **`Open chapter ↗`** and **`Open image ↗`** per item (besides `View in log`), and the chapter table displays **`Open page ↗`** next to warnings/errors.
+- **Direct Links in Report & Table:** Post-export report displays **`Open chapter`** and **`Open image`** per item (besides `View in log`), and the chapter table displays **`Open page`** next to warnings/errors.
 - **Full Image Failure Context:** Media failure logs record both the chapter page URL and the failing image URL.
 - **Automated Release Pipeline:** Release notes generated automatically from `CHANGELOG.md` after full CI validation (`lint`, unit tests + `EPUBCheck v5.4.0`, and Playwright E2E) before publishing the `.zip` asset.
 
@@ -103,7 +115,7 @@ All notable changes to **WebPullBook** are documented in this file.
 
 ### New Features
 - **Post-Export Report & Severity Separation:** Summary panel below the status banner distinguishing **Errors (chapters)** and **Warnings (images/cover)** with impact descriptions, numbered list, and clickable log navigation.
-- **Clickable Status & Log Badges:** Chapters display `Downloaded ✓` / `Cached ✓`, image warnings (`⚠ N`), and clickable errors linking directly to the highlighted row in **Logs** (with error and warning badge counters).
+- **Clickable Status & Log Badges:** Chapters display `Downloaded` / `Cached`, image warnings, and clickable errors linking directly to the highlighted row in **Logs** (with error and warning badge counters).
 - **Image Resilience & W3C EPUBCheck Validation:** Anonymous fallback (`credentials: 'omit'`) on `HTTP 401/403` for CDNs/S3 buckets, rejection of HTML error responses disguised as images, automatic WebP/AVIF conversion for EPUB 2, Chromium XML declaration fix, `toc.ncx` (`playOrder`/DOCTYPE), and `svg` manifest property in `content.opf`.
 - **Sanitizer Hardening:** Strict blocking of unsafe protocols on `<img>` (`javascript:`, `data:text/html`).
 - **Quality & CI (P0/P1/P2):** Zero-dependency native `node:test` suite (23 tests), regression fixtures/snapshots (`wp-lightnovel`, `madara-theme`, `generic-html`), W3C `EPUBCheck`, and Chromium unpacked-extension E2E test via Playwright.

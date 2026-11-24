@@ -45,22 +45,22 @@ WebPullBook/
 
 Always inspect the target source file before editing. Key boundaries and invariants:
 
-- **Background ([src/background/service-worker.js](src/background/service-worker.js)):** Opens `workspace.html?url=<tabUrl>&sourceTabId=<tabId>` on toolbar click and maintains Firefox `declarativeNetRequest` session rule ID `1` (`Origin` removal on cross-origin fetches).
+- **Background ([src/background/service-worker.js](src/background/service-worker.js)):** Opens `workspace.html?url=<tabUrl>&sourceTabId=<tabId>` on toolbar click, refreshes Firefox `declarativeNetRequest` session rule ID `1` (`Origin` removal on cross-origin fetches) on startup and `chrome.permissions.onAdded`, and cleans up orphaned session rules `100..129` when all workspace tabs close.
 - **Core (`src/core/`):**
   - `parser-engine.js`: Backwards-compatible barrel facade—preserve existing re-exports when adding core helpers.
   - `base-parser.js` (`BaseParser`) + `parser-helpers.js`: Template Method extraction (`extractJsonLdMetadata`, `extractCommonMetadata`, `collectAllChapters`, `downloadAndParseChapter`), automatic native-adapter fallback when `customListSelector` yields `0` chapters, and shared URL/text/JSON-slice helpers.
-  - `net-fetcher.js`: Zero-network active-tab capture (`readOpenTabDocument`), charset-accurate HTTP (`decodeHtmlBytes` / `fetchWithRetry`), reusable SPA background worker (`TabRenderPool`), first-page cache (`PageDomCache`), `assertSafeHttpUrl()`, and per-domain anti-bot circuit breaker (`isSpaDomainCircuitOpen`).
-  - `dnr-rules.js`: Session header rules using IDs `100..119` (navigation) and `120..129` (image `Referer` hotlink fallback)—never touch Firefox rule ID `1`.
-  - `sanitizer.js` (`HtmlSanitizer`) + `xhtml-serializer.js`: Whitelist XHTML sanitizer (strips scripts, handlers, ads, hidden decoy CSS classes; decodes `__cf_email__`; resolves lazy images/`srcset`; deduplicates leading headings) and strict XHTML 1.1 / XHTML5 serializer with EPUB 3 pop-up footnotes (`<aside epub:type="footnote">`).
-  - `image-processor.js`, `epub-builder.js`, `epub-templates.js`, `epub-css.js`, `zip.js`: Magic-byte MIME sniffing, credentialed -> anonymous -> DNR `Referer` image fallback, animated GIF/APNG/WebP detection, content-hash deduplication, OCF-compliant `CompressionStream` ZIP (`mimetype` stored first), and internal hyperlink rewriting.
-  - `cache-store.js` (`WebPullBookCache` IndexedDB with 7-day TTL & 64 MB cap), `rate-limiter.js` (`AdaptiveRateLimiter`), `selector-utils.js` (`buildReadableSelector`, `generateCssSelector`), `text-utils.js` (`buildOutputPath`, `toHighResCoverUrl`, volume helpers).
-- **Exporters (`src/exporters/`):** `exporterRegistry` (`epub`, `html`, `md`, `txt`) extending `BaseExporter`.
+  - `net-fetcher.js`: Zero-network active-tab capture (`readOpenTabDocument`), charset-accurate HTTP (`decodeHtmlBytes` / `fetchWithRetry` with request timeout & HTTP-date `Retry-After`), reusable SPA background worker (`TabRenderPool` verifying actual tab URLs), first-page cache (`PageDomCache` keyed by origin/path/search), `assertSafeHttpUrl()`, and per-domain anti-bot circuit breaker (`isSpaDomainCircuitOpen`).
+  - `dnr-rules.js`: Serialized (`withDnrLock`) session header rules using IDs `100..119` (navigation) and ref-counted slots `120..129` (image `Referer` hotlink fallback)—never touch Firefox rule ID `1`.
+  - `sanitizer.js` (`HtmlSanitizer`) + `xhtml-serializer.js`: Whitelist XHTML sanitizer (strips scripts, handlers, ads, hidden decoy CSS classes, invalid XML 1.0 chars via `stripInvalidXmlChars`; decodes UTF-8 `__cf_email__`; resolves lazy images/comma-safe `srcset`; deduplicates leading headings; prunes dangling `#fragment` links) and strict idempotent XHTML 1.1 / XHTML5 serializer (`normalizeXhtmlForEpub2` + EPUB 3 `<aside epub:type="footnote">`).
+  - `image-processor.js`, `epub-builder.js`, `epub-templates.js`, `epub-css.js`, `zip.js`: Strict raster magic-byte MIME sniffing (rejects SVG/HTML/empty payloads), credentialed -> anonymous -> DNR `Referer` image fallback, animated GIF/APNG/WebP detection, white-background JPEG canvas flattening, content-hash deduplication, path-validated ZIP32 `CompressionStream` archive (`mimetype` stored first, deflate error fallback), and internal hyperlink rewriting.
+  - `cache-store.js` (`WebPullBookCache` IndexedDB with 7-day TTL, 64 MB single-flight cap, `<parsererror>` hydration guard & `imageFallbacks`), `rate-limiter.js` (`AdaptiveRateLimiter`), `selector-utils.js` (`buildReadableSelector`, `generateCssSelector`), `text-utils.js` (`buildOutputPath`, `toHighResCoverUrl`, volume helpers).
+- **Exporters (`src/exporters/`):** `exporterRegistry` (`epub`, `html`, `md`, `txt`) extending `BaseExporter` (`HtmlExporter` escapes `</style>` and scopes per-chapter IDs; cover embeds route through `fetchImageBytes`).
 - **Parsers (`src/parsers/`):** `parserRegistry.detectWithScores()` performs single-pass scoring in `loadSeriesWithParser()`, falling back to `TabRenderPool` on empty/403/503 SPA shells (`looksLikeSpaShell`) and resolving cross-domain chapter parsers via `resolveParserForChapterUrl()`. Registered adapters and fixtures live in [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md).
 - **Workspace (`src/workspace/`):**
-  - `state.js` owns `DEFAULT_OPTIONS` and fixed `READER_PRESETS` (`modern`, `kobo`, `kindle-modern`, `kindle`, `textonly`, `legacy`).
-  - `options-storage.js` enforces `stripSiteScopedOptions()` so custom selectors/strip patterns never leak across domains.
-  - `locales/pt.js` & `locales/en.js` maintain strict PT/EN parity.
-  - Modular UI controllers (`series-loader.js`, `chapters-ui.js`, `chapter-modals.js`, `volume-modals.js`, `cover-ui.js`, `export-runner.js`, `library-ui.js`, `library-view.js`, `cache-sessions-ui.js`, `directory-handle.js`, `download-storage.js`, `domain-rules-ui.js`, `tab-picker.js`, `settings-io.js`, `logger.js`, `workspace.js`).
+  - `state.js` owns `DEFAULT_OPTIONS`, fixed `READER_PRESETS` (`modern`, `kobo`, `kindle-modern`, `kindle`, `textonly`, `legacy`), and parser-aware `getCacheKey()`.
+  - `options-storage.js` enforces `stripSiteScopedOptions()`, `sanitizeImportedOptions()`, and `sanitizeCoverPreviewUrl()`; `domain-rules-ui.js` enforces `sanitizeDomainRules()` and per-series `renderWithTab` scoping.
+  - `locales/pt.js` & `locales/en.js` maintain strict PT/EN parity, with `i18n.js` handling `data-i18n`, `data-i18n-placeholder`, `data-i18n-title`, `data-i18n-aria`, and `data-i18n-alt`.
+  - Modular UI controllers (`series-loader.js`, `chapters-ui.js`, `chapter-modals.js` with `pinnedCacheKey` & snapshot restore, `volume-modals.js`, `cover-ui.js`, `export-runner.js`, `library-ui.js`, `library-view.js`, `cache-sessions-ui.js`, `directory-handle.js`, `download-storage.js` with path-traversal validation & lifetime-safe Blob URLs, `domain-rules-ui.js`, `tab-picker.js`, `settings-io.js`, `logger.js` with deferred hidden-tab rendering, `workspace.js`).
 
 ---
 
@@ -103,10 +103,10 @@ Do **not** edit synced targets directly or duplicate dynamic lists across files.
 
 | Command | Dependencies Required | What It Validates |
 | :--- | :--- | :--- |
-| `node scripts/sync-website.mjs` | None | Syncs `website/` compatibility/preset tables, `[data-wpb-link]` hrefs, JSON-LD, versions, and git `<lastmod>` from docs/manifest/`site.config.json`. Must remain idempotent across consecutive runs. |
-| `node scripts/verify-website.mjs` | None | Validates 14 bilingual pages, heading order, links, images, canonicals, `hreflang`, OG/Twitter, JSON-LD, `[data-wpb-link]` parity, `sitemap.xml`, and `robots.txt`. |
-| `node scripts/check.mjs` | None | Manifest/package version parity, `_locales/` validation, Firefox MV3 keys, JS syntax (`node --check`), MV3 CSP, EPUB media-type, relative Markdown links, PT/EN i18n & DOM ID parity, LF/whitespace hygiene, and `verify-website.mjs`. |
-| `node --test tests/*.test.js` | None (EPUBCheck optional unless `REQUIRE_EPUBCHECK=1`) | Split unit & regression suites (`cache-store`, `epub-validation`, `exporters`, `net-fetcher`, `parsers`, `rate-limiter`, `sanitizer`, `text-utils`, `website-analytics`, `zip`). |
+| `node scripts/sync-website.mjs` | None | Syncs `website/` compatibility/preset tables, `[data-wpb-link]` hrefs, JSON-LD, versions, and git `<lastmod>` from docs/manifest/`site.config.json` (pass `--check` for non-mutating CI drift checks). Must remain idempotent across consecutive runs. |
+| `node scripts/verify-website.mjs` | None | Validates 14 bilingual pages plus `404.html`, heading order, links, images, canonicals, `hreflang`, OG/Twitter, JSON-LD, `[data-wpb-link]` parity, unique `sitemap.xml` URLs, version parity, and `robots.txt`. |
+| `node scripts/check.mjs` | None | Manifest/package version parity, `_locales/` validation, Firefox MV3 keys, JS syntax (`node --check` incl. `website/assets/js/site.js`), MV3 CSP, EPUB media-type, relative Markdown links, PT/EN i18n & DOM ID parity, LF/whitespace hygiene, `sync-website.mjs --check`, and `verify-website.mjs`. |
+| `node --test tests/*.test.js` | None (EPUBCheck optional unless `REQUIRE_EPUBCHECK=1`) | Split unit & regression suites (`cache-store`, `epub-validation`, `exporters`, `net-fetcher`, `parsers`, `rate-limiter`, `sanitizer`, `text-utils`, `website-analytics`, `workspace`, `zip`). |
 | `npm run test:e2e` | `Playwright + Chromium` | Real Chromium unpacked extension E2E covering loading, `sourceTabId` live DOM capture, SPA `TabRenderPool` fallback, selection, preview/edit, presets, library, domain rules, EPUB build, and Merge Tabs. |
 
 ---

@@ -100,13 +100,13 @@
     if (langSelect) {
       const currentVal = (root.lang || '').toLowerCase().startsWith('pt') ? 'pt-BR' : 'en';
       const SAFE_LANG_ROUTES = new Map([
-        ['index.html', { en: 'index.html', 'pt-BR': 'pt/index.html', enFromPt: '../index.html' }],
-        ['features.html', { en: 'features.html', 'pt-BR': 'pt/features.html', enFromPt: '../features.html' }],
-        ['installation.html', { en: 'installation.html', 'pt-BR': 'pt/installation.html', enFromPt: '../installation.html' }],
-        ['compatibility.html', { en: 'compatibility.html', 'pt-BR': 'pt/compatibility.html', enFromPt: '../compatibility.html' }],
-        ['faq.html', { en: 'faq.html', 'pt-BR': 'pt/faq.html', enFromPt: '../faq.html' }],
-        ['privacy.html', { en: 'privacy.html', 'pt-BR': 'pt/privacy.html', enFromPt: '../privacy.html' }],
-        ['contributing.html', { en: 'contributing.html', 'pt-BR': 'pt/contributing.html', enFromPt: '../contributing.html' }]
+        ['index.html', { 'pt-BR': 'pt/index.html', enFromPt: '../index.html' }],
+        ['features.html', { 'pt-BR': 'pt/features.html', enFromPt: '../features.html' }],
+        ['installation.html', { 'pt-BR': 'pt/installation.html', enFromPt: '../installation.html' }],
+        ['compatibility.html', { 'pt-BR': 'pt/compatibility.html', enFromPt: '../compatibility.html' }],
+        ['faq.html', { 'pt-BR': 'pt/faq.html', enFromPt: '../faq.html' }],
+        ['privacy.html', { 'pt-BR': 'pt/privacy.html', enFromPt: '../privacy.html' }],
+        ['contributing.html', { 'pt-BR': 'pt/contributing.html', enFromPt: '../contributing.html' }]
       ]);
       langSelect.value = currentVal;
       langSelect.addEventListener('change', () => {
@@ -142,10 +142,29 @@
     const navToggle = document.getElementById('nav-toggle');
     const navList = document.getElementById('site-menu');
     if (navToggle && navList) {
+      const closeMobileMenu = () => {
+        navToggle.setAttribute('aria-expanded', 'false');
+        navList.classList.remove('is-open');
+      };
       navToggle.addEventListener('click', () => {
         const expanded = navToggle.getAttribute('aria-expanded') === 'true';
         navToggle.setAttribute('aria-expanded', String(!expanded));
         navList.classList.toggle('is-open', !expanded);
+      });
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && navList.classList.contains('is-open')) {
+          closeMobileMenu();
+          navToggle.focus();
+        }
+      });
+      document.addEventListener('click', (e) => {
+        if (
+          navList.classList.contains('is-open') &&
+          !navList.contains(e.target) &&
+          !navToggle.contains(e.target)
+        ) {
+          closeMobileMenu();
+        }
       });
     }
 

@@ -28,6 +28,24 @@ if (!fs.existsSync(configPath)) {
 
 const siteConfig = JSON.parse(fs.readFileSync(configPath, 'utf8'));
 const BASE_URL = siteConfig.baseUrl.replace(/\/+$/, '');
+const manifestPath = path.resolve('manifest.json');
+const pkgPath = path.resolve('package.json');
+const manifest = fs.existsSync(manifestPath) ? JSON.parse(fs.readFileSync(manifestPath, 'utf8')) : null;
+const pkg = fs.existsSync(pkgPath) ? JSON.parse(fs.readFileSync(pkgPath, 'utf8')) : null;
+const expectedSoftwareVersion = manifest?.version_name || manifest?.version || '';
+const expectedVersionLabel = expectedSoftwareVersion ? `v${expectedSoftwareVersion}` : '';
+
+function isInsideSiteDir(targetPath) {
+  const rel = path.relative(SITE_DIR, targetPath);
+  return Boolean(rel) && !rel.startsWith('..') && !path.isAbsolute(rel);
+}
+
+if (manifest && siteConfig.version && siteConfig.version !== manifest.version) {
+  fail(`website/site.config.json: version (${siteConfig.version}) !== manifest.json (${manifest.version})`);
+}
+if (pkg && manifest && pkg.version !== manifest.version) {
+  fail(`package.json version (${pkg.version}) !== manifest.json (${manifest.version})`);
+}
 
 const BASIC_HTML_ENTITIES = new Map([
   ['&amp;', '&'],
@@ -133,12 +151,17 @@ if (!fs.existsSync(sitemapPath)) {
 } else {
   const sitemap = fs.readFileSync(sitemapPath, 'utf8');
   const locMatches = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1].trim());
+  const seenLocs = new Set();
   for (const expectedUrl of expectedCanonicalUrls) {
     if (!locMatches.includes(expectedUrl)) {
       fail(`sitemap.xml missing <loc>${expectedUrl}</loc>`);
     }
   }
   for (const loc of locMatches) {
+    if (seenLocs.has(loc)) {
+      fail(`sitemap.xml contains duplicate <loc>${loc}</loc>`);
+    }
+    seenLocs.add(loc);
     if (!expectedCanonicalUrls.has(loc)) {
       fail(`sitemap.xml contains unexpected <loc>${loc}</loc>`);
     }
@@ -292,12 +315,27 @@ for (const page of siteConfig.pages) {
       }
     }
 
-    // Validate JSON-LD blocks if present
+    // Validate JSON-LD blocks if present and version parity
     for (const ld of html.matchAll(/<script\s+type="application\/ld\+json">([\s\S]*?)<\/script>/gi)) {
       try {
-        JSON.parse(ld[1]);
+        const data = JSON.parse(ld[1]);
+        if (
+          expectedSoftwareVersion &&
+          data?.['@type'] === 'SoftwareApplication' &&
+          data.softwareVersion !== expectedSoftwareVersion
+        ) {
+          fail(`${v.relFile}: JSON-LD softwareVersion "${data.softwareVersion}" !== "${expectedSoftwareVersion}"`);
+        }
       } catch (err) {
         fail(`${v.relFile}: invalid JSON-LD block: ${err.message}`);
+      }
+    }
+
+    if (expectedVersionLabel) {
+      for (const verSpan of html.matchAll(/<span[^>]*\bdata-wpb-version\b[^>]*>([\s\S]*?)<\/span>/gi)) {
+        if (!verSpan[1].includes(expectedVersionLabel)) {
+          fail(`${v.relFile}: [data-wpb-version] "${verSpan[1].trim()}" missing expected "${expectedVersionLabel}"`);
+        }
       }
     }
 
@@ -314,7 +352,7 @@ for (const page of siteConfig.pages) {
       if (!fs.existsSync(resolved)) {
         fail(`${v.relFile}: broken internal link "${href}" -> ${resolved}`);
       }
-      if (!resolved.startsWith(SITE_DIR)) {
+      if (!isInsideSiteDir(resolved)) {
         fail(`${v.relFile}: link "${href}" escapes website/ directory`);
       }
     }
@@ -338,7 +376,7 @@ for (const page of siteConfig.pages) {
       if (!fs.existsSync(resolved)) {
         fail(`${v.relFile}: missing image file "${src}" -> ${resolved}`);
       }
-      if (!resolved.startsWith(SITE_DIR)) {
+      if (!isInsideSiteDir(resolved)) {
         fail(`${v.relFile}: image "${src}" escapes website/ directory`);
       }
     }
@@ -400,7 +438,46 @@ for (const page of siteConfig.pages) {
   }
 }
 
-// 4. Verify social preview image exists inside website/assets/images/social-preview.png
+// 4. Verify 404.html exists and references valid local assets & configured links
+const notFoundPath = path.join(SITE_DIR, '404.html');
+if (!fs.existsSync(notFoundPath)) {
+  fail('Missing website/404.html');
+} else {
+  const html404 = fs.readFileSync(notFoundPath, 'utf8');
+  if (!/^<!DOCTYPE html>/i.test(html404.trimStart())) fail('404.html: missing <!DOCTYPE html>');
+  if (!/<h1\b[^>]*>/i.test(html404)) fail('404.html: missing <h1>');
+  for (const tagMatch of html404.matchAll(/<(?:a|link)\b[^>]+>/gi)) {
+    const href = extractAttr(tagMatch[0], 'href');
+    if (!href || href.startsWith('#') || /^(?:https?:|mailto:)/i.test(href)) continue;
+    const cleanHref = href.split('#')[0].split('?')[0];
+    if (!cleanHref) continue;
+    const relTarget = cleanHref === '/WebPullBook/' ? 'index.html' : cleanHref.replace(/^\/WebPullBook\//, '');
+    const resolved = cleanHref.startsWith('/WebPullBook/')
+      ? path.join(SITE_DIR, relTarget.endsWith('/') ? `${relTarget}index.html` : relTarget)
+      : path.resolve(SITE_DIR, cleanHref);
+    if (!fs.existsSync(resolved)) {
+      fail(`404.html: broken internal link "${href}" -> ${resolved}`);
+    }
+  }
+  if (html404.includes('data-wpb-link=')) {
+    for (const aMatch of html404.matchAll(/<a\b[^>]*\bdata-wpb-link="([^"]+)"[^>]*>/gi)) {
+      const key = aMatch[1];
+      const expectedHref = {
+        firefoxAddons: siteConfig.firefoxAddonsUrl,
+        releases: siteConfig.releasesUrl,
+        releasesLatest: siteConfig.releasesLatestUrl,
+        repository: siteConfig.repositoryUrl,
+        issues: siteConfig.issuesUrl
+      }[key];
+      const actualHref = extractAttr(aMatch[0], 'href');
+      if (expectedHref && actualHref !== expectedHref) {
+        fail(`404.html: data-wpb-link="${key}" href="${actualHref}" !== "${expectedHref}"`);
+      }
+    }
+  }
+}
+
+// 5. Verify social preview image exists inside website/assets/images/social-preview.png
 const socialImgPath = path.join(SITE_DIR, 'assets', 'images', 'social-preview.png');
 if (!fs.existsSync(socialImgPath)) {
   fail('Missing website/assets/images/social-preview.png');

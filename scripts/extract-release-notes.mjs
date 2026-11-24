@@ -6,7 +6,12 @@ const outPath = process.argv[3] || '';
 const cleanVer = rawTag.replace(/^v/i, '');
 const baseVer = cleanVer.split('-')[0];
 
-if (!cleanVer || !fs.existsSync('CHANGELOG.md')) {
+if (!cleanVer) {
+  console.error('extract-release-notes: missing release tag/version argument');
+  process.exit(1);
+}
+if (!fs.existsSync('CHANGELOG.md')) {
+  console.error('extract-release-notes: CHANGELOG.md not found');
   process.exit(1);
 }
 
@@ -20,12 +25,14 @@ for (let i = 0; i < lines.length; i++) {
   const m = lines[i].match(/^##\s+\[?v?([^\]\s]+)\]?(.*)$/i);
   if (m && candidates.includes(m[1])) {
     startIdx = i + 1;
-    headingLine = `## WebPullBook v${cleanVer}${/\(beta\)/i.test(m[2]) ? ' (Beta)' : ''}`;
+    const suffixNeeded = !/-beta$/i.test(cleanVer) && !/\(beta\)/i.test(cleanVer) && /\(beta\)/i.test(m[2]);
+    headingLine = `## WebPullBook v${cleanVer}${suffixNeeded ? ' (Beta)' : ''}`;
     break;
   }
 }
 
 if (startIdx === -1) {
+  console.error(`extract-release-notes: no CHANGELOG.md section found for version "${cleanVer}"`);
   process.exit(2);
 }
 
@@ -39,6 +46,7 @@ for (let i = startIdx; i < lines.length; i++) {
 
 const sectionBody = lines.slice(startIdx, endIdx).join('\n').trim();
 if (!sectionBody) {
+  console.error(`extract-release-notes: empty CHANGELOG.md section for version "${cleanVer}"`);
   process.exit(2);
 }
 

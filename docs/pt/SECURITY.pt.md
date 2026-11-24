@@ -10,15 +10,15 @@ Apenas a versão mais recente do **WebPullBook** publicada na branch `main` rece
 
 | Versão | Suportada |
 | :--- | :--- |
-| Release `1.x` mais recente (`1.6.1-beta`) | ✅ Sim |
-| Releases `1.x` anteriores | ❌ Não (atualize para a versão mais recente) |
+| Release `1.x` mais recente (`1.7.0-beta`) | Sim |
+| Releases `1.x` anteriores | Não (atualize para a versão mais recente) |
 
 ## Modelo de Segurança & Proteções
 
 O **WebPullBook** é uma extensão de navegador Manifest V3 executada localmente dentro do navegador do usuário, sem servidores externos próprios:
 
-- **Sanitização de HTML Externo e XHTML:** todo HTML de capítulos extraídos é tratado como conteúdo não confiável, sanitizado pelo [`HtmlSanitizer`](../../src/core/sanitizer.js) e serializado em XML/XHTML estrito por [`serializeChapterXhtml`](../../src/core/xhtml-serializer.js) antes de empacotar EPUBs ou HTML offline (`<script>`, `<iframe>`, `<object>`, `<embed>`, atributos `on*` e URIs inseguros são removidos).
-- **Validação Estrita de Protocolos & Redirecionamentos:** links de capítulos, botões de banner, prévias de capa e abas auxiliares SPA passam por listas positivas HTTP/HTTPS (`assertSafeHttpUrl`, `resolveSafeHttpUrl`, `sanitizeCoverPreviewUrl` e `data:image/*` raster validado para capas locais/geradas), bloqueando `javascript:`, `data:text/html`, `vbscript:` e `file:`.
+- **Sanitização de HTML Externo e XHTML:** todo HTML de capítulos extraídos é tratado como conteúdo não confiável, sanitizado pelo [`HtmlSanitizer`](../../src/core/sanitizer.js) e serializado em XML/XHTML estrito por [`serializeChapterXhtml`](../../src/core/xhtml-serializer.js) antes de empacotar EPUBs ou HTML offline (`<script>`, `<iframe>`, `<object>`, `<embed>`, atributos `on*`, caracteres de controle inválidos em XML 1.0 e URIs inseguros são removidos).
+- **Validação Estrita de Protocolos, Mídia & Arquivos:** links de capítulos, botões de banner, prévias de capa e abas auxiliares SPA passam por listas positivas HTTP/HTTPS (`assertSafeHttpUrl`, `resolveSafeHttpUrl`, `sanitizeCoverPreviewUrl` e `data:image/*` apenas raster, bloqueando SVGs e HTML disfarçados de imagem). O gerador ZIP valida caminhos contra *path traversal* e limites ZIP32, e importações JSON de opções/regras passam por sanitização estrita (`sanitizeImportedOptions`, `sanitizeDomainRules`).
 - **CSP do Manifest V3:** as páginas da extensão (`src/workspace/workspace.html`) seguem a Content Security Policy do Manifest V3, sem blocos `<script>` inline nem atributos `on*` (validado em todo CI pelo `scripts/check.mjs`).
 - **Proteções SPA & Anti-Bot:** a renderização em aba auxiliar (`TabRenderPool`) utiliza *circuit breaker* por domínio e pausa automaticamente em desafios Cloudflare/CAPTCHA ou limites HTTP 429. O WebPullBook não contorna DRM, paywalls fechados nem CAPTCHAs.
 - **Sem Telemetria nem Servidores Externos:** não há analytics, envio de erros remoto nem carregamento de código externo. Preferências, Biblioteca, regras por domínio e cache de capítulos permanecem no dispositivo (`chrome.storage.local`, `IndexedDB` `WebPullBookCache` e pasta opcional escolhida via `showDirectoryPicker`). As requisições HTTP/HTTPS partem diretamente do navegador apenas para os sites escolhidos pelo usuário.

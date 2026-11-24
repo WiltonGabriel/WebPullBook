@@ -32,7 +32,7 @@ Reading long serialized works, documentation, or multi-part articles in browser 
 
 ### Key Features
 
-- **Automatic Extraction & SPA Support:** Captures the live DOM from the active tab, detects chapters and volumes across structural adapters and generic HTML pages, supports **SPA / JavaScript Tab Mode** with anti-bot pause guards, and includes a visual **🎯 Pick** selector tool with saved per-domain rules.
+- **Automatic Extraction & SPA Support:** Captures the live DOM from the active tab, detects chapters and volumes across structural adapters and generic HTML pages, supports **SPA / JavaScript Tab Mode** with anti-bot pause guards, and includes a visual **Pick** selector tool with saved per-domain rules.
 - **Reader Profiles & Book Structure:** Presets for **Kindle (Modern / Legacy)**, **Kobo & E-Readers**, **Modern Default**, **Text Only**, and **Legacy Default** ([guide](docs/READER_PRESETS.md)), with a customizable **Table of Contents** at the start of the book, **Information Page**, **End-of-Book Page (Colophon)**, and **EPUB 3 Pop-up Footnotes**.
 - **Chapter Preview, Edit, Merge & Image Pipeline:** Preview and edit chapters before packing, merge selected chapters, upload a cover or use the automatic default cover (with the WebPullBook emblem and book title when no cover is detected), and bundle images with magic-byte MIME detection, content-hash deduplication, and automatic fallbacks.
 - **Volume/Range Selection & Merge Open Tabs:** Toggle all volumes at once, select individual items or ranges with **`Ctrl+Click`** and **`Shift+Click`** on volume chips and chapter rows, or combine open browser tabs (**Merge Tabs**) into a single book or separate files.
@@ -97,7 +97,7 @@ No build step or package manager is required.
 
 ### Customizing Unfamiliar Websites Without Code
 
-When you load an unknown site, WebPullBook checks whether **SPA / JavaScript Mode** is needed and pre-fills suggested CSS selectors when possible. To override or refine manually in **Advanced Options**, use **🎯 Pick** directly on the page or click **Auto-detect selectors**:
+When you load an unknown site, WebPullBook checks whether **SPA / JavaScript Mode** is needed and pre-fills suggested CSS selectors when possible. To override or refine manually in **Advanced Options**, use **Pick** directly on the page or click **Auto-detect selectors**:
 
 ```text
 Parser Selection:                    Generic (Any HTML page)
@@ -157,7 +157,7 @@ For the full 5-stage pipeline walkthrough, module summary, and step-by-step pars
 
 - **Does it work with Kindle and Kobo?** Yes. Choose **Kindle (Legacy)** (classic EPUB 2 for Amazon *Send to Kindle* email/cloud conversion), **Kindle (Modern)** (EPUB 3 with 1200px images for Calibre USB / KFX), or **Kobo & E-Readers** (EPUB 3 with 1080px optimization and full color preserved). See [docs/READER_PRESETS.md](docs/READER_PRESETS.md).
 - **How does WebPullBook handle my data and network requests?** WebPullBook has no intermediate servers, no analytics, and no telemetry. All HTML parsing, XHTML sanitization, image processing, and ZIP/EPUB packaging happen locally in your browser, and settings/library/cache stay stored locally on your device (`chrome.storage.local` and `IndexedDB`). Your browser only makes direct HTTP/HTTPS requests to the websites and image CDNs you choose to download from (using your active browser session cookies when needed, with anonymous fallback on CDN errors). See the full [Privacy Policy](https://wiltongabriel.github.io/WebPullBook/privacy.html).
-- **What if a website fails to load chapters automatically?** WebPullBook tries automatic SPA rendering and heuristic selector detection automatically; for custom layouts, use **🎯 Pick** in **Advanced Options**, **Auto-detect selectors**, or save a **Domain Rule**—or open an issue using our site-support template.
+- **What if a website fails to load chapters automatically?** WebPullBook tries automatic SPA rendering and heuristic selector detection automatically; for custom layouts, use **Pick** in **Advanced Options**, **Auto-detect selectors**, or save a **Domain Rule**—or open an issue using our site-support template.
 
 ---
 

@@ -62,15 +62,15 @@ Portuguese (Brazil) & English (Bilingual UI)
 
 | Asset | Dimensions | Status | Filename |
 |-------|-----------|--------|----------|
-| Store Icon [REQUIRED] | 128×128 PNG | ✅ Ready | `icons/icon-128.png` |
-| Screenshot 1 [REQUIRED] | 1280×800 PNG | ✅ Ready | `website/assets/screenshots/workspace-main.png` |
-| Screenshot 2 [RECOMMENDED] | 1280×800 PNG | ✅ Ready | `website/assets/screenshots/workspace-preview-edit.png` |
-| Screenshot 3 [RECOMMENDED] | 1280×800 PNG | ✅ Ready | `website/assets/screenshots/workspace-library.png` |
-| Screenshot 4 | 1280×800 PNG | ✅ Ready | `website/assets/screenshots/workspace-settings.png` |
-| Screenshot 5 | 1280×800 PNG | ✅ Ready | `website/assets/screenshots/workspace-epub-export.png` |
-| GitHub / Open Graph Social Preview | 1280×640 PNG | ✅ Ready | `website/assets/images/social-preview.png` |
-| Small Promo Tile [RECOMMENDED] | 440×280 | ⬜ Not created | Optional for future store submission |
-| Marquee Promo Tile | 1400×560 | ⬜ Not created | Optional for future store submission |
+| Store Icon [REQUIRED] | 128×128 PNG | Ready | `icons/icon-128.png` |
+| Screenshot 1 [REQUIRED] | 1280×800 PNG | Ready | `website/assets/screenshots/workspace-main.png` |
+| Screenshot 2 [RECOMMENDED] | 1280×800 PNG | Ready | `website/assets/screenshots/workspace-preview-edit.png` |
+| Screenshot 3 [RECOMMENDED] | 1280×800 PNG | Ready | `website/assets/screenshots/workspace-library.png` |
+| Screenshot 4 | 1280×800 PNG | Ready | `website/assets/screenshots/workspace-settings.png` |
+| Screenshot 5 | 1280×800 PNG | Ready | `website/assets/screenshots/workspace-epub-export.png` |
+| GitHub / Open Graph Social Preview | 1280×640 PNG | Ready | `website/assets/images/social-preview.png` |
+| Small Promo Tile [RECOMMENDED] | 440×280 | Not created | Optional for future store submission |
+| Marquee Promo Tile | 1400×560 | Not created | Optional for future store submission |
 
 ### Screenshot Notes
 - **Screenshot 1 (`workspace-main.png`):** Main Workspace showing a multi-volume book loaded with cover art, Reader Profile selector, volume chips, and chapter table.

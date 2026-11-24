@@ -34,7 +34,7 @@ Sites without a dedicated adapter that work via WebPullBook's generic HTML extra
 
 | Pattern / Layout | Adapter / Mode | Notes |
 | :--- | :--- | :--- |
-| Static HTML chapter indexes, blogs & paginated lists (`rel="next"`) | `generic-html` | Uses link-cluster scoring, prose density extraction, heuristic selector assistant, and 🎯 visual picker. |
+| Static HTML chapter indexes, blogs & paginated lists (`rel="next"`) | `generic-html` | Uses link-cluster scoring, prose density extraction, heuristic selector assistant, and visual picker. |
 | Sequential chapters without a TOC page | `generic-html` ("Next Chapter" crawl) | Automatically crawls sequential *"Next Chapter"* links when landing on a prose chapter. |
 | JavaScript / SPA pages (React, Vue, Next.js) | Tab rendering (`renderWithTab`) | Extracts hydrated DOM via open or background browser tab when static HTML is an empty shell. |
 | Open browser tabs | Merge Tabs | Compiles open HTTP/HTTPS tabs into a single anthology or standalone books. |

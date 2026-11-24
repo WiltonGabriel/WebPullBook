@@ -4,6 +4,18 @@
 
 Todas as mudanças notáveis do **WebPullBook** estão documentadas neste arquivo (espelho de referência de [CHANGELOG.md](../../CHANGELOG.md)).
 
+## [1.7.1] - 2026-11-23 (Beta)
+
+### Segurança, Integridade & Confiabilidade EPUB/Exportação
+- **Sanitização, XHTML & Conformidade EPUB 2/3 (`src/core/sanitizer.js`, `src/core/xhtml-serializer.js`, `src/core/epub-builder.js`, `src/core/epub-templates.js`):** remoção de caracteres ilegais XML 1.0 e surrogates desemparelhados (`stripInvalidXmlChars`), serialização idempotente com clonagem de nós, normalização EPUB 2 (`<figure>`, `<figcaption>`, `<blockquote>`), proteção de notas pop-up, decodificação UTF-8 de `__cf_email__`, parser de `srcset` seguro para vírgulas, mapeamento de `<u>`/`<s>`, poda de âncoras `#fragment` órfãs, normalização BCP-47, conversão de `image/bmp` e localização dos rótulos estruturais dos livros (`Capa`/`Cover`, `Autor`/`Author`, `Sinopse`/`Synopsis`, `Sumário`/`Table of Contents`, `Início`/`Start`, `Informações`/`Information`, `Fim do Livro`/`End of Book`) nos exportadores EPUB, HTML, Markdown e TXT.
+- **Imagens, ZIP32 & HTML Offline (`src/core/image-processor.js`, `src/core/zip.js`, `src/exporters/html-exporter.js`):** inspeção de magic bytes em 512 bytes (pulando BOM UTF-8/comentários e rejeitando SVG/HTML disfarçados), fundo branco `#ffffff` na conversão para JPEG, limites e checagens de path traversal/duplicatas no ZIP32 com fallback de compressão, escape de `</style`, escopo de IDs por capítulo e incorporação de imagens em `data:` URI no `HtmlExporter`.
+- **Armazenamento, Workspace & Importação Segura (`src/workspace/`, `src/core/text-utils.js`):** adicionadas `sanitizeImportedOptions()`, `sanitizeDomainRules()`, `sanitizeCoverPreviewUrl()`, proteção contra path traversal em `sanitizePathSegment()`, `buildOutputPath()` e `writeBlobToDirectoryHandle()`, além de revogação segura de Blob URLs via `chrome.downloads.onChanged`.
+
+### Concorrência, Rede, Parsers & CI
+- **DNR, SPA & Cache (`src/core/dnr-rules.js`, `src/core/net-fetcher.js`, `src/core/cache-store.js`, `src/core/rate-limiter.js`, `src/background/service-worker.js`):** fila `withDnrLock` com contagem de referência para slots de imagem (`120..129`) preservando a regra ID `1` do Firefox e limpando regras órfãs ao fechar o workspace; timeout HTTP de 30s, suporte a HTTP-date em `Retry-After`, verificação de URL pós-redirecionamento no `TabRenderPool`, `PageDomCache` sensível à query string, `enforceStorageCap()` single-flight, rejeição de `<parsererror>` no cache e guardas monotônicas contra corridas na UI.
+- **Parsers & Seletores (`src/core/base-parser.js`, `src/core/parser-helpers.js`, `src/core/selector-utils.js`, `src/parsers/`):** extração direta `POST /ajax/chapters/` no `MadaraThemeParser`, validação de `expectedFictionId` no RoyalRoad, proteção contra `NaN` em `?toc=` no ScribbleHub, `<dl>` e teto de paginação no NovelMania, suporte a capítulos somente-imagem e ordenação numérica segura (`ensureAscendingChapterOrder`).
+- **Higiene de UI, Shims de Teste & Endurecimento de CI:** remoção de emojis da extensão, site e documentação; paridade de `data-i18n-aria`/`data-i18n-alt`; fidelidade ampliada em `dom-shim` e `idb-shim`; fixação de versão do `addons-linter` e verificação SHA-256 do EPUBCheck nos workflows de CI/Release.
+
 ## [1.7.0] - 2026-11-23 (Beta)
 
 ### Firefox MV3, Localização e Prontidão para Lojas
@@ -58,9 +70,9 @@ Todas as mudanças notáveis do **WebPullBook** estão documentadas neste arquiv
 - **Tela de Loading & Captura Direta da Aba Ativa:** overlay de carregamento instantâneo e captura do DOM vivo da aba ativa (`sourceTabId`) via `service-worker.js` + `PageDomCache`.
 - **Pipeline de Imagens Resiliente & Logs `[IMG]`:** detecção por *magic bytes*, fallback para bytes originais se canvas falhar, retry anônimo (`credentials: 'omit'`) em erros HTTP, deduplicação por hash de conteúdo, preservação de GIF/APNG/WebP animados e suporte a `srcset`/`<picture>`.
 - **Melhorias no `GenericHtmlParser` & Sanitizador XHTML:** capítulos com `<br>`, classificação Índice vs. Capítulo, ordenação ascendente, remoção exata de `nextPrevUrls`, decodificação de `__cf_email__`, `wp-block-spacer` → `<hr>`, remoção de título duplicado e reescrita de links internos entre capítulos.
-- **Modo Seguro Adaptativo, Latência Manual & Segurança SPA:** `AdaptiveRateLimiter` com backoff por latência/erros, respeito a `Retry-After`, espera cooperativa, `TabRenderPool` (1 aba reutilizável), *circuit breaker* anti-bot por domínio e botão **"Abrir página para verificar ↗"**.
+- **Modo Seguro Adaptativo, Latência Manual & Segurança SPA:** `AdaptiveRateLimiter` com backoff por latência/erros, respeito a `Retry-After`, espera cooperativa, `TabRenderPool` (1 aba reutilizável), *circuit breaker* anti-bot por domínio e botão **"Abrir página para verificar"**.
 - **Biblioteca & Atualizações em Lote:** botão **Baixar Todas as Atualizações** e visualização unificada vs. separada por site.
-- **Seletor Visual (`🎯 Apontar`)**, edição rápida e mesclagem de capítulos na prévia e **Notas de rodapé pop-up EPUB 3**.
+- **Seletor Visual (`Apontar`)**, edição rápida e mesclagem de capítulos na prévia e **Notas de rodapé pop-up EPUB 3**.
 
 ### Arquitetura & Qualidade
 - Refatoração completa seguindo o princípio de **Responsabilidade Única (SRP)** em `src/core/` e `src/workspace/`.
