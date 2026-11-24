@@ -1,5 +1,6 @@
 import { normalizeUrl, sleep } from '../core/parser-engine.js';
 import { loadSeriesWithParser } from '../parsers/index.js';
+import { createIconButtonContent, setButtonLabel } from './icons.js';
 import {
   $,
   getCacheKey,
@@ -91,7 +92,7 @@ export function renderLibrary() {
     const btnCheckNew = document.createElement('button');
     btnCheckNew.type = 'button';
     btnCheckNew.className = 'btn primary sm';
-    btnCheckNew.textContent = t('btnLibCheckNew');
+    createIconButtonContent(btnCheckNew, 'refresh', t('btnLibCheckNew'), { size: 14 });
     btnCheckNew.addEventListener('click', () => handleCheckLibrarySeries(item, true));
 
     const btnOpen = document.createElement('button');
@@ -103,7 +104,7 @@ export function renderLibrary() {
     const btnRemove = document.createElement('button');
     btnRemove.type = 'button';
     btnRemove.className = 'btn ghost sm';
-    btnRemove.textContent = t('btnLibRemove');
+    createIconButtonContent(btnRemove, 'trash', t('btnLibRemove'), { size: 14 });
     btnRemove.addEventListener('click', async () => {
       await saveLibrary({ removeId: item.id }, renderLibrary);
       await renderCacheSessions();
@@ -254,7 +255,7 @@ export async function handleCheckAllLibrary() {
     const baseOpts = stripSiteScopedOptions(state.options);
     for (let i = 0; i < entries.length; i++) {
       const entry = entries[i];
-      btn.textContent = t('btnCheckingAllLibrary', { done: i + 1, total: entries.length });
+      setButtonLabel(btn, t('btnCheckingAllLibrary', { done: i + 1, total: entries.length }));
       try {
         const domain = normalizeRuleDomain(entry.startingUrl);
         const rule = domain && Object.hasOwn(state.domainRules || {}, domain) ? state.domainRules[domain] : null;
@@ -311,7 +312,7 @@ export async function handleCheckAllLibrary() {
     showBanner(t('msgCheckAllDone', { withNew, totalNew }), withNew > 0 ? 'success' : 'info');
   } finally {
     btn.disabled = false;
-    btn.textContent = t('btnCheckAllLibrary');
+    setButtonLabel(btn, t('btnCheckAllLibrary'));
   }
 }
 
@@ -347,7 +348,7 @@ export async function handleDownloadLibraryUpdates() {
       if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
 
       const entry = entries[i];
-      batchBtn.textContent = t('btnDownloadingUpdates', { done: i + 1, total: entries.length });
+      setButtonLabel(batchBtn, t('btnDownloadingUpdates', { done: i + 1, total: entries.length }));
       const domain = normalizeRuleDomain(entry.startingUrl);
       const rule = domain && Object.hasOwn(state.domainRules || {}, domain) ? state.domainRules[domain] : null;
       const effectiveOpts = {
@@ -426,7 +427,7 @@ export async function handleDownloadLibraryUpdates() {
     state.paused = false;
     state.abortController = null;
     batchBtn.disabled = false;
-    batchBtn.textContent = t('btnDownloadAllUpdates');
+    setButtonLabel(batchBtn, t('btnDownloadAllUpdates'));
     if (!state.running) {
       $('btn-pause').disabled = true;
       $('btn-cancel').disabled = true;

@@ -3,6 +3,7 @@ import { cacheStore, serializeNodesForCache } from '../core/cache-store.js';
 import { sanitizeChapterContent } from '../core/sanitizer.js';
 import { genericHtmlParser } from '../parsers/generic-html.js';
 import { resolveParserForChapterUrl } from '../parsers/index.js';
+import { setButtonLabel } from './icons.js';
 import { $, getCacheKey, getCurrentSeriesKey, state, t } from './state.js';
 import { appendLog, showBanner } from './logger.js';
 import { readOptionsFromUi } from './options-storage.js';
@@ -96,7 +97,7 @@ export function setPreviewEditMode(editable, { restoreSnapshot = editable === fa
   contentEl.setAttribute('spellcheck', state.activePreviewEditable ? 'true' : 'false');
   titleWrap.classList.toggle('hidden', !state.activePreviewEditable);
   saveBtn.classList.toggle('hidden', !state.activePreviewEditable);
-  toggleBtn.textContent = state.activePreviewEditable ? t('btnPreviewCancelEdit') : t('btnPreviewToggleEdit');
+  setButtonLabel(toggleBtn, state.activePreviewEditable ? t('btnPreviewCancelEdit') : t('btnPreviewToggleEdit'));
   if (state.activePreviewEditable && state.activePreviewChapter) {
     titleInput.value = $('preview-modal-title').textContent || state.activePreviewChapter.displayTitle || '';
     contentEl.focus();

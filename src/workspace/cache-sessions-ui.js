@@ -2,6 +2,7 @@ import { sanitizeFilename } from '../core/parser-engine.js';
 import { cacheStore } from '../core/cache-store.js';
 import { getParserById } from '../parsers/index.js';
 import { genericHtmlParser } from '../parsers/generic-html.js';
+import { createIconButtonContent } from './icons.js';
 import {
   $,
   formatBytes,
@@ -100,7 +101,7 @@ export async function renderCacheSessions() {
     const btnPurge = document.createElement('button');
     btnPurge.type = 'button';
     btnPurge.className = 'btn ghost sm';
-    btnPurge.textContent = t('btnPurgeSeriesCache');
+    createIconButtonContent(btnPurge, 'trash', t('btnPurgeSeriesCache'), { size: 14 });
     btnPurge.addEventListener('click', async () => {
       await cacheStore.deleteSeriesCache(sess.seriesKey);
       for (const ch of sess.chapters || []) {

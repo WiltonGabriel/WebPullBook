@@ -29,7 +29,9 @@
           data-i18n-placeholder="urlPlaceholder"
           required
         >
-        <button type="submit" id="btn-load-series" class="btn primary" data-i18n="btnLoadSeries">Carregar Obra</button>
+        <button type="submit" id="btn-load-series" class="btn primary" data-wpb-icon="refresh">
+          <span class="wpb-btn-label" data-i18n="btnLoadSeries">Carregar Obra</span>
+        </button>
         <button
           type="button"
           id="btn-merge-tabs"
@@ -49,7 +51,7 @@
             <span data-i18n="tabLibrary">Biblioteca</span>
             <span id="library-badge" class="badge hidden">0</span>
           </button>
-          <button type="button" id="tab-btn-advanced" class="tab-btn" role="tab" aria-selected="false" tabindex="-1" data-tab="advanced">
+          <button type="button" id="tab-btn-advanced" class="tab-btn" role="tab" aria-selected="false" tabindex="-1" data-tab="advanced" data-wpb-icon="sliders">
             <span data-i18n="tabAdvanced">Opções Avançadas</span>
           </button>
           <button type="button" id="tab-btn-logs" class="tab-btn" role="tab" aria-selected="false" tabindex="-1" data-tab="logs">
@@ -95,8 +97,12 @@
             <div class="cover-actions">
               <button type="button" id="btn-upload-cover" class="btn ghost sm" data-i18n="btnUploadCover">Enviar Capa</button>
               <button type="button" id="btn-generate-cover" class="btn ghost sm" data-i18n="btnGenerateCover">Gerar Capa</button>
-              <button type="button" id="btn-reload-cover" class="btn ghost sm" data-i18n="btnReloadCover">Recarregar Capa</button>
-              <button type="button" id="btn-clear-cover" class="btn ghost sm" data-i18n="btnClearCover">Limpar Capa</button>
+              <button type="button" id="btn-reload-cover" class="btn ghost sm" data-wpb-icon="refresh">
+                <span class="wpb-btn-label" data-i18n="btnReloadCover">Recarregar Capa</span>
+              </button>
+              <button type="button" id="btn-clear-cover" class="btn ghost sm" data-wpb-icon="trash">
+                <span class="wpb-btn-label" data-i18n="btnClearCover">Limpar Capa</span>
+              </button>
               <input type="file" id="input-upload-cover" accept="image/jpeg,image/png,image/webp,image/gif" hidden>
             </div>
             <p id="cover-format-note" class="inline-warn-note hidden" role="note" data-i18n="coverWebpWarning">
@@ -158,7 +164,9 @@
             </label>
 
             <div class="pack-actions">
-              <button type="button" id="btn-pack-epub" class="btn primary lg" disabled data-i18n="btnPackEpub">Empacotar EPUB</button>
+              <button type="button" id="btn-pack-epub" class="btn primary lg" disabled data-wpb-icon="download">
+                <span class="wpb-btn-label" data-i18n="btnPackEpub">Empacotar EPUB</span>
+              </button>
               <button type="button" id="btn-retry-failed" class="btn secondary hidden">Tentar Falhos (0)</button>
               <div id="run-controls" class="run-controls">
                 <button type="button" id="btn-pause" class="btn secondary" disabled data-i18n="btnPause">Pausar</button>
@@ -281,9 +289,13 @@
             <button type="button" id="btn-select-all" class="btn ghost sm" data-i18n="btnSelectAll">Selecionar Todos</button>
             <button type="button" id="btn-unselect-all" class="btn ghost sm" data-i18n="btnUnselectAll">Desmarcar Todos</button>
             <button type="button" id="btn-reverse-order" class="btn ghost sm" data-i18n="btnReverseOrder">Inverter Ordem</button>
-            <button type="button" id="btn-preview-chapter" class="btn ghost sm" data-i18n="btnPreviewChapter">Pré-visualizar</button>
+            <button type="button" id="btn-preview-chapter" class="btn ghost sm" data-wpb-icon="eye">
+              <span class="wpb-btn-label" data-i18n="btnPreviewChapter">Pré-visualizar</span>
+            </button>
             <button type="button" id="btn-merge-chapters" class="btn ghost sm" data-i18n="btnMergeChapters">Mesclar Marcados</button>
-            <button type="button" id="btn-edit-urls" class="btn ghost sm" data-i18n="btnEditUrls">Editar URLs</button>
+            <button type="button" id="btn-edit-urls" class="btn ghost sm" data-wpb-icon="pencil">
+              <span class="wpb-btn-label" data-i18n="btnEditUrls">Editar URLs</span>
+            </button>
             <button type="button" id="btn-copy-urls" class="btn ghost sm" data-i18n="btnCopyUrls">Copiar URLs</button>
             <button type="button" id="btn-select-failed" class="btn ghost sm hidden" data-i18n="btnSelectFailed">Selecionar Falhos</button>
             <label class="checkbox-inline">
@@ -356,7 +368,9 @@
               <option value="7" selected data-i18n="cacheTtl7d">Expira em 7 dias</option>
               <option value="14" data-i18n="cacheTtl14d">Expira em 14 dias</option>
             </select>
-            <button type="button" id="btn-clear-all-cache" class="btn ghost sm" data-i18n="btnClearAllCache">Limpar Cache</button>
+            <button type="button" id="btn-clear-all-cache" class="btn ghost sm" data-wpb-icon="trash">
+              <span class="wpb-btn-label" data-i18n="btnClearAllCache">Limpar Cache</span>
+            </button>
           </div>
         </div>
         <div id="cache-sessions-grid" class="library-grid"></div>
@@ -371,8 +385,12 @@
             </p>
           </div>
           <div class="row-gap">
-            <button type="button" id="btn-check-all-library" class="btn secondary sm" data-i18n="btnCheckAllLibrary">Verificar Todas</button>
-            <button type="button" id="btn-download-library-updates" class="btn secondary sm" data-i18n="btnDownloadAllUpdates">Baixar Novidades</button>
+            <button type="button" id="btn-check-all-library" class="btn secondary sm" data-wpb-icon="refresh">
+              <span class="wpb-btn-label" data-i18n="btnCheckAllLibrary">Verificar Todas</span>
+            </button>
+            <button type="button" id="btn-download-library-updates" class="btn secondary sm" data-wpb-icon="download">
+              <span class="wpb-btn-label" data-i18n="btnDownloadAllUpdates">Baixar Novidades</span>
+            </button>
             <button type="button" id="btn-save-library-tab" class="btn primary sm" data-i18n="btnSaveCurrentToLib">+ Salvar Obra Atual</button>
           </div>
         </div>
@@ -578,21 +596,27 @@
               <label for="opt-list-selector" data-i18n="labelListSelector">Seletor CSS da lista de capítulos (opcional)</label>
               <div class="input-with-picker">
                 <input id="opt-list-selector" type="text" placeholder="Ex.: .chapter-list a">
-                <button type="button" id="btn-pick-list-selector" class="btn ghost sm" data-i18n="btnPickSelectorShort" data-i18n-title="btnPickSelectorTitle" title="Apontar e clicar diretamente na página aberta para capturar o seletor CSS">Apontar</button>
+                <button type="button" id="btn-pick-list-selector" class="btn ghost sm" data-wpb-icon="crosshair" data-i18n-title="btnPickSelectorTitle" title="Apontar e clicar diretamente na página aberta para capturar o seletor CSS">
+                  <span class="wpb-btn-label" data-i18n="btnPickSelectorShort">Apontar</span>
+                </button>
               </div>
             </div>
             <div class="field">
               <label for="opt-content-selector" data-i18n="labelContentSelector">Seletor CSS do conteúdo do capítulo (opcional)</label>
               <div class="input-with-picker">
                 <input id="opt-content-selector" type="text" placeholder="Ex.: article .content">
-                <button type="button" id="btn-pick-content-selector" class="btn ghost sm" data-i18n="btnPickSelectorShort" data-i18n-title="btnPickSelectorTitle" title="Apontar e clicar diretamente na página aberta para capturar o seletor CSS">Apontar</button>
+                <button type="button" id="btn-pick-content-selector" class="btn ghost sm" data-wpb-icon="crosshair" data-i18n-title="btnPickSelectorTitle" title="Apontar e clicar diretamente na página aberta para capturar o seletor CSS">
+                  <span class="wpb-btn-label" data-i18n="btnPickSelectorShort">Apontar</span>
+                </button>
               </div>
             </div>
             <div class="field span-2">
               <label for="opt-exclude-selector" data-i18n="labelExcludeSelector">Seletor CSS de elementos a excluir (opcional)</label>
               <div class="input-with-picker">
                 <input id="opt-exclude-selector" type="text" placeholder="Ex.: .ads, .author-note">
-                <button type="button" id="btn-pick-exclude-selector" class="btn ghost sm" data-i18n="btnPickSelectorShort" data-i18n-title="btnPickSelectorTitle" title="Apontar e clicar diretamente na página aberta para capturar o seletor CSS">Apontar</button>
+                <button type="button" id="btn-pick-exclude-selector" class="btn ghost sm" data-wpb-icon="crosshair" data-i18n-title="btnPickSelectorTitle" title="Apontar e clicar diretamente na página aberta para capturar o seletor CSS">
+                  <span class="wpb-btn-label" data-i18n="btnPickSelectorShort">Apontar</span>
+                </button>
               </div>
             </div>
             <div class="field span-2">
@@ -603,7 +627,9 @@
               <label data-i18n="labelAutoDetectSelectors">Assistente de Seletores (Heurística)</label>
               <div class="row-gap">
                 <button type="button" id="btn-auto-detect-selectors" class="btn ghost sm" data-i18n="btnAutoDetectSelectors">Auto-detectar seletores</button>
-                <button type="button" id="btn-test-selectors" class="btn secondary sm" data-i18n="btnTestSelectors">Testar seletores</button>
+                <button type="button" id="btn-test-selectors" class="btn secondary sm" data-wpb-icon="search-check">
+                  <span class="wpb-btn-label" data-i18n="btnTestSelectors">Testar seletores</span>
+                </button>
                 <button type="button" id="btn-save-domain-rule" class="btn secondary sm" data-i18n="btnSaveDomainRule">Salvar p/ Domínio</button>
               </div>
               <p id="selector-test-result" class="muted sm mt-sm hidden" role="status" aria-live="polite"></p>
@@ -783,7 +809,9 @@
             <button type="button" id="btn-reset-all-opts" class="btn danger sm" data-i18n="btnResetAllOpts">Restaurar Tudo</button>
           </div>
           <div class="dev-tools">
-            <button type="button" id="btn-export-opts" class="btn secondary sm" data-i18n="btnExportOpts">Exportar Opções (JSON)</button>
+            <button type="button" id="btn-export-opts" class="btn secondary sm" data-wpb-icon="download">
+              <span class="wpb-btn-label" data-i18n="btnExportOpts">Exportar Opções (JSON)</span>
+            </button>
             <label class="btn secondary sm file-label">
               <span data-i18n="btnImportOpts">Importar Opções (JSON)</span>
               <input type="file" id="input-import-opts" accept="application/json" hidden>
@@ -803,8 +831,12 @@
             <button type="button" id="log-filter-warn" class="btn ghost sm log-filter-btn" data-log-filter="warn" data-i18n="logFilterWarn">Avisos</button>
             <button type="button" id="log-filter-error" class="btn ghost sm log-filter-btn" data-log-filter="error" data-i18n="logFilterError">Erros</button>
             <button type="button" id="btn-copy-logs" class="btn secondary sm" data-i18n="btnCopyLogs">Copiar Log</button>
-            <button type="button" id="btn-download-logs" class="btn secondary sm" data-i18n="btnDownloadLogs">Baixar Log</button>
-            <button type="button" id="btn-clear-logs" class="btn ghost sm" data-i18n="btnClearLogs">Limpar</button>
+            <button type="button" id="btn-download-logs" class="btn secondary sm" data-wpb-icon="download">
+              <span class="wpb-btn-label" data-i18n="btnDownloadLogs">Baixar Log</span>
+            </button>
+            <button type="button" id="btn-clear-logs" class="btn ghost sm" data-wpb-icon="trash">
+              <span class="wpb-btn-label" data-i18n="btnClearLogs">Limpar</span>
+            </button>
           </div>
         </div>
         <div id="log-output" class="log-box" role="log" data-i18n="logsEmpty">Nenhuma atividade registrada ainda.</div>
@@ -817,7 +849,7 @@
     <div class="dialog-header">
       <h2 id="volume-modal-title" data-i18n="modalVolTitle">Definir Volumes Manualmente</h2>
       <form method="dialog">
-        <button type="submit" value="cancel" class="btn ghost sm" data-i18n-aria="ariaCloseModal" aria-label="Fechar">&times;</button>
+        <button type="submit" value="cancel" class="btn ghost sm" data-wpb-icon="x" data-wpb-icon-only="true" data-i18n-aria="ariaCloseModal" aria-label="Fechar">&times;</button>
       </form>
     </div>
     <div class="dialog-body">
@@ -872,7 +904,7 @@
     <div class="dialog-header">
       <h2 id="edit-urls-title" data-i18n="modalEditUrlsTitle">Editar Lista de Capítulos</h2>
       <form method="dialog">
-        <button type="submit" value="cancel" class="btn ghost sm" data-i18n-aria="ariaCloseModal" aria-label="Fechar">&times;</button>
+        <button type="submit" value="cancel" class="btn ghost sm" data-wpb-icon="x" data-wpb-icon-only="true" data-i18n-aria="ariaCloseModal" aria-label="Fechar">&times;</button>
       </form>
     </div>
     <div class="dialog-body">
@@ -895,7 +927,7 @@
         <p id="merge-tabs-summary" class="muted sm mt-xs"></p>
       </div>
       <form method="dialog">
-        <button type="submit" value="cancel" class="btn ghost sm" data-i18n-aria="ariaCloseModal" aria-label="Fechar">&times;</button>
+        <button type="submit" value="cancel" class="btn ghost sm" data-wpb-icon="x" data-wpb-icon-only="true" data-i18n-aria="ariaCloseModal" aria-label="Fechar">&times;</button>
       </form>
     </div>
     <div class="dialog-body">
@@ -943,9 +975,11 @@
         <p id="preview-modal-meta" class="muted sm mt-xs"></p>
       </div>
       <div class="row-gap">
-        <button type="button" id="btn-preview-toggle-edit" class="btn secondary sm hidden" data-i18n="btnPreviewToggleEdit">Editar Capítulo</button>
+        <button type="button" id="btn-preview-toggle-edit" class="btn secondary sm hidden" data-wpb-icon="pencil">
+          <span class="wpb-btn-label" data-i18n="btnPreviewToggleEdit">Editar Capítulo</span>
+        </button>
         <form method="dialog">
-          <button type="submit" value="cancel" class="btn ghost sm" data-i18n-aria="ariaCloseModal" aria-label="Fechar">&times;</button>
+          <button type="submit" value="cancel" class="btn ghost sm" data-wpb-icon="x" data-wpb-icon-only="true" data-i18n-aria="ariaCloseModal" aria-label="Fechar">&times;</button>
         </form>
       </div>
     </div>
@@ -969,7 +1003,7 @@
     <div class="dialog-header">
       <h2 id="merge-chapters-title" data-i18n="modalMergeChaptersTitle">Mesclar Capítulos Selecionados</h2>
       <form method="dialog">
-        <button type="submit" value="cancel" class="btn ghost sm" data-i18n-aria="ariaCloseModal" aria-label="Fechar">&times;</button>
+        <button type="submit" value="cancel" class="btn ghost sm" data-wpb-icon="x" data-wpb-icon-only="true" data-i18n-aria="ariaCloseModal" aria-label="Fechar">&times;</button>
       </form>
     </div>
     <div class="dialog-body">
@@ -992,7 +1026,7 @@
     <div class="dialog-header">
       <h2 id="confirm-reset-title" data-i18n="modalResetTitle">Restaurar todas as opções?</h2>
       <form method="dialog">
-        <button type="submit" value="cancel" class="btn ghost sm" data-i18n-aria="ariaCloseModal" aria-label="Fechar">&times;</button>
+        <button type="submit" value="cancel" class="btn ghost sm" data-wpb-icon="x" data-wpb-icon-only="true" data-i18n-aria="ariaCloseModal" aria-label="Fechar">&times;</button>
       </form>
     </div>
     <div class="dialog-body">
@@ -1010,7 +1044,7 @@
     <div class="dialog-header">
       <h2 id="confirm-cancel-title" data-i18n="modalCancelRunTitle">Cancelar a exportação?</h2>
       <form method="dialog">
-        <button type="submit" value="keep" class="btn ghost sm" data-i18n-aria="ariaCloseModal" aria-label="Fechar">&times;</button>
+        <button type="submit" value="keep" class="btn ghost sm" data-wpb-icon="x" data-wpb-icon-only="true" data-i18n-aria="ariaCloseModal" aria-label="Fechar">&times;</button>
       </form>
     </div>
     <div class="dialog-body">

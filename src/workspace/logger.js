@@ -1,4 +1,5 @@
 import { resolveSafeHttpUrl } from '../core/parser-engine.js';
+import { createIcon } from './icons.js';
 import { $, state, switchTab, t } from './state.js';
 
 function detectLogLevel(msg, explicitLevel) {
@@ -173,12 +174,21 @@ export function jumpToLog(logId) {
   target.scrollIntoView({ block: 'center', behavior: 'smooth' });
 }
 
+const STATUS_ICON_MAP = {
+  success: 'check-circle',
+  warn: 'alert-triangle',
+  error: 'alert-circle',
+  info: 'info'
+};
+
 export function showBanner(msg, type = 'info', action = null) {
   const banner = $('status-banner');
   banner.className = `banner ${type}`;
+  const icon = createIcon(STATUS_ICON_MAP[type] || 'info', { size: 17, className: 'banner-icon' });
+  const textSpan = document.createElement('span');
+  textSpan.className = 'banner-text';
   const safeActionUrl = action?.url ? resolveSafeHttpUrl(action.url) : null;
   if (action?.label && safeActionUrl) {
-    const textSpan = document.createElement('span');
     textSpan.textContent = `${msg} `;
     const btn = document.createElement('button');
     btn.type = 'button';
@@ -191,9 +201,10 @@ export function showBanner(msg, type = 'info', action = null) {
         window.open(safeActionUrl, '_blank', 'noopener,noreferrer');
       }
     });
-    banner.replaceChildren(textSpan, btn);
+    banner.replaceChildren(icon, textSpan, btn);
   } else {
-    banner.textContent = msg;
+    textSpan.textContent = msg;
+    banner.replaceChildren(icon, textSpan);
   }
   banner.classList.remove('hidden');
 }
@@ -212,12 +223,15 @@ export function renderExportReport({ okCount, chapterErrors, imageWarnings }) {
   const warnCount = imageWarnings.length;
 
   let tone = 'is-ok';
+  let statusIcon = 'check-circle';
   let summaryText = t('reportAllCleanTitle');
   if (errCount > 0) {
     tone = 'is-error';
+    statusIcon = 'alert-circle';
     summaryText = t('reportGraveTitle', { errors: errCount, warns: warnCount });
   } else if (warnCount > 0) {
     tone = 'is-warn';
+    statusIcon = 'alert-triangle';
     summaryText = t('reportLightTitle', { ok: okCount, warns: warnCount });
   }
 
@@ -225,8 +239,11 @@ export function renderExportReport({ okCount, chapterErrors, imageWarnings }) {
   const head = document.createElement('div');
   head.className = 'export-report-head';
 
+  const titleWrap = document.createElement('div');
+  titleWrap.className = 'export-report-title';
   const strong = document.createElement('strong');
   strong.textContent = summaryText;
+  titleWrap.append(createIcon(statusIcon, { size: 16, className: 'report-status-icon' }), strong);
 
   const counts = document.createElement('div');
   counts.className = 'export-report-counts';
@@ -240,7 +257,7 @@ export function renderExportReport({ okCount, chapterErrors, imageWarnings }) {
   warnPill.textContent = t('reportWarningsCount', { count: warnCount });
 
   counts.append(errPill, warnPill);
-  head.append(strong, counts);
+  head.append(titleWrap, counts);
 
   const items = [];
   for (const e of chapterErrors) {

@@ -8,6 +8,7 @@ import {
 } from '../core/parser-engine.js';
 import { loadSeriesWithParser, parserRegistry, resolveParserForChapterUrl } from '../parsers/index.js';
 import { genericHtmlParser } from '../parsers/generic-html.js';
+import { setButtonLabel } from './icons.js';
 import { $, normalizeRuleDomain, state, t } from './state.js';
 import { appendLog, hideBanner, showBanner } from './logger.js';
 import { readOptionsFromUi, saveOptions, syncMetadataToUi } from './options-storage.js';
@@ -72,7 +73,7 @@ export async function handleLoadSeries(url, { sourceTabId = null, allowDuringBat
   const initialUseTab = Boolean(state.options.renderWithTab || state.seriesRequiresTab);
   const btn = $('btn-load-series');
   btn.disabled = true;
-  btn.textContent = t('btnLoadingSeries');
+  setButtonLabel(btn, t('btnLoadingSeries'));
   const extVer = typeof chrome !== 'undefined' && chrome.runtime?.getManifest ? chrome.runtime.getManifest().version : '';
   const customSelNote = state.options.customListSelector ? `, listSelector="${state.options.customListSelector}"` : '';
   appendLog(
@@ -233,7 +234,7 @@ export async function handleLoadSeries(url, { sourceTabId = null, allowDuringBat
     if (loadSeq === currentLoadSeq) {
       setLoadingOverlay(false);
       btn.disabled = false;
-      btn.textContent = t('btnLoadSeries');
+      setButtonLabel(btn, t('btnLoadSeries'));
     }
   }
 }
@@ -369,7 +370,7 @@ export async function handleTestSelectors() {
   }
 
   btn.disabled = true;
-  btn.textContent = t('btnTestingSelectors');
+  setButtonLabel(btn, t('btnTestingSelectors'));
 
   try {
     const isSameActiveSeries = Boolean(
@@ -435,6 +436,6 @@ export async function handleTestSelectors() {
     setTestResult(t('msgTestSelectorsFailed', { error: err.message }));
   } finally {
     btn.disabled = false;
-    btn.textContent = t('btnTestSelectors');
+    setButtonLabel(btn, t('btnTestSelectors'));
   }
 }

@@ -5,6 +5,7 @@ import {
 } from '../core/parser-engine.js';
 import { cacheStore, hydrateCachedChapter } from '../core/cache-store.js';
 import { loadSeriesWithParser } from '../parsers/index.js';
+import { createIconButtonContent } from './icons.js';
 import { $, getCacheKey, getCurrentSeriesKey, state, t } from './state.js';
 import { appendLog, createExternalLink, jumpToLog, showBanner } from './logger.js';
 import { readOptionsFromUi } from './options-storage.js';
@@ -532,7 +533,7 @@ export function renderChaptersTable() {
     const previewBtn = document.createElement('button');
     previewBtn.type = 'button';
     previewBtn.className = 'btn ghost sm chap-preview-btn';
-    previewBtn.textContent = t('btnPreviewShort');
+    createIconButtonContent(previewBtn, 'eye', t('btnPreviewShort'), { size: 14 });
     previewBtn.title = t('btnPreviewTitle');
     previewBtn.setAttribute('aria-label', `${t('btnPreviewTitle')}: ${ch.displayTitle}`);
     previewBtn.addEventListener('click', () => state.onOpenChapterPreview?.(idx));

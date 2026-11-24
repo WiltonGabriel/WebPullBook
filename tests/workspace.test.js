@@ -1,6 +1,6 @@
 import test, { beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { installDomGlobals } from './helpers/dom-shim.js';
+import { installDomGlobals } from './helpers/dom-env.js';
 import { DEFAULT_OPTIONS, getCacheKey, state } from '../src/workspace/state.js';
 import {
   applyThemeChoice,
@@ -9,6 +9,12 @@ import {
 } from '../src/workspace/options-storage.js';
 import { sanitizeDomainRules } from '../src/workspace/domain-rules-ui.js';
 import { writeBlobToDirectoryHandle } from '../src/workspace/download-storage.js';
+import {
+  applyStaticIcons,
+  createIcon,
+  createIconButtonContent,
+  setButtonLabel
+} from '../src/workspace/icons.js';
 
 let restoreDom;
 let prevLocalStorage;
@@ -170,4 +176,39 @@ test('writeBlobToDirectoryHandle rejects traversal paths and aborts writable str
     /Disk full/
   );
   assert.equal(aborted, true);
+});
+
+test('icons helpers build minimalist SVG icons via createElementNS and preserve icons on label updates', () => {
+  const icon = createIcon('crosshair', { size: 16 });
+  assert.equal(icon.namespaceURI, 'http://www.w3.org/2000/svg');
+  assert.equal(icon.getAttribute('viewBox'), '0 0 24 24');
+  assert.equal(icon.getAttribute('stroke'), 'currentColor');
+  assert.equal(icon.getAttribute('stroke-width'), '2');
+  assert.equal(icon.getAttribute('fill'), 'none');
+  assert.equal(icon.getAttribute('aria-hidden'), 'true');
+  assert.ok(icon.querySelector('circle'));
+
+  const doc = new DOMParser().parseFromString(
+    `<button id="b1" data-wpb-icon="download"><span class="wpb-btn-label">Pack</span></button>
+     <button id="b2" data-wpb-icon="x" data-wpb-icon-only="true" aria-label="Close">&times;</button>`,
+    'text/html'
+  );
+  globalThis.document = doc;
+  applyStaticIcons(doc);
+
+  const b1 = doc.getElementById('b1');
+  assert.ok(b1.querySelector('svg.wpb-icon'));
+  setButtonLabel(b1, 'Exporting...');
+  assert.ok(b1.querySelector('svg.wpb-icon'));
+  assert.equal(b1.querySelector('.wpb-btn-label').textContent, 'Exporting...');
+
+  const b2 = doc.getElementById('b2');
+  assert.equal(b2.classList.contains('btn-icon-only'), true);
+  assert.ok(b2.querySelector('svg.wpb-icon'));
+  assert.equal(b2.textContent, '');
+
+  const dyn = doc.createElement('button');
+  createIconButtonContent(dyn, 'trash', 'Remove');
+  assert.ok(dyn.querySelector('svg.wpb-icon'));
+  assert.equal(dyn.querySelector('.wpb-btn-label').textContent, 'Remove');
 });

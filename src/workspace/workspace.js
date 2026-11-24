@@ -5,6 +5,7 @@ import {
   toHighResCoverUrl
 } from '../core/parser-engine.js';
 import { cacheStore } from '../core/cache-store.js';
+import { applyStaticIcons, createIcon } from './icons.js';
 import { applyI18nToDom } from './i18n.js';
 import { $, state, switchTab, t } from './state.js';
 import {
@@ -115,7 +116,7 @@ function renderFirefoxPermissionBanner() {
         showBanner(t('firefoxPermDeniedMsg'), 'error');
       });
   });
-  banner.replaceChildren(textSpan, btn);
+  banner.replaceChildren(createIcon('info', { size: 17, className: 'banner-icon' }), textSpan, btn);
   banner.classList.remove('hidden');
 }
 
@@ -583,6 +584,7 @@ async function init() {
     state.onOpenChapterPreview = openChapterPreview;
 
     populateRegistries();
+    applyStaticIcons();
     await loadOptions(applyLanguageChoice);
     await checkFirefoxHostPermissions();
     await loadDomainRules();

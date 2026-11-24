@@ -1,5 +1,6 @@
 import { fetchDocumentWithOptions, normalizeSpaces, toHighResCoverUrl } from '../core/parser-engine.js';
 import { parserRegistry } from '../parsers/index.js';
+import { setButtonLabel } from './icons.js';
 import { $, state, t } from './state.js';
 import { appendLog, showBanner } from './logger.js';
 import { readMetadataFromUi, updateCoverPreview } from './options-storage.js';
@@ -258,7 +259,7 @@ export async function handleReloadCover() {
   }
 
   btn.disabled = true;
-  btn.textContent = t('btnReloadingCover');
+  setButtonLabel(btn, t('btnReloadingCover'));
   try {
     const doc = await fetchDocumentWithOptions(sourceUrl, {
       ...state.options,
@@ -285,7 +286,7 @@ export async function handleReloadCover() {
   } finally {
     if (seq === currentCoverSeq) {
       btn.disabled = false;
-      btn.textContent = t('btnReloadCover');
+      setButtonLabel(btn, t('btnReloadCover'));
     }
   }
 }

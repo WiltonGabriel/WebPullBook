@@ -2,6 +2,7 @@ import { sanitizeFilename } from '../core/parser-engine.js';
 import { DEFAULT_CACHE_TTL_DAYS } from '../core/cache-store.js';
 import { getParserById, parserRegistry } from '../parsers/index.js';
 import { exporterRegistry } from '../exporters/index.js';
+import { setButtonLabel } from './icons.js';
 import {
   $,
   DEFAULT_OPTIONS,
@@ -283,10 +284,12 @@ export function populateRegistries() {
 
 export function updatePackButtonLabel() {
   const exporter = exporterRegistry.get($('output-format').value || 'epub');
-  $('btn-pack-epub').textContent =
+  setButtonLabel(
+    $('btn-pack-epub'),
     exporter.id === 'epub'
       ? t('btnPackEpub')
-      : t('btnExportFmt', { ext: exporter.extension.toUpperCase() });
+      : t('btnExportFmt', { ext: exporter.extension.toUpperCase() })
+  );
 }
 
 export function sanitizeCoverPreviewUrl(rawUrl) {
