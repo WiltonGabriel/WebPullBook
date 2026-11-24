@@ -228,12 +228,24 @@ export function serializeChapterXhtml({
   const safeTitle = stripInvalidXmlChars(title) || 'Chapter';
   const safeSubtitle = stripInvalidXmlChars(subtitle);
 
+  const XMLNS_NS = 'http://www.w3.org/2000/xmlns/';
   const html = xmlDoc.documentElement;
-  html.setAttribute('xmlns', XHTML_NS);
-  if (epub3) {
-    html.setAttribute('xmlns:epub', EPUB_NS);
+  if (typeof html.setAttributeNS === 'function') {
+    html.setAttributeNS(XMLNS_NS, 'xmlns', XHTML_NS);
+    if (epub3) {
+      html.setAttributeNS(XMLNS_NS, 'xmlns:epub', EPUB_NS);
+    } else if (typeof html.removeAttributeNS === 'function') {
+      html.removeAttributeNS(XMLNS_NS, 'xmlns:epub');
+    } else {
+      html.removeAttribute('xmlns:epub');
+    }
   } else {
-    html.removeAttribute('xmlns:epub');
+    html.setAttribute('xmlns', XHTML_NS);
+    if (epub3) {
+      html.setAttribute('xmlns:epub', EPUB_NS);
+    } else {
+      html.removeAttribute('xmlns:epub');
+    }
   }
 
   const head = xmlDoc.createElementNS(XHTML_NS, 'head');
@@ -273,7 +285,13 @@ export function serializeChapterXhtml({
   contentDiv.setAttribute('class', 'chapter-content');
   for (const n of nodes) {
     if (!n) continue;
-    contentDiv.appendChild(typeof n.cloneNode === 'function' ? n.cloneNode(true) : n);
+    const adopted =
+      typeof xmlDoc.importNode === 'function'
+        ? xmlDoc.importNode(n, true)
+        : typeof n.cloneNode === 'function'
+          ? n.cloneNode(true)
+          : n;
+    contentDiv.appendChild(adopted);
   }
   if (epub3 && popupFootnotes) {
     enhancePopupFootnotesInDoc(xmlDoc, contentDiv);

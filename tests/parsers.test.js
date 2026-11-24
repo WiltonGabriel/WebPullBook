@@ -1,6 +1,6 @@
 import test, { beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { installDomGlobals } from './helpers/dom-shim.js';
+import { installDomGlobals } from './helpers/dom-env.js';
 import {
   SNAPSHOTS,
   assertParserSnapshot,

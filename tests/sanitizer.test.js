@@ -1,6 +1,6 @@
 import test, { beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { installDomGlobals } from './helpers/dom-shim.js';
+import { installDomGlobals } from './helpers/dom-env.js';
 import {
   HtmlSanitizer,
   XHTML_NS,
@@ -342,29 +342,6 @@ test('HtmlSanitizer strips adjacent nextPrevUrls, decodes __cf_email__, converts
   assert.equal(res.images.length, 1);
   assert.equal(res.images[0].originalUrl, 'https://cdn.example.com/full-art.jpg');
   assert.equal(res.images[0].fallbackUrl, 'https://cdn.example.com/thumb-art-300x200.jpg');
-});
-
-test('dom-shim evaluates :empty, CSS escapes, modern pseudo-classes, and rejects unknown pseudo-classes', () => {
-  const doc = new DOMParser().parseFromString(`
-    <html><body>
-      <div id="empty-root"><!-- comment only --></div>
-      <div id="filled-root"><p>Real SSR content</p></div>
-      <div id="text-root"> </div>
-      <section id="ns:panel" class="md:w-1/2 card"><span class="badge">A</span><em>B</em></section>
-    </body></html>`, 'text/html');
-
-  assert.ok(doc.querySelector('#empty-root:empty'));
-  assert.equal(doc.querySelector('#filled-root:empty'), null);
-  assert.equal(doc.querySelector('#text-root:empty'), null);
-
-  assert.equal(doc.querySelector('#ns\\:panel')?.tagName, 'SECTION');
-  assert.equal(doc.querySelector('.md\\:w-1\\/2.card')?.id, 'ns:panel');
-  assert.ok(doc.querySelector('section:has(> span.badge)'));
-  assert.equal(doc.querySelector('section:has(> p)'), null);
-  assert.ok(doc.querySelector(':is(section, article).card'));
-  assert.ok(doc.querySelector('em:first-of-type'));
-
-  assert.throws(() => doc.querySelector('div:nonexistent-pseudo'), SyntaxError);
 });
 
 test('HtmlSanitizer and serializeChapterXhtml strip invalid XML chars, parse comma srcset, map u/s, prune dangling refs, and normalize EPUB 2', () => {

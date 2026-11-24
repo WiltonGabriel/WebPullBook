@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { installDomGlobals } from './helpers/dom-shim.js';
+import { installDomGlobals } from './helpers/dom-env.js';
 import { resolveEpubCheckRunner, runEpubCheck } from './helpers/epubcheck.js';
 import { loadSeriesWithParser } from '../src/parsers/index.js';
 import { exporterRegistry } from '../src/exporters/index.js';

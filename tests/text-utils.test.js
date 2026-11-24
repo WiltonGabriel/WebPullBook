@@ -1,6 +1,6 @@
 import test, { beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { installDomGlobals } from './helpers/dom-shim.js';
+import { installDomGlobals } from './helpers/dom-env.js';
 import {
   buildOutputPath,
   ensureAscendingChapterOrder,
@@ -204,36 +204,4 @@ test('ensureAscendingChapterOrder preserves ascending multi-digit sequences with
   const reversed = [...chs].reverse();
   const ordered = ensureAscendingChapterOrder(reversed);
   assert.deepEqual(ordered.map((c) => c.numText), ['2', '10', '11']);
-});
-
-test('dom-shim enforces strict XML attribute/entity/namespace checks, HTML head/body, cloneNode case, [attr~=], and :has() scope', () => {
-  const htmlDoc = new DOMParser().parseFromString('<p>Snippet</p>', 'text/html');
-  assert.equal(htmlDoc.head?.tagName, 'HEAD');
-  assert.equal(htmlDoc.body?.tagName, 'BODY');
-  assert.equal(htmlDoc.body?.querySelector('p')?.textContent, 'Snippet');
-
-  const dom = new DOMParser().parseFromString(
-    `<div class="empty" data-tokens="">
-       <div class="outer"><section class="target"><span class="inner">X</span></section></div>
-     </div>`,
-    'text/html'
-  );
-  assert.equal(dom.querySelector('[data-tokens~=""]'), null);
-  assert.equal(dom.querySelector('section.target:has(.outer .inner)'), null);
-  assert.ok(dom.querySelector('section.target:has(> .inner)'));
-
-  const xmlDoc = new DOMParser().parseFromString(
-    '<svg xmlns="http://www.w3.org/2000/svg"><linearGradient id="g1" /></svg>',
-    'application/xml'
-  );
-  const grad = xmlDoc.getElementsByTagName('linearGradient')[0];
-  assert.equal(grad?.tagName, 'linearGradient');
-  assert.equal(grad?.cloneNode(true).tagName, 'linearGradient');
-
-  const badAttrXml = new DOMParser().parseFromString('<root a="x<y" />', 'application/xml');
-  assert.ok(badAttrXml.querySelector('parsererror'));
-  const badNsXml = new DOMParser().parseFromString('<unknown:tag />', 'application/xml');
-  assert.ok(badNsXml.querySelector('parsererror'));
-  const badCharRefXml = new DOMParser().parseFromString('<root>&#0;</root>', 'application/xml');
-  assert.ok(badCharRefXml.querySelector('parsererror'));
 });

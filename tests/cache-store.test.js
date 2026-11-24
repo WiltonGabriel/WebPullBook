@@ -1,7 +1,7 @@
 import test, { beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { installDomGlobals } from './helpers/dom-shim.js';
-import { installIdbGlobals } from './helpers/idb-shim.js';
+import { installDomGlobals } from './helpers/dom-env.js';
+import { installIdbGlobals } from './helpers/idb-env.js';
 import { HtmlSanitizer } from '../src/core/sanitizer.js';
 import {
   DEFAULT_CACHE_TTL_DAYS,
@@ -172,60 +172,6 @@ test('CacheStore.enforceStorageCap evicts oldest entries down to 85% threshold',
   assert.ok(await cacheStore.getChapter('k5'));
 });
 
-test('idb-shim sorts cursors by key/index, supports key ranges, and enforces readonly transactions', async () => {
-  const db = await cacheStore.open();
-  await new Promise((resolve) => {
-    const tx = db.transaction('chapters', 'readwrite');
-    const store = tx.objectStore('chapters');
-    store.put({ key: 'c', seriesKey: 's1', savedAt: 300, expiresAt: 900 });
-    store.put({ key: 'a', seriesKey: 's1', savedAt: 100, expiresAt: 700 });
-    store.put({ key: 'b', seriesKey: 's1', savedAt: 200, expiresAt: 800 });
-    tx.oncomplete = resolve;
-  });
-
-  // Primary key cursor iterates in ascending key order (a, b, c) despite insertion order (c, a, b)
-  const keys = [];
-  await new Promise((resolve) => {
-    const tx = db.transaction('chapters', 'readonly');
-    tx.objectStore('chapters').openCursor().onsuccess = (e) => {
-      const cur = e.target.result;
-      if (!cur) return;
-      keys.push(cur.key);
-      cur.continue();
-    };
-    tx.oncomplete = resolve;
-  });
-  assert.deepEqual(keys, ['a', 'b', 'c']);
-
-  // Index cursor iterates sorted by savedAt within IDBKeyRange.bound
-  const bounded = [];
-  await new Promise((resolve) => {
-    const tx = db.transaction('chapters', 'readonly');
-    tx.objectStore('chapters').index('savedAt').openCursor(IDBKeyRange.bound(100, 250)).onsuccess = (e) => {
-      const cur = e.target.result;
-      if (!cur) return;
-      bounded.push({ key: cur.primaryKey, savedAt: cur.key });
-      cur.continue();
-    };
-    tx.oncomplete = resolve;
-  });
-  assert.deepEqual(bounded, [
-    { key: 'a', savedAt: 100 },
-    { key: 'b', savedAt: 200 }
-  ]);
-
-  // Readonly transactions must reject mutating operations
-  const roTx = db.transaction('chapters', 'readonly');
-  assert.throws(
-    () => roTx.objectStore('chapters').put({ key: 'z', seriesKey: 's1', savedAt: 1, expiresAt: 2 }),
-    (err) => err?.name === 'ReadOnlyError'
-  );
-  assert.throws(
-    () => roTx.objectStore('chapters').delete('a'),
-    (err) => err?.name === 'ReadOnlyError'
-  );
-});
-
 test('getCacheKey includes customStripPatterns while keeping legacy key when empty', () => {
   const prevStrip = state.options.customStripPatterns;
   try {
@@ -267,58 +213,4 @@ test('hydrateCachedChapter rejects XML parsererror and preserves imageFallbacks 
   assert.equal(stored.imageFallbacks['https://cdn.example.com/full.jpg'], 'https://cdn.example.com/thumb.jpg');
   const hydrated = hydrateCachedChapter({ url: 'https://example.com/ch1', displayTitle: 'Ch 1' }, stored);
   assert.equal(hydrated.images[0].fallbackUrl, 'https://cdn.example.com/thumb.jpg');
-});
-
-test('idb-shim queues put() before openCursor(), validates keyPath, unique indexes, version upgrades, and tx.abort()', async () => {
-  const db = await new Promise((resolve, reject) => {
-    const req = indexedDB.open('shim-regression', 1);
-    req.onupgradeneeded = (e) => {
-      const s = e.target.result.createObjectStore('items', { keyPath: 'id' });
-      s.createIndex('slug', 'slug', { unique: true });
-    };
-    req.onsuccess = (e) => resolve(e.target.result);
-    req.onerror = (e) => reject(e.target.error);
-  });
-
-  // 1. put() queued before openCursor() in same transaction must be visible to cursor
-  const keysSeen = await new Promise((resolve, reject) => {
-    const tx = db.transaction('items', 'readwrite');
-    const st = tx.objectStore('items');
-    st.put({ id: 'b', slug: 's2' });
-    st.put({ id: 'a', slug: 's1' });
-    const seen = [];
-    st.openCursor().onsuccess = (e) => {
-      const cur = e.target.result;
-      if (!cur) return resolve(seen);
-      seen.push(cur.key);
-      cur.continue();
-    };
-    tx.onerror = (e) => reject(e.target.error);
-  });
-  assert.deepEqual(keysSeen, ['a', 'b']);
-
-  // 2. unique index conflict rejects
-  await assert.rejects(
-    () =>
-      new Promise((resolve, reject) => {
-        const tx = db.transaction('items', 'readwrite');
-        const req = tx.objectStore('items').put({ id: 'c', slug: 's1' });
-        req.onsuccess = () => resolve();
-        req.onerror = (e) => reject(e.target.error);
-      }),
-    (err) => err?.name === 'ConstraintError'
-  );
-
-  // 3. version upgrade updates db.version and tx.abort triggers onabort
-  const dbV2 = await new Promise((resolve) => {
-    const req = indexedDB.open('shim-regression', 2);
-    req.onsuccess = (e) => resolve(e.target.result);
-  });
-  assert.equal(dbV2.version, 2);
-
-  await new Promise((resolve) => {
-    const tx = dbV2.transaction('items', 'readwrite');
-    tx.onabort = () => resolve();
-    tx.abort();
-  });
 });
