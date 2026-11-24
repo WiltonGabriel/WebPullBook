@@ -12,7 +12,6 @@ permissions:
 env:
   EPUBCHECK_VERSION: "5.4.0"
   EPUBCHECK_SHA256: "33350c61038e71dfb3d45a76aed04bf5481e6d5500cb780f6e98db8bbd15a28c"
-  ADDONS_LINTER_VERSION: "10.16.0"
 
 jobs:
   validate:
@@ -52,15 +51,19 @@ jobs:
       - name: Run lint, syntax, CSP, i18n, and formatting checks
         run: npm run lint
 
+      - name: Install Node devDependencies for tests and static linters
+        run: npm ci --no-audit --no-fund
+
+      - name: Run Biome static analysis
+        run: npm run lint:biome
+
       - name: Run unit, parser snapshot, and EPUBCheck validation tests
         env:
           REQUIRE_EPUBCHECK: "1"
         run: npm test
 
       - name: Install Playwright Chromium for E2E test
-        run: |
-          npm ci --no-audit --no-fund
-          npx playwright install chromium
+        run: npx playwright install chromium
 
       - name: Run extension E2E integration test
         env:
@@ -69,7 +72,7 @@ jobs:
 
       - name: Dry-run extension ZIP package & Mozilla addons-linter
         run: |
-          zip -r WebPullBook-preview.zip manifest.json _locales icons src LICENSE README.md README.pt.md docs
+          zip -9 -r WebPullBook-preview.zip manifest.json _locales icons src LICENSE README.md README.pt.md
           unzip -t WebPullBook-preview.zip
-          npx --yes "addons-linter@${ADDONS_LINTER_VERSION}" WebPullBook-preview.zip
+          npx --no-install addons-linter WebPullBook-preview.zip
           rm -f WebPullBook-preview.zip

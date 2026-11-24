@@ -158,8 +158,9 @@
           <figcaption id="clone-cmd-caption">Clone the repository and optionally run local checks:</figcaption>
           <pre role="region" aria-labelledby="clone-cmd-caption" tabindex="0"><code>git clone https://github.com/WiltonGabriel/WebPullBook.git
 cd WebPullBook
-# Optional: run zero-dependency lint and unit tests (Node.js 22+)
-npm run check</code></pre>
+# Optional: run static lint (Node.js 22+) or full checks (requires npm install)
+npm run lint
+npm install && npm run check</code></pre>
         </figure>
 
         <p style="color: var(--muted);">End users do not need Git—use Firefox Add-ons or download the clean release <code>.zip</code> above. For manual Chromium updates, extract the new <code>.zip</code> over the same folder (or run <code>git pull</code>) and reload on <code>chrome://extensions/</code>; saved settings and Library entries in <code>chrome.storage.local</code> are preserved.</p>

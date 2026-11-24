@@ -38,7 +38,7 @@ WebPullBook/
 ├── CHANGELOG.md              # Release history (also used by scripts/extract-release-notes.mjs)
 ├── CONTRIBUTING.md           # This contributor guide
 ├── manifest.json             # Cross-browser Manifest V3 declaration (Chrome + Firefox gecko)
-├── package.json              # Scripts and devDependencies (playwright only for E2E)
+├── package.json              # Scripts and devDependencies (jsdom, fake-indexeddb, @biomejs/biome, addons-linter, playwright)
 ├── docs/                     # Compatibility matrix, Reader Presets guide, SEO guide & docs/pt/ mirrors
 ├── icons/                    # Extension icons (SVG + PNG sizes)
 ├── scripts/                  # check.mjs (lint/CSP/i18n), sync-website.mjs, verify-website.mjs, extract-release-notes.mjs
@@ -123,14 +123,16 @@ Before writing a new site-specific parser (or adding site-specific logic to an e
 
 ## Automated Testing & Quality Checks
 
-The extension runtime has **zero npm dependencies and zero build steps** (`npm run lint`, `npm test`, and `npm run check` also run with zero `npm install` needed). Only the optional Chromium browser E2E test uses Playwright (`devDependencies`).
+The extension runtime has **zero npm dependencies and zero build steps** (`npm run lint`, `npm run lint:fix`, and `npm run sync:website` run using only the Node.js standard library). Unit/snapshot tests use `jsdom` + `fake-indexeddb` and the Chromium browser E2E test uses Playwright (`devDependencies`, installed once via `npm install`).
 
 | Command | Requirements | What It Validates |
 | :--- | :--- | :--- |
-| `npm run check` | Node.js only | Runs `npm run lint && npm test` (recommended before every commit/PR). |
+| `npm run check` | `npm install` (`Node.js` + `devDependencies`) | Runs `npm run lint && npm test` (recommended before every commit/PR). |
 | `npm run lint` | Node.js only | Manifest/package parity, Firefox MV3 keys, JS syntax, MV3 CSP, EPUB media-type, relative Markdown links, PT/EN i18n key parity, DOM IDs, LF/whitespace hygiene, and `verify-website.mjs`. |
+| `npm run lint:biome` | `npm install` (`@biomejs/biome`) | Fast static analysis (unused variables/imports, undeclared globals, unreachable code) without modifying formatting. |
+| `npm run lint:amo` | `npm install` (`addons-linter`) + `zip` | Builds a compressed preview ZIP (`manifest.json`, `_locales`, `icons`, `src`, `LICENSE`, `README*.md`) and validates it with Mozilla `addons-linter`. |
 | `npm run lint:fix` | Node.js only | Auto-fixes LF line endings and trailing whitespace. |
-| `npm test` | Node.js only | Native `node:test` unit & snapshot test suite (`HtmlSanitizer`, `createZipBlob`, `ParserRegistry`, `ExporterRegistry`, `CacheStore`, `ImageProcessor`, `AdaptiveRateLimiter`, `TabRenderPool`, plus W3C EPUBCheck when available). |
+| `npm test` | `npm install` (`jsdom`, `fake-indexeddb`) | Native `node:test` unit & snapshot test suite (`HtmlSanitizer`, `createZipBlob`, `ParserRegistry`, `ExporterRegistry`, `CacheStore`, `ImageProcessor`, `AdaptiveRateLimiter`, `TabRenderPool`, plus W3C EPUBCheck when available). |
 | `npm run sync:website` | Node.js only | Updates `website/` compatibility/preset tables and version strings from `docs/` and `manifest.json` (`--check` verifies zero drift). |
 | `REQUIRE_EPUBCHECK=1 npm run test:epubcheck` | Java 21+ & EPUBCheck (`.tools/epubcheck` or `EPUBCHECK_JAR`) | Strictly validates generated EPUB 2 & EPUB 3 outputs (0 errors, 0 warnings). |
 | `npm run test:e2e` | `npm install` + `npx playwright install chromium` | Loads the unpacked extension in headless Chromium and exercises series loading, selection, profiles, library updates, domains, settings I/O, downloads, and tab merging. |
@@ -155,4 +157,4 @@ The extension runtime has **zero npm dependencies and zero build steps** (`npm r
   1. Verify all unit, regression, lint, EPUBCheck, and E2E tests are green in CI.
   2. Ensure [manifest.json](manifest.json) `version` matches the release tag (`vX.Y.Z`) and [package.json](package.json) `version`.
   3. Add a `## [X.Y.Z]` section in [CHANGELOG.md](CHANGELOG.md) (parsed automatically by [extract-release-notes.mjs](scripts/extract-release-notes.mjs) for GitHub Release notes).
-  4. Verify the release archive builds cleanly with `manifest.json`, `icons/`, `src/`, `LICENSE`, `README.md`, `README.pt.md`, and `docs/` (excluding `website/`, `tests/`, and `node_modules/`) plus its `.sha256` checksum.
+  4. Verify the release archive builds cleanly with `manifest.json`, `_locales/`, `icons/`, `src/`, `LICENSE`, `README.md`, and `README.pt.md` (excluding `docs/`, `website/`, `tests/`, and `node_modules/`) plus its `.sha256` checksum.

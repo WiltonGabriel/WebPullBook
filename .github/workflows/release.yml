@@ -11,7 +11,6 @@ permissions:
 env:
   EPUBCHECK_VERSION: "5.4.0"
   EPUBCHECK_SHA256: "33350c61038e71dfb3d45a76aed04bf5481e6d5500cb780f6e98db8bbd15a28c"
-  ADDONS_LINTER_VERSION: "10.16.0"
 
 jobs:
   release:
@@ -69,6 +68,12 @@ jobs:
           unzip -q /tmp/epubcheck.zip -d .tools/epubcheck
           rm -f /tmp/epubcheck.zip
 
+      - name: Install Node devDependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Run Biome static analysis
+        run: npm run lint:biome
+
       - name: Run pre-release lint, unit tests, and EPUBCheck
         env:
           REQUIRE_EPUBCHECK: "1"
@@ -78,7 +83,6 @@ jobs:
         env:
           REQUIRE_EPUBCHECK: "1"
         run: |
-          npm ci --no-audit --no-fund
           npx playwright install chromium
           npm run test:e2e
 
@@ -92,9 +96,9 @@ jobs:
 
       - name: Build & verify extension archive
         run: |
-          zip -r "WebPullBook-v${VERSION}.zip" manifest.json _locales icons src LICENSE README.md README.pt.md docs
+          zip -9 -r "WebPullBook-v${VERSION}.zip" manifest.json _locales icons src LICENSE README.md README.pt.md
           unzip -t "WebPullBook-v${VERSION}.zip"
-          npx --yes "addons-linter@${ADDONS_LINTER_VERSION}" "WebPullBook-v${VERSION}.zip"
+          npx --no-install addons-linter "WebPullBook-v${VERSION}.zip"
           sha256sum "WebPullBook-v${VERSION}.zip" > "WebPullBook-v${VERSION}.zip.sha256"
 
       - name: Create or update GitHub Release

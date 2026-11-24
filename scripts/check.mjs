@@ -210,6 +210,7 @@ const lintableExts = new Set(['.js', '.mjs', '.html', '.css', '.json']);
 const textFiles = [
   'manifest.json',
   'package.json',
+  ...(fs.existsSync('biome.json') ? ['biome.json'] : []),
   ...walk('_locales'),
   ...walk('src'),
   ...walk('tests').filter((f) => !f.includes(`${path.sep}fixtures${path.sep}`)),

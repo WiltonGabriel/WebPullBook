@@ -224,10 +224,10 @@ Encontrou algum problema ou deseja sugerir melhoria? Abra uma issue em https://g
 
 ## Packaging Verification
 
-The release workflow ([.github/workflows/release.yml](.github/workflows/release.yml)) packages only runtime and documentation files required by the extension:
+The release workflow ([.github/workflows/release.yml](.github/workflows/release.yml)) packages only runtime and core repository documentation files required by the extension (`zip -9 -r`):
 
 ```bash
-zip -r "WebPullBook-v${VERSION}.zip" manifest.json _locales icons src LICENSE README.md README.pt.md docs
+zip -9 -r "WebPullBook-v${VERSION}.zip" manifest.json _locales icons src LICENSE README.md README.pt.md
 ```
 
-This explicitly excludes `.git/`, `node_modules/`, `tests/`, `scripts/`, `website/`, and `CHROMEWEBSTORE.md`.
+This explicitly excludes `.git/`, `node_modules/`, `docs/`, `tests/`, `scripts/`, `website/`, and `CHROMEWEBSTORE.md`.

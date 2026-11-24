@@ -16,6 +16,7 @@
 .gitignore export-ignore
 AGENTS.md export-ignore
 CHROMEWEBSTORE.md export-ignore
+biome.json export-ignore
 package.json export-ignore
 package-lock.json export-ignore
 scripts/ export-ignore

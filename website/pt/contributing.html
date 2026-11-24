@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="color-scheme" content="light dark">
   <title>Guia de Contribuição — WebPullBook Open Source</title>
-  <meta name="description" content="Contribua com o WebPullBook: teste sites, reporte bugs com logs, crie adaptadores de parser, execute a suíte de testes sem dependências e use o AGENTS.md.">
+  <meta name="description" content="Contribua com o WebPullBook: teste sites, reporte bugs com logs, crie adaptadores de parser, execute a suíte de testes automatizados e use o AGENTS.md.">
   <link rel="canonical" href="https://wiltongabriel.github.io/WebPullBook/pt/contributing.html">
   <link rel="alternate" hreflang="en" href="https://wiltongabriel.github.io/WebPullBook/contributing.html">
   <link rel="alternate" hreflang="pt-BR" href="https://wiltongabriel.github.io/WebPullBook/pt/contributing.html">
@@ -183,25 +183,27 @@ export class MeuLayoutParser extends BaseParser {
       <div class="container">
         <div class="section-header">
           <h2>Desenvolvimento Local &amp; Testes</h2>
-          <p>As verificações de lint e testes unitários/snapshots rodam na biblioteca padrão do Node.js 22+ sem exigir <code>npm install</code>. Apenas o teste E2E no navegador Chromium utiliza Playwright.</p>
+          <p>O lint estático roda apenas com a biblioteca padrão do Node.js 22+. Os testes unitários/snapshots usam <code>jsdom</code> e <code>fake-indexeddb</code>, e o teste E2E no navegador Chromium utiliza Playwright (via <code>npm install</code>).</p>
         </div>
 
         <figure>
           <figcaption id="dev-commands-caption-pt">Comandos de verificação:</figcaption>
-          <pre role="region" aria-labelledby="dev-commands-caption-pt" tabindex="0"><code># 1. Lint estático, sintaxe JS, CSP MV3, links Markdown, paridade i18n e validação do site
+          <pre role="region" aria-labelledby="dev-commands-caption-pt" tabindex="0"><code># 1. Lint estático, sintaxe JS, CSP MV3, links Markdown, paridade i18n e validação do site (sem npm install)
 npm run lint
 
-# 2. Testes unitários, sanitizador, ZIP, cache, exportadores e snapshots de parsers
+# 2. Instalar devDependencies de teste (jsdom, fake-indexeddb, playwright)
+npm install
+
+# 3. Testes unitários, sanitizador, ZIP, cache, exportadores e snapshots de parsers
 npm test
 
-# 3. Executar lint e testes unitários em sequência
+# 4. Executar lint e testes unitários em sequência
 npm run check
 
-# 4. Validar arquivos EPUB 2 e EPUB 3 com W3C EPUBCheck (requer Java 21+ e EPUBCheck)
+# 5. Validar arquivos EPUB 2 e EPUB 3 com W3C EPUBCheck (requer Java 21+ e EPUBCheck)
 REQUIRE_EPUBCHECK=1 npm run test:epubcheck
 
-# 5. Teste End-to-End da extensão no Chromium (requer Playwright Chromium)
-npm install
+# 6. Teste End-to-End da extensão no Chromium (requer Playwright Chromium)
 npx playwright install chromium
 npm run test:e2e</code></pre>
         </figure>

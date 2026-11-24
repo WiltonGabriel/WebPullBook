@@ -10,7 +10,7 @@ For human contributor guides and parser tutorials, see [CONTRIBUTING.md](CONTRIB
 
 - **Purpose:** Open-source cross-browser **Manifest V3** extension (Chrome, Edge, Brave, and Mozilla Firefox 128+) that extracts web novels, light novels, serialized fiction, articles, documentation, and open tabs into volume-organized **EPUB 2**, **EPUB 3**, **Single-File HTML**, **Markdown**, and **Plain Text (TXT)** files locally in the browser.
 - **Communication Philosophy:** Quiet design and minimalism (*design silencioso e minimalismo*). Documentation, UI copy, and website text must remain objective, discreet, and honest—never promotional or unverified.
-- **Zero Runtime Dependencies:** `dependencies` in [package.json](package.json) is empty (`{}`), with **no build step or bundler**. Vanilla ES modules under `src/` execute directly in the browser. Only `playwright` is in `devDependencies` for headless Chromium E2E testing.
+- **Zero Runtime Dependencies:** `dependencies` in [package.json](package.json) is empty (`{}`), with **no build step or bundler**. Vanilla ES modules under `src/` execute directly in the browser. Only test/dev tooling (`jsdom`, `fake-indexeddb`, `@biomejs/biome`, `addons-linter`, `playwright`) is in `devDependencies`.
 
 ### Repository Layout
 
@@ -25,7 +25,7 @@ WebPullBook/
 ├── LICENSE                   # Project license
 ├── README.md / README.pt.md  # Primary repository documentation (EN / PT-BR mirrors)
 ├── manifest.json             # Cross-browser MV3 declaration (Chrome + Firefox gecko)
-├── package.json              # Scripts & devDependencies (playwright only)
+├── package.json              # Scripts & devDependencies (jsdom, fake-indexeddb, @biomejs/biome, addons-linter, playwright)
 ├── docs/                     # COMPATIBILITY.md, READER_PRESETS*.md, SEO guide & docs/pt/ mirrors
 ├── icons/                    # Extension icons (SVG + PNG)
 ├── scripts/                  # check.mjs (lint), sync-website.mjs, verify-website.mjs, extract-release-notes.mjs
@@ -99,14 +99,16 @@ Do **not** edit synced targets directly or duplicate dynamic lists across files.
 
 ## 5. Testing Commands & Validation
 
-**Run checks using native Node.js stdlib tools (`node scripts/...`, `node --test`) rather than `npm install` when possible.**
+**Static scripts (`node scripts/...`) require only Node.js stdlib (`None`); unit tests (`node --test tests/*.test.js`) require `npm ci` / `npm install` (`devDependencies`: `jsdom`, `fake-indexeddb`).**
 
 | Command | Dependencies Required | What It Validates |
 | :--- | :--- | :--- |
 | `node scripts/sync-website.mjs` | None | Syncs `website/` compatibility/preset tables, `[data-wpb-link]` hrefs, JSON-LD, versions, and git `<lastmod>` from docs/manifest/`site.config.json` (pass `--check` for non-mutating CI drift checks). Must remain idempotent across consecutive runs. |
 | `node scripts/verify-website.mjs` | None | Validates 14 bilingual pages plus `404.html`, heading order, links, images, canonicals, `hreflang`, OG/Twitter, JSON-LD, `[data-wpb-link]` parity, unique `sitemap.xml` URLs, version parity, and `robots.txt`. |
 | `node scripts/check.mjs` | None | Manifest/package version parity, `_locales/` validation, Firefox MV3 keys, JS syntax (`node --check` incl. `website/assets/js/site.js`), MV3 CSP, EPUB media-type, relative Markdown links, PT/EN i18n & DOM ID parity, LF/whitespace hygiene, `sync-website.mjs --check`, and `verify-website.mjs`. |
-| `node --test tests/*.test.js` | None (EPUBCheck optional unless `REQUIRE_EPUBCHECK=1`) | Split unit & regression suites (`cache-store`, `epub-validation`, `exporters`, `net-fetcher`, `parsers`, `rate-limiter`, `sanitizer`, `text-utils`, `website-analytics`, `workspace`, `zip`). |
+| `node --test tests/*.test.js` | `npm ci` (`jsdom`, `fake-indexeddb`; EPUBCheck optional unless `REQUIRE_EPUBCHECK=1`) | Split unit & regression suites (`cache-store`, `epub-validation`, `exporters`, `net-fetcher`, `parsers`, `rate-limiter`, `sanitizer`, `text-utils`, `website-analytics`, `workspace`, `zip`). |
+| `npm run lint:biome` | `npm ci` (`@biomejs/biome`) | Targeted static JS analysis (unused vars/imports, undeclared globals, scope/dead-code checks) with formatter disabled. |
+| `npm run lint:amo` | `npm ci` (`addons-linter`) + `zip` | Builds compressed extension ZIP (`manifest.json _locales icons src LICENSE README.md README.pt.md`) and validates with Mozilla `addons-linter`. |
 | `npm run test:e2e` | `Playwright + Chromium` | Real Chromium unpacked extension E2E covering loading, `sourceTabId` live DOM capture, SPA `TabRenderPool` fallback, selection, preview/edit, presets, library, domain rules, EPUB build, and Merge Tabs. |
 
 ---

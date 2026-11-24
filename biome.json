@@ -1,0 +1,106 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.6.8/schema.json",
+  "formatter": {
+    "enabled": false
+  },
+  "assist": {
+    "enabled": false
+  },
+  "files": {
+    "includes": [
+      "src/**/*.js",
+      "scripts/**/*.mjs",
+      "tests/**/*.js",
+      "tests/**/*.mjs",
+      "website/assets/js/**/*.js",
+      "!**/tests/fixtures/**"
+    ]
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "preset": "none",
+      "correctness": {
+        "noConstAssign": "error",
+        "noConstantCondition": "error",
+        "noDuplicateArgumentNames": "error",
+        "noDuplicateVariableNames": "error",
+        "noInvalidUseBeforeDeclaration": "error",
+        "noSelfAssign": "error",
+        "noUndeclaredVariables": "error",
+        "noUnreachable": "error",
+        "noUnsafeFinally": "error",
+        "noUnusedImports": "error",
+        "noUnusedVariables": "error",
+        "useIsNan": "error",
+        "useValidTypeof": "error"
+      },
+      "suspicious": {
+        "noCatchAssign": "error",
+        "noClassAssign": "error",
+        "noCompareNegZero": "error",
+        "noDebugger": "error",
+        "noDuplicateCase": "error",
+        "noDuplicateClassMembers": "error",
+        "noDuplicateObjectKeys": "error",
+        "noDuplicateParameters": "error",
+        "noFunctionAssign": "error",
+        "noGlobalAssign": "error",
+        "noImportAssign": "error",
+        "noRedeclare": "error",
+        "noSelfCompare": "error",
+        "noShadowRestrictedNames": "error"
+      }
+    }
+  },
+  "javascript": {
+    "globals": [
+      "chrome",
+      "browser",
+      "window",
+      "document",
+      "DOMParser",
+      "XMLSerializer",
+      "Node",
+      "NodeFilter",
+      "CSS",
+      "navigator",
+      "localStorage",
+      "sessionStorage",
+      "FileReader",
+      "Blob",
+      "CompressionStream",
+      "DecompressionStream",
+      "indexedDB",
+      "IDBKeyRange",
+      "crypto",
+      "btoa",
+      "atob",
+      "TextDecoder",
+      "TextEncoder",
+      "HTMLCanvasElement",
+      "Image",
+      "createImageBitmap",
+      "OffscreenCanvas",
+      "DOMException",
+      "URL",
+      "URLSearchParams",
+      "AbortController",
+      "AbortSignal",
+      "fetch",
+      "Response",
+      "Request",
+      "Headers",
+      "setTimeout",
+      "clearTimeout",
+      "setInterval",
+      "clearInterval",
+      "queueMicrotask",
+      "console",
+      "structuredClone",
+      "process",
+      "Buffer",
+      "globalThis"
+    ]
+  }
+}

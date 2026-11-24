@@ -38,7 +38,7 @@ WebPullBook/
 ├── CHANGELOG.md              # Histórico de versões (lido por scripts/extract-release-notes.mjs)
 ├── CONTRIBUTING.md           # Guia oficial de contribuição (em inglês)
 ├── manifest.json             # Manifesto MV3 multi-navegador (Chrome + Firefox gecko)
-├── package.json              # Scripts NPM e playwright (apenas em devDependencies para E2E)
+├── package.json              # Scripts NPM e devDependencies (jsdom, fake-indexeddb, @biomejs/biome, addons-linter, playwright)
 ├── docs/                     # Matriz de compatibilidade, Perfis de Leitor, guia de SEO e espelhos docs/pt/
 ├── icons/                    # Ícones da extensão (SVG + PNG)
 ├── scripts/                  # check.mjs (lint/CSP/i18n), sync-website.mjs, verify-website.mjs, extract-release-notes.mjs
@@ -119,14 +119,16 @@ O WebPullBook busca ser o **mais genérico possível**, priorizando compatibilid
 
 ## Testes Automatizados e Verificações
 
-O código da extensão não precisa de `npm install` nem de compilação (`npm run lint`, `npm test` e `npm run check` usam apenas Node.js padrão). Somente o teste E2E em navegador Chromium usa Playwright (`devDependencies`).
+O código da extensão não tem dependências de runtime nem etapa de compilação (`npm run lint`, `npm run lint:fix` e `npm run sync:website` usam apenas Node.js padrão). Os testes unitários usam `jsdom` + `fake-indexeddb` e o teste E2E em navegador Chromium usa Playwright (`devDependencies`, instalados via `npm install`).
 
 | Comando | Requisitos | O que Valida |
 | :--- | :--- | :--- |
-| `npm run check` | Apenas Node.js | Executa `npm run lint && npm test` (recomendado antes de todo commit/PR). |
+| `npm run check` | `npm install` (`Node.js` + `devDependencies`) | Executa `npm run lint && npm test` (recomendado antes de todo commit/PR). |
 | `npm run lint` | Apenas Node.js | Paridade `manifest.json`/`package.json`, chaves MV3 do Firefox, sintaxe JS, CSP MV3, links Markdown, paridade PT/EN no i18n, IDs do DOM, LF/espaços e `verify-website.mjs`. |
+| `npm run lint:biome` | `npm install` (`@biomejs/biome`) | Análise estática rápida (variáveis/imports não usados, globais não declaradas, código morto) sem alterar formatação. |
+| `npm run lint:amo` | `npm install` (`addons-linter`) + `zip` | Monta um ZIP comprimido de prévia (`manifest.json`, `_locales`, `icons`, `src`, `LICENSE`, `README*.md`) e valida no `addons-linter`. |
 | `npm run lint:fix` | Apenas Node.js | Corrige automaticamente fins de linha LF e espaços no fim das linhas. |
-| `npm test` | Apenas Node.js | Suíte nativa de testes unitários e snapshots (`node:test`) cobrindo `HtmlSanitizer`, `createZipBlob`, `ParserRegistry`, `ExporterRegistry`, `CacheStore`, `ImageProcessor`, `AdaptiveRateLimiter`, `TabRenderPool`, além de `EPUBCheck` quando disponível. |
+| `npm test` | `npm install` (`jsdom`, `fake-indexeddb`) | Suíte nativa de testes unitários e snapshots (`node:test`) cobrindo `HtmlSanitizer`, `createZipBlob`, `ParserRegistry`, `ExporterRegistry`, `CacheStore`, `ImageProcessor`, `AdaptiveRateLimiter`, `TabRenderPool`, além de `EPUBCheck` quando disponível. |
 | `npm run sync:website` | Apenas Node.js | Sincroniza tabelas e versões de `website/` a partir de `docs/` e `manifest.json` (`--check` verifica se está atualizado). |
 | `REQUIRE_EPUBCHECK=1 npm run test:epubcheck` | Java 21+ e EPUBCheck | Valida EPUB 2 e EPUB 3 gerados (0 erros, 0 avisos). |
 | `npm run test:e2e` | `npm install` + `npx playwright install chromium` | Abre o Chromium com a extensão carregada e testa extração, seleção, perfis, biblioteca, regras por domínio, download real e mesclagem de abas. |
@@ -151,4 +153,4 @@ O código da extensão não precisa de `npm install` nem de compilação (`npm r
   1. Confirme todos os testes (unitários, lint, EPUBCheck e E2E) verdes no CI.
   2. Garanta que `version` em [manifest.json](../../manifest.json) e [package.json](../../package.json) bata com a tag (`vX.Y.Z`).
   3. Inclua a seção `## [X.Y.Z]` em [CHANGELOG.md](../../CHANGELOG.md) (usada automaticamente por [extract-release-notes.mjs](../../scripts/extract-release-notes.mjs)).
-  4. Confira o `.zip` gerado (`manifest.json`, `icons/`, `src/`, `LICENSE`, `README.md`, `README.pt.md`, `docs/`) + arquivo `.sha256`.
+  4. Confira o `.zip` gerado (`manifest.json`, `_locales/`, `icons/`, `src/`, `LICENSE`, `README.md`, `README.pt.md`, excluindo `docs/`, `website/`, `tests/` e `node_modules/`) + arquivo `.sha256`.
