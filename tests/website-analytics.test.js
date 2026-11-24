@@ -1,6 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizeGoatCounterConfig, syncGoatCounterScript } from '../scripts/sync-website.mjs';
+import {
+  getConfiguredLinkMap,
+  normalizeGoatCounterConfig,
+  parseMarkdownSections,
+  renderInlineMarkdown,
+  syncGoatCounterScript,
+  syncWebsite
+} from '../scripts/sync-website.mjs';
 
 const EN_HEAD = [
   '<!DOCTYPE html>',
@@ -103,4 +110,51 @@ test('syncGoatCounterScript is idempotent, deduplicates repeated tags, and updat
   const endpointMatch = replaced.match(/data-goatcounter="([^"]+)"/);
   assert.ok(endpointMatch);
   assert.equal(new URL(endpointMatch[1]).hostname, 'stats.example.org');
+});
+
+test('parseMarkdownSections preserves escaped pipes inside table cells', () => {
+  const md = [
+    '## Sample Section',
+    '',
+    '| Name | Selector | Status |',
+    '| :--- | :--- | :--- |',
+    '| Site A | `div.main \\| div.alt` | Working |'
+  ].join('\n');
+
+  const sections = parseMarkdownSections(md);
+  const sample = sections.get('Sample Section');
+  assert.ok(sample);
+  assert.deepEqual(sample.headers, ['Name', 'Selector', 'Status']);
+  assert.deepEqual(sample.rows, [['Site A', '`div.main | div.alt`', 'Working']]);
+});
+
+test('renderInlineMarkdown strips links containing balanced parentheses', () => {
+  assert.equal(
+    renderInlineMarkdown('[Wiki entry](https://example.org/Wiki_(Test)) — `tag` **bold**'),
+    'Wiki entry &mdash; <code>tag</code> <strong>bold</strong>'
+  );
+});
+
+test('getConfiguredLinkMap maps all five official link keys from site.config.json', () => {
+  const linkMap = getConfiguredLinkMap({
+    firefoxAddonsUrl: 'https://addons.mozilla.org/en-US/firefox/addon/webpullbook/',
+    releasesUrl: 'https://github.com/WiltonGabriel/WebPullBook/releases',
+    releasesLatestUrl: 'https://github.com/WiltonGabriel/WebPullBook/releases/tag/v1.7.1',
+    repositoryUrl: 'https://github.com/WiltonGabriel/WebPullBook',
+    issuesUrl: 'https://github.com/WiltonGabriel/WebPullBook/issues'
+  });
+
+  assert.deepEqual(Object.keys(linkMap), [
+    'firefoxAddons',
+    'releases',
+    'releasesLatest',
+    'repository',
+    'issues'
+  ]);
+  assert.equal(linkMap.releasesLatest, 'https://github.com/WiltonGabriel/WebPullBook/releases/tag/v1.7.1');
+});
+
+test('syncWebsite checkOnly reports zero drift when website files match authoritative sources', () => {
+  const result = syncWebsite({ checkOnly: true });
+  assert.deepEqual(result, { drifted: [], updated: [] });
 });

@@ -1,12 +1,11 @@
 {
-  "siteName": "WebPullBook",
   "version": "1.7.1",
+  "versionName": "1.7.1-beta",
   "baseUrl": "https://wiltongabriel.github.io/WebPullBook",
   "repositoryUrl": "https://github.com/WiltonGabriel/WebPullBook",
   "firefoxAddonsUrl": "https://addons.mozilla.org/firefox/addon/webpullbook/",
   "releasesUrl": "https://github.com/WiltonGabriel/WebPullBook/releases",
-  "releasesLatestUrl": "https://github.com/WiltonGabriel/WebPullBook/releases/latest",
-  "releasesApiUrl": "https://api.github.com/repos/WiltonGabriel/WebPullBook/releases?per_page=1",
+  "releasesLatestUrl": "https://github.com/WiltonGabriel/WebPullBook/releases/tag/v1.7.1",
   "issuesUrl": "https://github.com/WiltonGabriel/WebPullBook/issues",
   "socialPreviewImage": "https://wiltongabriel.github.io/WebPullBook/assets/images/social-preview.png",
   "analytics": {
@@ -14,11 +13,6 @@
     "endpoint": "https://wiltongabriel.goatcounter.com/count",
     "scriptSrc": "https://gc.zgo.at/count.js"
   },
-  "defaultLocale": "en",
-  "locales": [
-    "en",
-    "pt-BR"
-  ],
   "pages": [
     {
       "id": "home",
@@ -69,6 +63,5 @@
       "enFile": "contributing.html",
       "ptFile": "pt/contributing.html"
     }
-  ],
-  "versionName": "1.7.1-beta"
+  ]
 }

@@ -66,8 +66,8 @@
 
       <div class="header-actions">
         <select id="lang-select" class="header-select" aria-label="Language">
-          <option value="en" data-href="privacy.html" selected>English</option>
-          <option value="pt-BR" data-href="pt/privacy.html">Português (BR)</option>
+          <option value="en" selected>English</option>
+          <option value="pt-BR">Português (BR)</option>
         </select>
         <select id="theme-select" class="header-select" aria-label="Theme">
           <option value="system">Auto</option>
@@ -220,7 +220,7 @@
               <tr>
                 <td><code>declarativeNetRequestWithHostAccess</code></td>
                 <td><code>permissions</code></td>
-                <td>Used for temporary session-scoped rules: on Firefox, rule ID <code>1</code> removes the <code>Origin: moz-extension://</code> header so cross-origin chapter/image fetches are not rejected by server CORS checks; session rules <code>100..119</code> attach standard navigation headers when required by protected hosts.</td>
+                <td>Used for temporary session-scoped rules: on Firefox, rule ID <code>1</code> removes the <code>Origin: moz-extension://</code> header so cross-origin chapter/image fetches are not rejected by server CORS checks; session rules <code>100..119</code> attach standard navigation headers when required by protected hosts, and ref-counted session rules <code>120..129</code> supply temporary same-origin <code>Referer</code> fallbacks only when hotlink-protected images fail anonymous retries.</td>
               </tr>
               <tr>
                 <td><code>https://*/*</code> &amp; <code>http://*/*</code></td>

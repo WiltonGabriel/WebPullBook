@@ -66,8 +66,8 @@
 
       <div class="header-actions">
         <select id="lang-select" class="header-select" aria-label="Language">
-          <option value="en" data-href="features.html" selected>English</option>
-          <option value="pt-BR" data-href="pt/features.html">Português (BR)</option>
+          <option value="en" selected>English</option>
+          <option value="pt-BR">Português (BR)</option>
         </select>
         <select id="theme-select" class="header-select" aria-label="Theme">
           <option value="system">Auto</option>
@@ -244,7 +244,7 @@
               <li><strong>Preview &amp; Quick Edit:</strong> Preview any chapter and edit its title or paragraph text inline before exporting.</li>
               <li><strong>Merge Chapters &amp; Merge Open Tabs:</strong> Combine checked chapters into one, or capture open browser tabs into a single anthology or separate volume files.</li>
               <li><strong>Volume &amp; Range Selection:</strong> Toggle all volumes at once, or select individual items and ranges with <code>Ctrl+Click</code> and <code>Shift+Click</code> on volume chips and chapter rows.</li>
-              <li><strong>Magic-Byte MIME Detection &amp; Deduplication:</strong> Verifies binary image headers (PNG, JPEG, GIF, WebP, AVIF, BMP, SVG), drops HTML error pages returned as image URLs, retries HTTP failures anonymously, preserves animated GIF/APNG/WebP, and deduplicates identical images by content hash.</li>
+              <li><strong>Magic-Byte MIME Detection &amp; Deduplication:</strong> Verifies binary raster image headers (PNG, JPEG, GIF, WebP, AVIF, BMP), rejects disguised HTML or SVG payloads, retries HTTP failures anonymously, preserves animated GIF/APNG/WebP, and deduplicates identical images by content hash.</li>
             </ul>
           </article>
         </div>

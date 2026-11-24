@@ -3,10 +3,13 @@
  * Automated validator for the official WebPullBook static website (website/).
  * Verifies HTML structure, heading hierarchy, internal links, image paths,
  * canonical URLs, bidirectional hreflang tags, Open Graph & Twitter Card metadata,
- * JSON-LD validity, sitemap.xml parity, and robots.txt configuration.
+ * JSON-LD validity, sitemap.xml parity & xhtml:link alternates, Reader Presets parity,
+ * privacy permissions parity, and robots.txt configuration.
  */
 import fs from 'node:fs';
 import path from 'node:path';
+import { getConfiguredLinkMap, parseMarkdownSections } from './sync-website.mjs';
+import { READER_PRESETS } from '../src/workspace/state.js';
 
 const SITE_DIR = path.resolve('website');
 const errors = [];
@@ -27,7 +30,15 @@ if (!fs.existsSync(configPath)) {
 }
 
 const siteConfig = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-const BASE_URL = siteConfig.baseUrl.replace(/\/+$/, '');
+const BASE_URL = String(siteConfig.baseUrl || '').replace(/\/+$/, '');
+let BASE_PATH = '/';
+try {
+  const pathname = new URL(BASE_URL).pathname;
+  BASE_PATH = pathname.endsWith('/') ? pathname : `${pathname}/`;
+} catch {
+  fail(`website/site.config.json: invalid baseUrl (${siteConfig.baseUrl})`);
+}
+
 const manifestPath = path.resolve('manifest.json');
 const pkgPath = path.resolve('package.json');
 const manifest = fs.existsSync(manifestPath) ? JSON.parse(fs.readFileSync(manifestPath, 'utf8')) : null;
@@ -40,8 +51,44 @@ function isInsideSiteDir(targetPath) {
   return Boolean(rel) && !rel.startsWith('..') && !path.isAbsolute(rel);
 }
 
-if (manifest && siteConfig.version && siteConfig.version !== manifest.version) {
-  fail(`website/site.config.json: version (${siteConfig.version}) !== manifest.json (${manifest.version})`);
+function escapeRegExp(str) {
+  return String(str).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function extractAttr(tag, attr) {
+  const rx = new RegExp(`\\b${escapeRegExp(attr)}\\s*=\\s*"([^"]*)"`, 'i');
+  return tag.match(rx)?.[1] ?? null;
+}
+
+function findMetaContent(html, attrName, attrValue) {
+  const target = attrValue.toLowerCase();
+  for (const m of html.matchAll(/<meta\b[^>]+>/gi)) {
+    const val = extractAttr(m[0], attrName);
+    if (val && val.toLowerCase() === target) {
+      return extractAttr(m[0], 'content');
+    }
+  }
+  return null;
+}
+
+function resolveSiteHref(rawHref, baseFileDir) {
+  const cleanHref = rawHref.split('#')[0].split('?')[0];
+  if (!cleanHref) return null;
+  if (cleanHref.startsWith(BASE_PATH)) {
+    const rel = cleanHref.slice(BASE_PATH.length);
+    if (!rel) return path.join(SITE_DIR, 'index.html');
+    return path.join(SITE_DIR, rel.endsWith('/') ? `${rel}index.html` : rel);
+  }
+  return path.resolve(baseFileDir, cleanHref);
+}
+
+if (manifest) {
+  if (!siteConfig.version || siteConfig.version !== manifest.version) {
+    fail(`website/site.config.json: version (${siteConfig.version}) !== manifest.json (${manifest.version})`);
+  }
+  if (!siteConfig.versionName || siteConfig.versionName !== expectedSoftwareVersion) {
+    fail(`website/site.config.json: versionName (${siteConfig.versionName}) !== expected (${expectedSoftwareVersion})`);
+  }
 }
 if (pkg && manifest && pkg.version !== manifest.version) {
   fail(`package.json version (${pkg.version}) !== manifest.json (${manifest.version})`);
@@ -138,32 +185,84 @@ if (!fs.existsSync(robotsPath)) {
   }
 }
 
-// 2. Validate sitemap.xml
+// 2. Validate sitemap.xml (<loc>, <lastmod>, and <xhtml:link> parity)
 const sitemapPath = path.join(SITE_DIR, 'sitemap.xml');
-const expectedCanonicalUrls = new Set();
-for (const page of siteConfig.pages) {
-  expectedCanonicalUrls.add(`${BASE_URL}${page.en}`);
-  expectedCanonicalUrls.add(`${BASE_URL}${page.pt}`);
+const expectedUrlAlts = new Map();
+for (const page of siteConfig.pages || []) {
+  const enUrl = `${BASE_URL}${page.en}`;
+  const ptUrl = `${BASE_URL}${page.pt}`;
+  const alts = { en: enUrl, 'pt-BR': ptUrl, 'x-default': enUrl };
+  expectedUrlAlts.set(enUrl, alts);
+  expectedUrlAlts.set(ptUrl, alts);
 }
 
 if (!fs.existsSync(sitemapPath)) {
   fail('website/sitemap.xml is missing');
 } else {
   const sitemap = fs.readFileSync(sitemapPath, 'utf8');
-  const locMatches = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1].trim());
   const seenLocs = new Set();
-  for (const expectedUrl of expectedCanonicalUrls) {
-    if (!locMatches.includes(expectedUrl)) {
-      fail(`sitemap.xml missing <loc>${expectedUrl}</loc>`);
+  for (const urlBlock of sitemap.matchAll(/<url>[\s\S]*?<\/url>/g)) {
+    const block = urlBlock[0];
+    const loc = block.match(/<loc>([^<]+)<\/loc>/)?.[1]?.trim();
+    if (!loc) {
+      fail('sitemap.xml contains <url> block without <loc>');
+      continue;
     }
-  }
-  for (const loc of locMatches) {
     if (seenLocs.has(loc)) {
       fail(`sitemap.xml contains duplicate <loc>${loc}</loc>`);
     }
     seenLocs.add(loc);
-    if (!expectedCanonicalUrls.has(loc)) {
+    const alts = expectedUrlAlts.get(loc);
+    if (!alts) {
       fail(`sitemap.xml contains unexpected <loc>${loc}</loc>`);
+      continue;
+    }
+    const lastmod = block.match(/<lastmod>([^<]*)<\/lastmod>/)?.[1]?.trim() || '';
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(lastmod)) {
+      fail(`sitemap.xml: invalid or missing <lastmod> for ${loc}: "${lastmod}"`);
+    }
+    const blockLinks = new Map();
+    for (const xMatch of block.matchAll(/<xhtml:link\b[^>]+>/gi)) {
+      const hl = extractAttr(xMatch[0], 'hreflang');
+      const hr = extractAttr(xMatch[0], 'href');
+      if (hl && hr) blockLinks.set(hl, hr);
+    }
+    for (const [langKey, expectedHref] of Object.entries(alts)) {
+      if (blockLinks.get(langKey) !== expectedHref) {
+        fail(`sitemap.xml: ${loc} hreflang="${langKey}" (${blockLinks.get(langKey)}) !== "${expectedHref}"`);
+      }
+    }
+  }
+  for (const expectedUrl of expectedUrlAlts.keys()) {
+    if (!seenLocs.has(expectedUrl)) {
+      fail(`sitemap.xml missing <loc>${expectedUrl}</loc>`);
+    }
+  }
+}
+
+// 2b. Validate Reader Presets Markdown vs src/workspace/state.js READERS_PRESETS
+const expectedPresetIds = new Set([...Object.keys(READER_PRESETS), 'custom']);
+for (const presetFile of ['docs/READER_PRESETS.md', 'docs/READER_PRESETS.pt.md']) {
+  const absPreset = path.resolve(presetFile);
+  if (!fs.existsSync(absPreset)) {
+    fail(`Missing ${presetFile}`);
+    continue;
+  }
+  const tables = parseMarkdownSections(fs.readFileSync(absPreset, 'utf8'));
+  let rows = [];
+  for (const tbl of tables.values()) {
+    if (tbl.rows.length > 0) {
+      rows = tbl.rows;
+      break;
+    }
+  }
+  if (rows.length !== expectedPresetIds.size) {
+    fail(`${presetFile}: expected ${expectedPresetIds.size} profile rows (matching READER_PRESETS + custom), found ${rows.length}`);
+  }
+  const docIds = new Set(rows.map((r) => r[0]?.match(/`([a-z0-9-]+)`/i)?.[1]).filter(Boolean));
+  for (const id of expectedPresetIds) {
+    if (!docIds.has(id)) {
+      fail(`${presetFile}: profile comparison table missing \`${id}\``);
     }
   }
 }
@@ -171,13 +270,10 @@ if (!fs.existsSync(sitemapPath)) {
 // 3. Validate each bilingual page pair
 const seenTitles = new Map();
 const seenDescriptions = new Map();
+const configuredLinks = getConfiguredLinkMap(siteConfig);
+const minGeckoMajor = String(manifest?.browser_specific_settings?.gecko?.strict_min_version || '128').split('.')[0];
 
-function extractAttr(tag, attr) {
-  const rx = new RegExp(`\\b${attr}\\s*=\\s*"([^"]*)"`, 'i');
-  return tag.match(rx)?.[1] ?? null;
-}
-
-for (const page of siteConfig.pages) {
+for (const page of siteConfig.pages || []) {
   const variants = [
     {
       locale: 'en',
@@ -211,8 +307,9 @@ for (const page of siteConfig.pages) {
       fail(`${v.relFile}: missing <!DOCTYPE html>`);
     }
 
-    const htmlLangMatch = html.match(/<html\b[^>]*\blang="([^"]+)"/i);
-    if (!htmlLangMatch || htmlLangMatch[1] !== v.htmlLang) {
+    const htmlLangMatch = html.match(/<html\b[^>]*>/i);
+    const actualLang = htmlLangMatch ? extractAttr(htmlLangMatch[0], 'lang') : null;
+    if (actualLang !== v.htmlLang) {
       fail(`${v.relFile}: expected <html lang="${v.htmlLang}">`);
     }
 
@@ -230,9 +327,8 @@ for (const page of siteConfig.pages) {
       seenTitles.set(title, v.relFile);
     }
 
-    // Meta description
-    const descMatch = html.match(/<meta\s+name="description"\s+content="([^"]+)"/i);
-    const desc = descMatch?.[1]?.trim() || '';
+    // Meta description (attribute-order independent)
+    const desc = (findMetaContent(html, 'name', 'description') || '').trim();
     const decodedDesc = decodeBasicHtmlEntities(desc);
     if (!desc || decodedDesc.length < 50) {
       fail(`${v.relFile}: missing or too short meta description`);
@@ -244,16 +340,22 @@ for (const page of siteConfig.pages) {
       seenDescriptions.set(desc, v.relFile);
     }
 
-    // Canonical URL
-    const canonicalMatch = html.match(/<link\s+rel="canonical"\s+href="([^"]+)"/i);
-    if (!canonicalMatch || canonicalMatch[1] !== v.canonical) {
-      fail(`${v.relFile}: canonical "${canonicalMatch?.[1]}" !== expected "${v.canonical}"`);
-    }
-
-    // Hreflang links (en, pt-BR, x-default)
+    // Canonical URL & hreflang links (attribute-order independent)
+    let canonicalActual = null;
     const hreflangs = new Map();
-    for (const m of html.matchAll(/<link\s+rel="alternate"\s+hreflang="([^"]+)"\s+href="([^"]+)"/gi)) {
-      hreflangs.set(m[1], m[2]);
+    for (const linkMatch of html.matchAll(/<link\b[^>]+>/gi)) {
+      const tag = linkMatch[0];
+      const rel = extractAttr(tag, 'rel')?.toLowerCase();
+      const href = extractAttr(tag, 'href');
+      if (rel === 'canonical' && href) {
+        canonicalActual = href;
+      } else if (rel === 'alternate') {
+        const hl = extractAttr(tag, 'hreflang');
+        if (hl && href) hreflangs.set(hl, href);
+      }
+    }
+    if (canonicalActual !== v.canonical) {
+      fail(`${v.relFile}: canonical "${canonicalActual}" !== expected "${v.canonical}"`);
     }
     if (hreflangs.get('en') !== v.enAlt) {
       fail(`${v.relFile}: hreflang="en" (${hreflangs.get('en')}) !== ${v.enAlt}`);
@@ -265,26 +367,29 @@ for (const page of siteConfig.pages) {
       fail(`${v.relFile}: hreflang="x-default" (${hreflangs.get('x-default')}) !== ${v.enAlt}`);
     }
 
-    // Open Graph & Twitter Card
+    // Open Graph & Twitter Card (attribute-order independent)
     const requiredMetaProps = ['og:type', 'og:site_name', 'og:title', 'og:description', 'og:url', 'og:image'];
     for (const prop of requiredMetaProps) {
-      const rx = new RegExp(`<meta\\s+property="${prop}"\\s+content="([^"]+)"`, 'i');
-      const m = html.match(rx);
-      if (!m || !m[1].trim()) {
+      const val = findMetaContent(html, 'property', prop);
+      if (!val || !val.trim()) {
         fail(`${v.relFile}: missing <meta property="${prop}">`);
-      } else if (prop === 'og:url' && m[1] !== v.canonical) {
-        fail(`${v.relFile}: og:url (${m[1]}) !== canonical (${v.canonical})`);
-      } else if (prop === 'og:image' && m[1] !== siteConfig.socialPreviewImage) {
-        fail(`${v.relFile}: og:image (${m[1]}) !== ${siteConfig.socialPreviewImage}`);
+      } else if (prop === 'og:url' && val !== v.canonical) {
+        fail(`${v.relFile}: og:url (${val}) !== canonical (${v.canonical})`);
+      } else if (prop === 'og:image' && val !== siteConfig.socialPreviewImage) {
+        fail(`${v.relFile}: og:image (${val}) !== ${siteConfig.socialPreviewImage}`);
       }
     }
 
     for (const tw of ['twitter:card', 'twitter:title', 'twitter:description', 'twitter:image']) {
-      const rx = new RegExp(`<meta\\s+name="${tw}"\\s+content="([^"]+)"`, 'i');
-      if (!rx.test(html)) fail(`${v.relFile}: missing <meta name="${tw}">`);
+      const val = findMetaContent(html, 'name', tw);
+      if (!val || !val.trim()) {
+        fail(`${v.relFile}: missing <meta name="${tw}">`);
+      } else if (tw === 'twitter:image' && val !== siteConfig.socialPreviewImage) {
+        fail(`${v.relFile}: twitter:image (${val}) !== ${siteConfig.socialPreviewImage}`);
+      }
     }
 
-    // Semantic landmarks & heading hierarchy
+    // Semantic landmarks, dead attribute hygiene & heading hierarchy
     if (!/<header\b/i.test(html)) fail(`${v.relFile}: missing <header>`);
     if (!/<nav\b/i.test(html)) fail(`${v.relFile}: missing <nav>`);
     if (!/<main\b/i.test(html)) fail(`${v.relFile}: missing <main>`);
@@ -292,6 +397,7 @@ for (const page of siteConfig.pages) {
     if (!/aria-current="page"/i.test(html)) fail(`${v.relFile}: missing aria-current="page" in navigation`);
     if (/class="beta-bar"/i.test(html)) fail(`${v.relFile}: must not include top .beta-bar banner`);
     if (!/<select\b[^>]*\bid="lang-select"/i.test(html)) fail(`${v.relFile}: missing #lang-select dropdown`);
+    if (/\bdata-href="/i.test(html)) fail(`${v.relFile}: must not contain unused data-href attributes`);
     if (!/<select\b[^>]*\bid="theme-select"/i.test(html)) fail(`${v.relFile}: missing #theme-select dropdown`);
     if (!/class="nav-github-link"/i.test(html)) fail(`${v.relFile}: missing .nav-github-link in header navigation`);
     for (const themeOpt of ['system', 'light', 'dark', 'sepia', 'midnight']) {
@@ -302,6 +408,12 @@ for (const page of siteConfig.pages) {
     if (/🇺🇸|🇧🇷/.test(html)) fail(`${v.relFile}: must not contain country flag emojis`);
     if (/Download\s*\(\.zip\)|Baixar\s*\(\.zip\)/i.test(html)) {
       fail(`${v.relFile}: must not contain Download (.zip) / Baixar (.zip) button`);
+    }
+
+    for (const syncedTbody of html.matchAll(/<tbody[^>]*\bdata-sync-table="([^"]+)"[^>]*>([\s\S]*?)<\/tbody>/gi)) {
+      if (!/<tr\b/i.test(syncedTbody[2])) {
+        fail(`${v.relFile}: synced table data-sync-table="${syncedTbody[1]}" is empty`);
+      }
     }
 
     const headings = [...html.matchAll(/<h([1-6])\b[^>]*>/gi)].map((m) => Number(m[1]));
@@ -315,16 +427,31 @@ for (const page of siteConfig.pages) {
       }
     }
 
-    // Validate JSON-LD blocks if present and version parity
+    // Validate JSON-LD blocks (SoftwareApplication & FAQPage)
     for (const ld of html.matchAll(/<script\s+type="application\/ld\+json">([\s\S]*?)<\/script>/gi)) {
       try {
         const data = JSON.parse(ld[1]);
-        if (
-          expectedSoftwareVersion &&
-          data?.['@type'] === 'SoftwareApplication' &&
-          data.softwareVersion !== expectedSoftwareVersion
-        ) {
-          fail(`${v.relFile}: JSON-LD softwareVersion "${data.softwareVersion}" !== "${expectedSoftwareVersion}"`);
+        if (data?.['@type'] === 'SoftwareApplication') {
+          if (expectedSoftwareVersion && data.softwareVersion !== expectedSoftwareVersion) {
+            fail(`${v.relFile}: JSON-LD softwareVersion "${data.softwareVersion}" !== "${expectedSoftwareVersion}"`);
+          }
+          if (data.installUrl !== siteConfig.firefoxAddonsUrl) {
+            fail(`${v.relFile}: JSON-LD installUrl "${data.installUrl}" !== "${siteConfig.firefoxAddonsUrl}"`);
+          }
+          if (data.downloadUrl !== siteConfig.releasesUrl) {
+            fail(`${v.relFile}: JSON-LD downloadUrl "${data.downloadUrl}" !== "${siteConfig.releasesUrl}"`);
+          }
+          if (data.codeRepository !== siteConfig.repositoryUrl) {
+            fail(`${v.relFile}: JSON-LD codeRepository "${data.codeRepository}" !== "${siteConfig.repositoryUrl}"`);
+          }
+          const expectedSameAs = [siteConfig.firefoxAddonsUrl, siteConfig.repositoryUrl];
+          if (JSON.stringify(data.sameAs) !== JSON.stringify(expectedSameAs)) {
+            fail(`${v.relFile}: JSON-LD sameAs out of sync with site.config.json`);
+          }
+        } else if (data?.['@type'] === 'FAQPage') {
+          if (data.inLanguage !== v.htmlLang) {
+            fail(`${v.relFile}: JSON-LD FAQPage inLanguage "${data.inLanguage}" !== "${v.htmlLang}"`);
+          }
         }
       } catch (err) {
         fail(`${v.relFile}: invalid JSON-LD block: ${err.message}`);
@@ -332,10 +459,29 @@ for (const page of siteConfig.pages) {
     }
 
     if (expectedVersionLabel) {
+      const exactVerRx = new RegExp(`(?:^|\\s)${escapeRegExp(expectedVersionLabel)}$`);
       for (const verSpan of html.matchAll(/<span[^>]*\bdata-wpb-version\b[^>]*>([\s\S]*?)<\/span>/gi)) {
-        if (!verSpan[1].includes(expectedVersionLabel)) {
-          fail(`${v.relFile}: [data-wpb-version] "${verSpan[1].trim()}" missing expected "${expectedVersionLabel}"`);
+        const cleanText = verSpan[1].trim();
+        if (!exactVerRx.test(cleanText)) {
+          fail(`${v.relFile}: [data-wpb-version] "${cleanText}" does not match exact "${expectedVersionLabel}"`);
         }
+      }
+    }
+
+    // Validate privacy permissions parity & Firefox min-version parity
+    if (manifest && (page.id === 'privacy')) {
+      for (const perm of [...(manifest.permissions || []), ...(manifest.host_permissions || [])]) {
+        if (!html.includes(`<code>${perm}</code>`)) {
+          fail(`${v.relFile}: missing manifest permission documentation for "${perm}"`);
+        }
+      }
+      if (!html.includes('120..129')) {
+        fail(`${v.relFile}: missing DNR image Referer rule documentation (120..129)`);
+      }
+    }
+    if (manifest && (page.id === 'installation' || page.id === 'compatibility')) {
+      if (!html.includes(`${minGeckoMajor}+`)) {
+        fail(`${v.relFile}: missing Firefox min version "${minGeckoMajor}+" from manifest.json`);
       }
     }
 
@@ -344,11 +490,8 @@ for (const page of siteConfig.pages) {
       const tag = tagMatch[0];
       const href = extractAttr(tag, 'href');
       if (!href || href.startsWith('#') || /^(?:https?:|mailto:)/i.test(href)) continue;
-      const cleanHref = href.split('#')[0].split('?')[0];
-      if (!cleanHref) continue;
-      const resolved = cleanHref.startsWith('/WebPullBook/')
-        ? path.join(SITE_DIR, cleanHref.replace(/^\/WebPullBook\//, ''))
-        : path.resolve(fileDir, cleanHref);
+      const resolved = resolveSiteHref(href, fileDir);
+      if (!resolved) continue;
       if (!fs.existsSync(resolved)) {
         fail(`${v.relFile}: broken internal link "${href}" -> ${resolved}`);
       }
@@ -370,13 +513,10 @@ for (const page of siteConfig.pages) {
       }
       if (alt === null) fail(`${v.relFile}: <img src="${src}"> missing alt attribute`);
       if (!width || !height) fail(`${v.relFile}: <img src="${src}"> missing width or height attribute`);
-      const resolved = src.startsWith('/WebPullBook/')
-        ? path.join(SITE_DIR, src.replace(/^\/WebPullBook\//, ''))
-        : path.resolve(fileDir, src);
-      if (!fs.existsSync(resolved)) {
+      const resolved = resolveSiteHref(src, fileDir);
+      if (!resolved || !fs.existsSync(resolved)) {
         fail(`${v.relFile}: missing image file "${src}" -> ${resolved}`);
-      }
-      if (!isInsideSiteDir(resolved)) {
+      } else if (!isInsideSiteDir(resolved)) {
         fail(`${v.relFile}: image "${src}" escapes website/ directory`);
       }
     }
@@ -400,11 +540,11 @@ for (const page of siteConfig.pages) {
         continue;
       }
       if (!src) continue;
-      const resolved = src.startsWith('/WebPullBook/')
-        ? path.join(SITE_DIR, src.replace(/^\/WebPullBook\//, ''))
-        : path.resolve(fileDir, src);
-      if (!fs.existsSync(resolved)) {
+      const resolved = resolveSiteHref(src, fileDir);
+      if (!resolved || !fs.existsSync(resolved)) {
         fail(`${v.relFile}: missing script file "${src}" -> ${resolved}`);
+      } else if (!isInsideSiteDir(resolved)) {
+        fail(`${v.relFile}: script "${src}" escapes website/ directory`);
       }
     }
 
@@ -418,13 +558,6 @@ for (const page of siteConfig.pages) {
       fail(`${v.relFile}: unexpected GoatCounter script tag while analytics.endpoint is empty`);
     }
 
-    const configuredLinks = {
-      firefoxAddons: siteConfig.firefoxAddonsUrl,
-      releases: siteConfig.releasesUrl,
-      releasesLatest: siteConfig.releasesLatestUrl,
-      repository: siteConfig.repositoryUrl,
-      issues: siteConfig.issuesUrl
-    };
     for (const aMatch of html.matchAll(/<a\b[^>]*\bdata-wpb-link="([^"]+)"[^>]*>/gi)) {
       const key = aMatch[1];
       const expectedHref = configuredLinks[key];
@@ -438,7 +571,7 @@ for (const page of siteConfig.pages) {
   }
 }
 
-// 4. Verify 404.html exists and references valid local assets & configured links
+// 4. Verify 404.html exists and references valid local assets, images, scripts & configured links
 const notFoundPath = path.join(SITE_DIR, '404.html');
 if (!fs.existsSync(notFoundPath)) {
   fail('Missing website/404.html');
@@ -449,30 +582,44 @@ if (!fs.existsSync(notFoundPath)) {
   for (const tagMatch of html404.matchAll(/<(?:a|link)\b[^>]+>/gi)) {
     const href = extractAttr(tagMatch[0], 'href');
     if (!href || href.startsWith('#') || /^(?:https?:|mailto:)/i.test(href)) continue;
-    const cleanHref = href.split('#')[0].split('?')[0];
-    if (!cleanHref) continue;
-    const relTarget = cleanHref === '/WebPullBook/' ? 'index.html' : cleanHref.replace(/^\/WebPullBook\//, '');
-    const resolved = cleanHref.startsWith('/WebPullBook/')
-      ? path.join(SITE_DIR, relTarget.endsWith('/') ? `${relTarget}index.html` : relTarget)
-      : path.resolve(SITE_DIR, cleanHref);
-    if (!fs.existsSync(resolved)) {
+    const resolved = resolveSiteHref(href, SITE_DIR);
+    if (!resolved || !fs.existsSync(resolved)) {
       fail(`404.html: broken internal link "${href}" -> ${resolved}`);
+    } else if (!isInsideSiteDir(resolved)) {
+      fail(`404.html: link "${href}" escapes website/ directory`);
     }
   }
-  if (html404.includes('data-wpb-link=')) {
-    for (const aMatch of html404.matchAll(/<a\b[^>]*\bdata-wpb-link="([^"]+)"[^>]*>/gi)) {
-      const key = aMatch[1];
-      const expectedHref = {
-        firefoxAddons: siteConfig.firefoxAddonsUrl,
-        releases: siteConfig.releasesUrl,
-        releasesLatest: siteConfig.releasesLatestUrl,
-        repository: siteConfig.repositoryUrl,
-        issues: siteConfig.issuesUrl
-      }[key];
-      const actualHref = extractAttr(aMatch[0], 'href');
-      if (expectedHref && actualHref !== expectedHref) {
-        fail(`404.html: data-wpb-link="${key}" href="${actualHref}" !== "${expectedHref}"`);
-      }
+  for (const imgMatch of html404.matchAll(/<img\b[^>]+>/gi)) {
+    const src = extractAttr(imgMatch[0], 'src');
+    if (!src) {
+      fail('404.html: <img> missing src attribute');
+      continue;
+    }
+    const resolved = resolveSiteHref(src, SITE_DIR);
+    if (!resolved || !fs.existsSync(resolved)) {
+      fail(`404.html: missing image file "${src}" -> ${resolved}`);
+    } else if (!isInsideSiteDir(resolved)) {
+      fail(`404.html: image "${src}" escapes website/ directory`);
+    }
+  }
+  for (const scriptMatch of html404.matchAll(/<script\b[^>]+>/gi)) {
+    const src = extractAttr(scriptMatch[0], 'src');
+    if (!src) continue;
+    const resolved = resolveSiteHref(src, SITE_DIR);
+    if (!resolved || !fs.existsSync(resolved)) {
+      fail(`404.html: missing script file "${src}" -> ${resolved}`);
+    } else if (!isInsideSiteDir(resolved)) {
+      fail(`404.html: script "${src}" escapes website/ directory`);
+    }
+  }
+  for (const aMatch of html404.matchAll(/<a\b[^>]*\bdata-wpb-link="([^"]+)"[^>]*>/gi)) {
+    const key = aMatch[1];
+    const expectedHref = configuredLinks[key];
+    const actualHref = extractAttr(aMatch[0], 'href');
+    if (!expectedHref) {
+      fail(`404.html: unknown data-wpb-link="${key}"`);
+    } else if (actualHref !== expectedHref) {
+      fail(`404.html: data-wpb-link="${key}" href="${actualHref}" !== "${expectedHref}"`);
     }
   }
 }

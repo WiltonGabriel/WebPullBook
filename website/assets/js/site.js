@@ -6,9 +6,9 @@
 (function () {
   const THEME_STORAGE_KEY = 'wpb-site-theme';
   const VALID_THEMES = ['system', 'light', 'dark', 'sepia', 'midnight'];
-  const RELEASE_CACHE_KEY = 'wpb-latest-release-v2';
+  const RELEASE_CACHE_KEY = 'wpb-latest-release-v3';
   const CACHE_TTL_MS = 10 * 60 * 1000;
-  const RELEASES_API_URL = 'https://api.github.com/repos/WiltonGabriel/WebPullBook/releases?per_page=1';
+  const RELEASES_API_URL = 'https://api.github.com/repos/WiltonGabriel/WebPullBook/releases?per_page=5';
   const root = document.documentElement;
 
   function getSavedTheme() {
@@ -33,6 +33,33 @@
     }
   }
 
+  function parseSemverTag(tagName) {
+    const m = String(tagName || '')
+      .trim()
+      .match(/^v?(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?$/i);
+    if (!m) return null;
+    return {
+      major: Number(m[1]),
+      minor: Number(m[2]),
+      patch: Number(m[3]),
+      pre: m[4] || ''
+    };
+  }
+
+  function compareSemver(a, b) {
+    const pa = parseSemverTag(a?.tag_name);
+    const pb = parseSemverTag(b?.tag_name);
+    if (!pa && !pb) return 0;
+    if (!pa) return -1;
+    if (!pb) return 1;
+    if (pa.major !== pb.major) return pa.major - pb.major;
+    if (pa.minor !== pb.minor) return pa.minor - pb.minor;
+    if (pa.patch !== pb.patch) return pa.patch - pb.patch;
+    if (!pa.pre && pb.pre) return 1;
+    if (pa.pre && !pb.pre) return -1;
+    return pa.pre.localeCompare(pb.pre);
+  }
+
   function formatVersionLabel(tagName, isPrerelease) {
     const clean = String(tagName || '').trim().replace(/^v/i, '');
     if (!clean) return '';
@@ -51,6 +78,7 @@
   }
 
   async function resolveLatestRelease() {
+    if (!document.querySelector('[data-wpb-version]')) return;
     try {
       const cachedRaw = sessionStorage.getItem(RELEASE_CACHE_KEY);
       if (cachedRaw) {
@@ -70,8 +98,10 @@
       });
       if (!resp.ok) return;
       const list = await resp.json();
-      const latest = Array.isArray(list) ? list[0] : null;
-      if (!latest || !latest.tag_name) return;
+      const published = Array.isArray(list) ? list.filter((r) => r && !r.draft && r.tag_name) : [];
+      if (published.length === 0) return;
+      published.sort((a, b) => compareSemver(b, a));
+      const latest = published[0];
 
       const info = {
         tagName: latest.tag_name,
@@ -100,7 +130,7 @@
     if (langSelect) {
       const currentVal = (root.lang || '').toLowerCase().startsWith('pt') ? 'pt-BR' : 'en';
       const SAFE_LANG_ROUTES = new Map([
-        ['index.html', { 'pt-BR': 'pt/index.html', enFromPt: '../index.html' }],
+        ['index.html', { 'pt-BR': 'pt/', enFromPt: '../' }],
         ['features.html', { 'pt-BR': 'pt/features.html', enFromPt: '../features.html' }],
         ['installation.html', { 'pt-BR': 'pt/installation.html', enFromPt: '../installation.html' }],
         ['compatibility.html', { 'pt-BR': 'pt/compatibility.html', enFromPt: '../compatibility.html' }],
@@ -126,7 +156,6 @@
 
     const themeSelect = document.getElementById('theme-select');
     if (themeSelect) {
-      themeSelect.value = getSavedTheme();
       themeSelect.addEventListener('change', () => {
         const next = VALID_THEMES.includes(themeSelect.value) ? themeSelect.value : 'system';
         try {

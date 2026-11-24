@@ -66,8 +66,8 @@
 
       <div class="header-actions">
         <select id="lang-select" class="header-select" aria-label="Idioma">
-          <option value="pt-BR" data-href="privacy.html" selected>Português (BR)</option>
-          <option value="en" data-href="../privacy.html">English</option>
+          <option value="pt-BR" selected>Português (BR)</option>
+          <option value="en">English</option>
         </select>
         <select id="theme-select" class="header-select" aria-label="Tema">
           <option value="system">Auto</option>
@@ -220,7 +220,7 @@
               <tr>
                 <td><code>declarativeNetRequestWithHostAccess</code></td>
                 <td><code>permissions</code></td>
-                <td>Usada para regras temporárias de sessão: no Firefox, a regra ID <code>1</code> remove o cabeçalho <code>Origin: moz-extension://</code> para evitar bloqueios CORS ao baixar capítulos e capas; as regras de sessão <code>100..119</code> aplicam cabeçalhos padrão de navegação quando exigidos por servidores protegidos.</td>
+                <td>Usada para regras temporárias de sessão: no Firefox, a regra ID <code>1</code> remove o cabeçalho <code>Origin: moz-extension://</code> para evitar bloqueios CORS ao baixar capítulos e capas; as regras de sessão <code>100..119</code> aplicam cabeçalhos padrão de navegação quando exigidos por servidores protegidos, e as regras temporárias com contagem de referência <code>120..129</code> enviam <code>Referer</code> da mesma origem apenas quando imagens protegidas contra hotlink falham na retentativa anônima.</td>
               </tr>
               <tr>
                 <td><code>https://*/*</code> &amp; <code>http://*/*</code></td>

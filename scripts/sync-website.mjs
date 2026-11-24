@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 /**
- * Synchronizes website/ static HTML and site.config.json from the repository's
- * authoritative documentation and manifest files:
- *  - docs/COMPATIBILITY.md       -> website/compatibility.html, website/pt/compatibility.html, index.html, faq.html
- *  - docs/READER_PRESETS.md      -> website/features.html
- *  - docs/READER_PRESETS.pt.md   -> website/pt/features.html
- *  - manifest.json & site.config.json -> version strings, official links, JSON-LD & sitemap.xml
+ * Synchronizes website/ static HTML, site.config.json, robots.txt, and sitemap.xml
+ * from the repository's authoritative documentation and manifest files:
+ *  - docs/COMPATIBILITY.md            -> website/compatibility.html, website/pt/compatibility.html, website/{,pt/}index.html
+ *  - docs/READER_PRESETS.md           -> website/features.html
+ *  - docs/READER_PRESETS.pt.md        -> website/pt/features.html
+ *  - manifest.json, package.json & site.config.json -> version labels, official links, JSON-LD, sitemap.xml & robots.txt
  */
 
 import fs from 'node:fs';
@@ -25,10 +25,10 @@ function escapeHtml(str) {
     .replace(/"/g, '&quot;');
 }
 
-function renderInlineMarkdown(md) {
+export function renderInlineMarkdown(md) {
   let out = escapeHtml(String(md || '').trim());
-  // Strip relative markdown links [label](url) -> label
-  out = out.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
+  // Strip markdown links [label](url) -> label, supporting one level of balanced parentheses in URLs
+  out = out.replace(/\[([^\]]+)\]\((?:[^()]+|\([^()]*\))+\)/g, '$1');
   // Inline code `code`
   out = out.replace(/`([^`]+)`/g, '<code>$1</code>');
   // Bold **text**
@@ -40,7 +40,26 @@ function renderInlineMarkdown(md) {
   return out;
 }
 
-function parseMarkdownSections(markdown) {
+function splitMarkdownTableRow(line) {
+  const inner = line.slice(1, -1);
+  const cells = [];
+  let cur = '';
+  for (let i = 0; i < inner.length; i++) {
+    if (inner[i] === '\\' && inner[i + 1] === '|') {
+      cur += '|';
+      i++;
+    } else if (inner[i] === '|') {
+      cells.push(cur.trim());
+      cur = '';
+    } else {
+      cur += inner[i];
+    }
+  }
+  cells.push(cur.trim());
+  return cells;
+}
+
+export function parseMarkdownSections(markdown) {
   const sections = new Map();
   let currentHeading = '';
   for (const rawLine of String(markdown || '').split('\n')) {
@@ -60,16 +79,10 @@ function parseMarkdownSections(markdown) {
   const parsedTables = new Map();
   for (const [heading, lines] of sections.entries()) {
     if (lines.length < 3) continue;
-    const headers = lines[0]
-      .slice(1, -1)
-      .split('|')
-      .map((c) => c.trim());
+    const headers = splitMarkdownTableRow(lines[0]);
     const rows = [];
     for (let i = 2; i < lines.length; i++) {
-      const cells = lines[i]
-        .slice(1, -1)
-        .split('|')
-        .map((c) => c.trim());
+      const cells = splitMarkdownTableRow(lines[i]);
       if (cells.length >= 2) {
         rows.push(cells);
       }
@@ -147,10 +160,16 @@ const PT_TRANSLATIONS = {
     'Requisições automatizadas ficam bloqueadas até que o usuário conclua a verificação manualmente em uma aba normal.'
 };
 
-function translateCell(text, isPt) {
+function translateCell(text, isPt, { required = false } = {}) {
   const clean = String(text || '').trim();
   if (!isPt) return clean;
-  return PT_TRANSLATIONS[clean] || clean;
+  if (Object.hasOwn(PT_TRANSLATIONS, clean)) {
+    return PT_TRANSLATIONS[clean];
+  }
+  if (required && clean && /[A-Za-z]/.test(clean) && !/^`[^`]+`$/.test(clean)) {
+    throw new Error(`Missing PT_TRANSLATIONS entry in sync-website.mjs for: "${clean}"`);
+  }
+  return clean;
 }
 
 function formatLeadColumn(text) {
@@ -180,6 +199,10 @@ function buildCompatibilityTbodies(compatMd, isPt) {
   const tier3 = findTableByPrefix(tables, 'Potentially Compatible');
   const tier4 = findTableByPrefix(tables, 'Not Compatible');
 
+  if (!tier1.rows.length || !tier2.rows.length || !tier3.rows.length || !tier4.rows.length) {
+    throw new Error('docs/COMPATIBILITY.md: expected non-empty tables for all 4 compatibility tiers.');
+  }
+
   const indent = '              ';
 
   const tbody1 = tier1.rows
@@ -189,7 +212,7 @@ function buildCompatibilityTbodies(compatMd, isPt) {
         `${indent}  <td>${formatLeadColumn(translateCell(site, isPt))}</td>`,
         `${indent}  <td>${renderInlineMarkdown(adapter)}</td>`,
         `${indent}  <td>${escapeHtml(lastVerified)}</td>`,
-        `${indent}  <td>${renderInlineMarkdown(translateCell(notes, isPt))}</td>`,
+        `${indent}  <td>${renderInlineMarkdown(translateCell(notes, isPt, { required: true }))}</td>`,
         `${indent}</tr>`
       ].join('\n');
     })
@@ -199,10 +222,10 @@ function buildCompatibilityTbodies(compatMd, isPt) {
     .map(([site, adapter, status, _fixture, notes]) => {
       return [
         `${indent}<tr>`,
-        `${indent}  <td>${formatLeadColumn(translateCell(site, isPt))}</td>`,
+        `${indent}  <td>${formatLeadColumn(translateCell(site, isPt, { required: true }))}</td>`,
         `${indent}  <td>${renderInlineMarkdown(adapter)}</td>`,
-        `${indent}  <td><span class="badge warn">${renderInlineMarkdown(translateCell(status, isPt))}</span></td>`,
-        `${indent}  <td>${renderInlineMarkdown(translateCell(notes, isPt))}</td>`,
+        `${indent}  <td><span class="badge warn">${renderInlineMarkdown(translateCell(status, isPt, { required: true }))}</span></td>`,
+        `${indent}  <td>${renderInlineMarkdown(translateCell(notes, isPt, { required: true }))}</td>`,
         `${indent}</tr>`
       ].join('\n');
     })
@@ -212,9 +235,9 @@ function buildCompatibilityTbodies(compatMd, isPt) {
     .map(([pattern, mode, notes]) => {
       return [
         `${indent}<tr>`,
-        `${indent}  <td>${formatLeadColumn(translateCell(pattern, isPt))}</td>`,
-        `${indent}  <td>${renderInlineMarkdown(translateCell(mode, isPt))}</td>`,
-        `${indent}  <td>${renderInlineMarkdown(translateCell(notes, isPt))}</td>`,
+        `${indent}  <td>${formatLeadColumn(translateCell(pattern, isPt, { required: true }))}</td>`,
+        `${indent}  <td>${renderInlineMarkdown(translateCell(mode, isPt, { required: true }))}</td>`,
+        `${indent}  <td>${renderInlineMarkdown(translateCell(notes, isPt, { required: true }))}</td>`,
         `${indent}</tr>`
       ].join('\n');
     })
@@ -224,8 +247,8 @@ function buildCompatibilityTbodies(compatMd, isPt) {
     .map(([limitation, reason]) => {
       return [
         `${indent}<tr>`,
-        `${indent}  <td>${formatLeadColumn(translateCell(limitation, isPt))}</td>`,
-        `${indent}  <td>${renderInlineMarkdown(translateCell(reason, isPt))}</td>`,
+        `${indent}  <td>${formatLeadColumn(translateCell(limitation, isPt, { required: true }))}</td>`,
+        `${indent}  <td>${renderInlineMarkdown(translateCell(reason, isPt, { required: true }))}</td>`,
         `${indent}</tr>`
       ].join('\n');
     })
@@ -233,7 +256,7 @@ function buildCompatibilityTbodies(compatMd, isPt) {
 
   const verifiedNames = tier1.rows.map(([site]) => translateCell(site, isPt));
   const limitationNames = tier4.rows.map(([limitation]) =>
-    renderInlineMarkdown(translateCell(limitation, isPt))
+    renderInlineMarkdown(translateCell(limitation, isPt, { required: true }))
   );
 
   return {
@@ -255,6 +278,9 @@ function buildReaderPresetsTbody(presetsMd) {
       break;
     }
   }
+  if (!presetTable.rows.length) {
+    throw new Error('READER_PRESETS markdown contains no profile rows.');
+  }
   const indent = '              ';
   return presetTable.rows
     .map((cells) => {
@@ -264,13 +290,13 @@ function buildReaderPresetsTbody(presetsMd) {
         cells.length >= 8 ? cells : [...cells, ''];
       return [
         `${indent}<tr>`,
-        `${indent}  <td>${ renderInlineMarkdown(profile) }</td>`,
-        `${indent}  <td>${ renderInlineMarkdown(epubStd) }</td>`,
-        `${indent}  <td>${ renderInlineMarkdown(footnotes) }</td>`,
-        `${indent}  <td>${ renderInlineMarkdown(coverJpeg) }</td>`,
-        `${indent}  <td>${ renderInlineMarkdown(imgOpt) }</td>`,
-        `${indent}  <td>${ renderInlineMarkdown(maxRes) }</td>`,
-        `${indent}  <td>${ renderInlineMarkdown(recommended) }</td>`,
+        `${indent}  <td>${renderInlineMarkdown(profile)}</td>`,
+        `${indent}  <td>${renderInlineMarkdown(epubStd)}</td>`,
+        `${indent}  <td>${renderInlineMarkdown(footnotes)}</td>`,
+        `${indent}  <td>${renderInlineMarkdown(coverJpeg)}</td>`,
+        `${indent}  <td>${renderInlineMarkdown(imgOpt)}</td>`,
+        `${indent}  <td>${renderInlineMarkdown(maxRes)}</td>`,
+        `${indent}  <td>${renderInlineMarkdown(recommended)}</td>`,
         `${indent}</tr>`
       ].join('\n');
     })
@@ -323,15 +349,20 @@ export function syncGoatCounterScript(html, analyticsConfig) {
   );
 }
 
-function syncConfiguredLinks(html, siteConfig) {
-  if (!siteConfig) return html;
-  const linkMap = {
+export function getConfiguredLinkMap(siteConfig) {
+  if (!siteConfig) return {};
+  return {
     firefoxAddons: siteConfig.firefoxAddonsUrl,
     releases: siteConfig.releasesUrl,
     releasesLatest: siteConfig.releasesLatestUrl,
     repository: siteConfig.repositoryUrl,
     issues: siteConfig.issuesUrl
   };
+}
+
+function syncConfiguredLinks(html, siteConfig) {
+  const linkMap = getConfiguredLinkMap(siteConfig);
+  if (Object.keys(linkMap).length === 0) return html;
   return String(html || '').replace(/<a\b[^>]*\bdata-wpb-link="([^"]+)"[^>]*>/gi, (tag, key) => {
     const nextHref = linkMap[key];
     if (!nextHref) return tag;
@@ -378,61 +409,126 @@ function resolveGitLastmodDate(relRepoPath) {
   if (dirty) {
     return new Date().toISOString().slice(0, 10);
   }
-  const commitDate = execFileSync('git', ['log', '-1', '--format=%cs', '--', relRepoPath], {
+  const commitIso = execFileSync('git', ['log', '-1', '--format=%cI', '--', relRepoPath], {
     cwd: ROOT,
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'ignore']
   }).trim();
-  return /^\d{4}-\d{2}-\d{2}$/.test(commitDate) ? commitDate : '';
+  if (!commitIso) return '';
+  const parsed = new Date(commitIso);
+  return Number.isNaN(parsed.getTime()) ? '' : parsed.toISOString().slice(0, 10);
 }
 
-function syncSitemapLastmod(siteConfig, writeOrCheck) {
-  const sitemapPath = path.join(WEBSITE_DIR, 'sitemap.xml');
-  if (!siteConfig) return;
+function extractExistingSitemapDates(rawXml) {
+  const dates = new Map();
+  for (const block of String(rawXml || '').matchAll(/<url>[\s\S]*?<\/url>/g)) {
+    const loc = block[0].match(/<loc>([^<]+)<\/loc>/)?.[1]?.trim();
+    const lastmod = block[0].match(/<lastmod>([^<]*)<\/lastmod>/)?.[1]?.trim();
+    if (loc && lastmod && /^\d{4}-\d{2}-\d{2}$/.test(lastmod)) {
+      dates.set(loc, lastmod);
+    }
+  }
+  return dates;
+}
 
+function syncSitemapAndRobots(siteConfig, writeOrCheck) {
+  if (!siteConfig?.baseUrl || !Array.isArray(siteConfig.pages)) return;
+  const baseUrl = String(siteConfig.baseUrl).replace(/\/+$/, '');
+
+  // Generate website/robots.txt from site.config.json baseUrl
+  const robotsPath = path.join(WEBSITE_DIR, 'robots.txt');
+  const prevRobots = fs.existsSync(robotsPath) ? fs.readFileSync(robotsPath, 'utf8') : '';
+  const nextRobots = `User-agent: *\nAllow: /\n\nSitemap: ${baseUrl}/sitemap.xml\n`;
+  writeOrCheck(robotsPath, prevRobots, nextRobots);
+
+  // Generate website/sitemap.xml from site.config.json pages
+  const sitemapPath = path.join(WEBSITE_DIR, 'sitemap.xml');
+  const prevSitemap = fs.existsSync(sitemapPath) ? fs.readFileSync(sitemapPath, 'utf8') : '';
+  const fallbackDates = extractExistingSitemapDates(prevSitemap);
+  const todayUtc = new Date().toISOString().slice(0, 10);
+
+  let canQueryGitHistory = false;
   try {
     const isShallow = execFileSync('git', ['rev-parse', '--is-shallow-repository'], {
       cwd: ROOT,
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'ignore']
     }).trim();
-    if (isShallow === 'true') return;
+    canQueryGitHistory = isShallow === 'false';
   } catch {
-    return;
+    canQueryGitHistory = false;
   }
 
-  let original;
-  try {
-    original = fs.readFileSync(sitemapPath, 'utf8');
-  } catch (err) {
-    if (err.code === 'ENOENT') return;
-    throw err;
-  }
-
-  const baseUrl = String(siteConfig.baseUrl || '').replace(/\/+$/, '');
-  const locToFile = new Map();
-  for (const p of siteConfig.pages || []) {
-    locToFile.set(`${baseUrl}${p.en}`, `website/${p.enFile}`);
-    locToFile.set(`${baseUrl}${p.pt}`, `website/${p.ptFile}`);
-  }
-
-  const updated = original.replace(/<url>[\s\S]*?<\/url>/g, (block) => {
-    const locMatch = block.match(/<loc>([^<]+)<\/loc>/);
-    const repoRel = locMatch ? locToFile.get(locMatch[1].trim()) : '';
-    if (!repoRel) return block;
-    try {
-      const lastmod = resolveGitLastmodDate(repoRel);
-      if (!lastmod) return block;
-      return block.replace(/<lastmod>[^<]*<\/lastmod>/, () => `<lastmod>${lastmod}</lastmod>`);
-    } catch {
-      return block;
+  const resolveDateFor = (loc, repoRel) => {
+    if (canQueryGitHistory) {
+      try {
+        const d = resolveGitLastmodDate(repoRel);
+        if (d) return d;
+      } catch {
+        // fall through to fallback
+      }
     }
-  });
-  writeOrCheck(sitemapPath, original, updated);
+    return fallbackDates.get(loc) || todayUtc;
+  };
+
+  const urlBlocks = [];
+  for (const p of siteConfig.pages) {
+    const enHref = `${baseUrl}${p.en}`;
+    const ptHref = `${baseUrl}${p.pt}`;
+    const variants = [
+      { loc: enHref, file: `website/${p.enFile}` },
+      { loc: ptHref, file: `website/${p.ptFile}` }
+    ];
+    for (const v of variants) {
+      const lastmod = resolveDateFor(v.loc, v.file);
+      urlBlocks.push(
+        [
+          '  <url>',
+          `    <loc>${escapeHtml(v.loc)}</loc>`,
+          `    <lastmod>${lastmod}</lastmod>`,
+          `    <xhtml:link rel="alternate" hreflang="en" href="${escapeHtml(enHref)}"/>`,
+          `    <xhtml:link rel="alternate" hreflang="pt-BR" href="${escapeHtml(ptHref)}"/>`,
+          `    <xhtml:link rel="alternate" hreflang="x-default" href="${escapeHtml(enHref)}"/>`,
+          '  </url>'
+        ].join('\n')
+      );
+    }
+  }
+
+  const nextSitemap = [
+    '<?xml version="1.0" encoding="UTF-8"?>',
+    '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"',
+    '        xmlns:xhtml="http://www.w3.org/1999/xhtml">',
+    ...urlBlocks,
+    '</urlset>',
+    ''
+  ].join('\n');
+  writeOrCheck(sitemapPath, prevSitemap, nextSitemap);
+}
+
+function getRepoOwnerAndLicense(siteConfig, pkg) {
+  const repoUrl = String(siteConfig?.repositoryUrl || 'https://github.com/WiltonGabriel/WebPullBook').replace(/\/+$/, '');
+  let ownerUrl = 'https://github.com/WiltonGabriel';
+  try {
+    const parsed = new URL(repoUrl);
+    const ownerSeg = parsed.pathname.split('/').filter(Boolean)[0];
+    if (ownerSeg) ownerUrl = `${parsed.origin}/${ownerSeg}`;
+  } catch {
+    // keep default ownerUrl
+  }
+  const spdx = String(pkg?.license || 'AGPL-3.0-or-later');
+  const isAgpl = /^AGPL-3\.0/i.test(spdx);
+  return {
+    ownerUrl,
+    licenseUrl: `${repoUrl}/blob/main/LICENSE`,
+    enLicenseLabel: isAgpl ? 'GNU AGPLv3 License' : `${spdx} License`,
+    ptLicenseLabel: isAgpl ? 'Licença GNU AGPLv3' : `Licença ${spdx}`
+  };
 }
 
 export function syncWebsite({ checkOnly = false } = {}) {
   const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'manifest.json'), 'utf8'));
+  const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'));
   const compatMd = fs.readFileSync(path.join(ROOT, 'docs', 'COMPATIBILITY.md'), 'utf8');
   const presetsEnMd = fs.readFileSync(path.join(ROOT, 'docs', 'READER_PRESETS.md'), 'utf8');
   const presetsPtMd = fs.readFileSync(path.join(ROOT, 'docs', 'READER_PRESETS.pt.md'), 'utf8');
@@ -453,41 +549,31 @@ export function syncWebsite({ checkOnly = false } = {}) {
   const softwareVersion = manifest.version_name || manifest.version;
   const versionLabel = `v${softwareVersion}`;
   const siteConfigPath = path.join(WEBSITE_DIR, 'site.config.json');
-  let siteConfig = null;
-  try {
-    const rawConfig = fs.readFileSync(siteConfigPath, 'utf8');
-    siteConfig = JSON.parse(rawConfig);
-    siteConfig.version = manifest.version;
-    siteConfig.versionName = softwareVersion;
-    writeOrCheck(siteConfigPath, rawConfig, `${JSON.stringify(siteConfig, null, 2)}\n`);
-  } catch (err) {
-    if (err.code !== 'ENOENT') throw err;
+  const rawConfig = fs.readFileSync(siteConfigPath, 'utf8');
+  const siteConfig = JSON.parse(rawConfig);
+  siteConfig.version = manifest.version;
+  siteConfig.versionName = softwareVersion;
+  if (siteConfig.releasesUrl) {
+    const baseRel = String(siteConfig.releasesUrl).replace(/\/+$/, '');
+    const isPre = /(?:beta|alpha|rc)/i.test(softwareVersion);
+    siteConfig.releasesLatestUrl = isPre ? `${baseRel}/tag/v${manifest.version}` : `${baseRel}/latest`;
   }
-  const goatCounterConfig = normalizeGoatCounterConfig(siteConfig?.analytics);
+  writeOrCheck(siteConfigPath, rawConfig, `${JSON.stringify(siteConfig, null, 2)}\n`);
+
+  const goatCounterConfig = normalizeGoatCounterConfig(siteConfig.analytics);
+  const { ownerUrl, licenseUrl, enLicenseLabel, ptLicenseLabel } = getRepoOwnerAndLicense(siteConfig, pkg);
 
   const compatEn = buildCompatibilityTbodies(compatMd, false);
   const compatPt = buildCompatibilityTbodies(compatMd, true);
   const presetsEnTbody = buildReaderPresetsTbody(presetsEnMd);
   const presetsPtTbody = buildReaderPresetsTbody(presetsPtMd);
 
-  const pages = [
-    'index.html',
-    'features.html',
-    'installation.html',
-    'compatibility.html',
-    'faq.html',
-    'privacy.html',
-    'contributing.html'
-  ];
-
-  for (const isPt of [false, true]) {
-    const compatData = isPt ? compatPt : compatEn;
-    const presetsTbody = isPt ? presetsPtTbody : presetsEnTbody;
-
-    for (const page of pages) {
-      const filePath = isPt
-        ? path.join(WEBSITE_DIR, 'pt', page)
-        : path.join(WEBSITE_DIR, page);
+  for (const pageEntry of siteConfig.pages || []) {
+    for (const isPt of [false, true]) {
+      const compatData = isPt ? compatPt : compatEn;
+      const presetsTbody = isPt ? presetsPtTbody : presetsEnTbody;
+      const relFile = isPt ? pageEntry.ptFile : pageEntry.enFile;
+      const filePath = path.join(WEBSITE_DIR, relFile);
       let prevHtml;
       try {
         prevHtml = fs.readFileSync(filePath, 'utf8');
@@ -498,7 +584,27 @@ export function syncWebsite({ checkOnly = false } = {}) {
 
       let html = prevHtml;
 
-      // 1. Sync version labels in [data-wpb-version]
+      // 1. Sync compatibility & limitations tables (compatibility.html)
+      for (const tierKey of ['compat-tier-1', 'compat-tier-2', 'compat-tier-3', 'compat-tier-4']) {
+        html = replaceSyncedTbody(html, tierKey, compatData[tierKey]);
+      }
+
+      // 2. Sync Reader Profiles table (features.html)
+      html = replaceSyncedTbody(html, 'reader-presets', presetsTbody);
+
+      // 3. Sync compatibility & limitations summary (index.html)
+      html = replaceSyncedLimitationsSummary(html, compatData, isPt);
+
+      // 4. Sync footer authorship, derived repo license link, and version line across all pages
+      const footerLine = isPt
+        ? `<span>Criado e mantido por <a href="${escapeHtml(ownerUrl)}">Wilton Gabriel</a> e contribuidores • <a href="${escapeHtml(licenseUrl)}">${escapeHtml(ptLicenseLabel)}</a> • <span data-wpb-version data-wpb-version-prefix="Versão ">Versão ${versionLabel}</span></span>`
+        : `<span>Created and maintained by <a href="${escapeHtml(ownerUrl)}">Wilton Gabriel</a> &amp; contributors • <a href="${escapeHtml(licenseUrl)}">${escapeHtml(enLicenseLabel)}</a> • <span data-wpb-version data-wpb-version-prefix="Version ">Version ${versionLabel}</span></span>`;
+      html = html.replace(
+        /(<div class="footer-bottom">\s*)<span>[\s\S]*?<\/span><\/span>/,
+        (_full, indent) => `${indent}${footerLine}`
+      );
+
+      // 5. Sync [data-wpb-version] spans (including any non-footer spans if added)
       html = html.replace(
         /(<span[^>]*data-wpb-version[^>]*>)(?:Versão\s+|Version\s+)?v[0-9A-Za-z.-]+(<\/span>)/g,
         (_, open, close) => {
@@ -506,26 +612,6 @@ export function syncWebsite({ checkOnly = false } = {}) {
           const prefix = prefixMatch ? prefixMatch[1] : '';
           return `${open}${prefix}${versionLabel}${close}`;
         }
-      );
-
-      // 2. Sync compatibility & limitations tables (compatibility.html)
-      for (const tierKey of ['compat-tier-1', 'compat-tier-2', 'compat-tier-3', 'compat-tier-4']) {
-        html = replaceSyncedTbody(html, tierKey, compatData[tierKey]);
-      }
-
-      // 3. Sync Reader Profiles table (features.html)
-      html = replaceSyncedTbody(html, 'reader-presets', presetsTbody);
-
-      // 4. Sync compatibility & limitations summary (index.html, faq.html)
-      html = replaceSyncedLimitationsSummary(html, compatData, isPt);
-
-      // 5. Sync footer authorship & license line across all pages
-      const footerLine = isPt
-        ? `<span>Criado e mantido por <a href="https://github.com/WiltonGabriel">Wilton Gabriel</a> e contribuidores • <a href="https://github.com/WiltonGabriel/WebPullBook/blob/main/LICENSE">Licença GNU AGPLv3</a> • <span data-wpb-version data-wpb-version-prefix="Versão ">Versão ${versionLabel}</span></span>`
-        : `<span>Created and maintained by <a href="https://github.com/WiltonGabriel">Wilton Gabriel</a> &amp; contributors • <a href="https://github.com/WiltonGabriel/WebPullBook/blob/main/LICENSE">GNU AGPLv3 License</a> • <span data-wpb-version data-wpb-version-prefix="Version ">Version ${versionLabel}</span></span>`;
-      html = html.replace(
-        /(<div class="footer-bottom">\s*)<span>[\s\S]*?<\/span><\/span>/,
-        (_full, indent) => `${indent}${footerLine}`
       );
 
       // 6. Sync [data-wpb-link] official links and JSON-LD metadata from website/site.config.json
@@ -548,7 +634,7 @@ export function syncWebsite({ checkOnly = false } = {}) {
     if (err.code !== 'ENOENT') throw err;
   }
 
-  syncSitemapLastmod(siteConfig, writeOrCheck);
+  syncSitemapAndRobots(siteConfig, writeOrCheck);
   return { drifted, updated };
 }
 

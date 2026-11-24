@@ -1,7 +1,7 @@
 # Chrome Web Store & Mozilla Add-ons Listing Readiness — WebPullBook
 
-> Last Updated: 2026-11-23
-> Current Release Status: **Beta (`v1.7.0-beta`)** — published on [Firefox Add-ons (AMO)](https://addons.mozilla.org/firefox/addon/webpullbook/) and [GitHub Releases](https://github.com/WiltonGabriel/WebPullBook/releases); prepared for Chrome Web Store submission.
+> Last Updated: 2026-11-24
+> Current Release Status: **Beta (`v1.7.1-beta`)** — published on [Firefox Add-ons (AMO)](https://addons.mozilla.org/firefox/addon/webpullbook/) and [GitHub Releases](https://github.com/WiltonGabriel/WebPullBook/releases); prepared for Chrome Web Store submission.
 
 ## Store Listing
 
@@ -45,7 +45,7 @@ PERMISSIONS
 SUPPORT
 Found a bug or want to suggest an improvement? Open an issue at https://github.com/WiltonGabriel/WebPullBook/issues or visit https://wiltongabriel.github.io/WebPullBook/
 
-Version 1.7.0-beta — Firefox MV3 bilingual localization (`_locales/en` & `_locales/pt_BR`), optional Firefox website-access permission banner and hotlink-image DNR Referer fallback, inline Test Selectors diagnostic in Advanced Options, shared parser deduplication, expanded Chromium E2E checks, automated website sync, and GNU AGPLv3 (`AGPL-3.0-or-later`) licensing.
+Version 1.7.1-beta — Security, concurrency, XHTML/EPUB 2/3 & ZIP32 integrity hardening, ref-counted DNR image Referer fallback (`120..129`), offline HTML chapter image embedding, Madara `POST /ajax/chapters/` support, localized generated book labels, Firefox MV3 bilingual localization (`_locales/en` & `_locales/pt_BR`), GNU AGPLv3 licensing, and automated website sync.
 
 **Category** [REQUIRED]
 Productivity
