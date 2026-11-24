@@ -3,12 +3,26 @@ import os from 'node:os';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 
+function findVersionedEpubCheckJars(baseDir) {
+  if (!fs.existsSync(baseDir)) return [];
+  try {
+    return fs
+      .readdirSync(baseDir, { withFileTypes: true })
+      .filter((ent) => ent.isDirectory() && /^epubcheck-/i.test(ent.name))
+      .map((ent) => path.join(baseDir, ent.name, 'epubcheck.jar'))
+      .sort()
+      .reverse();
+  } catch {
+    return [];
+  }
+}
+
 export function resolveEpubCheckRunner() {
   const candidates = [
     process.env.EPUBCHECK_JAR,
-    path.resolve('.tools/epubcheck/epubcheck-5.4.0/epubcheck.jar'),
+    ...findVersionedEpubCheckJars(path.resolve('.tools/epubcheck')),
     path.resolve('.tools/epubcheck/epubcheck.jar'),
-    path.join(os.tmpdir(), 'wpb-epubcheck', 'epubcheck-5.4.0', 'epubcheck.jar')
+    ...findVersionedEpubCheckJars(path.join(os.tmpdir(), 'wpb-epubcheck'))
   ].filter(Boolean);
 
   for (const jar of candidates) {

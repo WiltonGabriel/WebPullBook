@@ -244,3 +244,81 @@ test('getCacheKey includes customStripPatterns while keeping legacy key when emp
     state.options.customStripPatterns = prevStrip;
   }
 });
+
+test('hydrateCachedChapter rejects XML parsererror and preserves imageFallbacks across putChapter', async () => {
+  const malformed = hydrateCachedChapter(
+    { url: 'https://example.com/bad', displayTitle: 'Bad' },
+    { chapterTitle: 'Bad', subtitle: '', contentXml: '<div><unclosed></div>' }
+  );
+  assert.equal(malformed, null);
+
+  const nodes = createChapterNodes('<p>Pic</p><img src="https://cdn.example.com/full.jpg" alt="pic"/>');
+  await cacheStore.putChapter({
+    key: 'fb-k1',
+    seriesKey: 'series-fb',
+    chapterUrl: 'https://example.com/ch1',
+    chapterTitle: 'Ch 1',
+    subtitle: '',
+    nodes,
+    imageFallbacks: { 'https://cdn.example.com/full.jpg': 'https://cdn.example.com/thumb.jpg' },
+    ttlDays: 7
+  });
+  const stored = await cacheStore.getChapter('fb-k1');
+  assert.equal(stored.imageFallbacks['https://cdn.example.com/full.jpg'], 'https://cdn.example.com/thumb.jpg');
+  const hydrated = hydrateCachedChapter({ url: 'https://example.com/ch1', displayTitle: 'Ch 1' }, stored);
+  assert.equal(hydrated.images[0].fallbackUrl, 'https://cdn.example.com/thumb.jpg');
+});
+
+test('idb-shim queues put() before openCursor(), validates keyPath, unique indexes, version upgrades, and tx.abort()', async () => {
+  const db = await new Promise((resolve, reject) => {
+    const req = indexedDB.open('shim-regression', 1);
+    req.onupgradeneeded = (e) => {
+      const s = e.target.result.createObjectStore('items', { keyPath: 'id' });
+      s.createIndex('slug', 'slug', { unique: true });
+    };
+    req.onsuccess = (e) => resolve(e.target.result);
+    req.onerror = (e) => reject(e.target.error);
+  });
+
+  // 1. put() queued before openCursor() in same transaction must be visible to cursor
+  const keysSeen = await new Promise((resolve, reject) => {
+    const tx = db.transaction('items', 'readwrite');
+    const st = tx.objectStore('items');
+    st.put({ id: 'b', slug: 's2' });
+    st.put({ id: 'a', slug: 's1' });
+    const seen = [];
+    st.openCursor().onsuccess = (e) => {
+      const cur = e.target.result;
+      if (!cur) return resolve(seen);
+      seen.push(cur.key);
+      cur.continue();
+    };
+    tx.onerror = (e) => reject(e.target.error);
+  });
+  assert.deepEqual(keysSeen, ['a', 'b']);
+
+  // 2. unique index conflict rejects
+  await assert.rejects(
+    () =>
+      new Promise((resolve, reject) => {
+        const tx = db.transaction('items', 'readwrite');
+        const req = tx.objectStore('items').put({ id: 'c', slug: 's1' });
+        req.onsuccess = () => resolve();
+        req.onerror = (e) => reject(e.target.error);
+      }),
+    (err) => err?.name === 'ConstraintError'
+  );
+
+  // 3. version upgrade updates db.version and tx.abort triggers onabort
+  const dbV2 = await new Promise((resolve) => {
+    const req = indexedDB.open('shim-regression', 2);
+    req.onsuccess = (e) => resolve(e.target.result);
+  });
+  assert.equal(dbV2.version, 2);
+
+  await new Promise((resolve) => {
+    const tx = dbV2.transaction('items', 'readwrite');
+    tx.onabort = () => resolve();
+    tx.abort();
+  });
+});

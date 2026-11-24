@@ -188,13 +188,18 @@ export class ShimNode {
         expanded.push(n);
       }
     }
-    this.parentNode = null;
     for (const item of expanded) {
+      if (item === this) continue;
       if (item.parentNode) item.parentNode.removeChild(item);
       item.parentNode = parent;
       propagateOwnerDocument(item, doc);
     }
-    parent.childNodes.splice(idx, 1, ...expanded);
+    const curIdx = parent.childNodes.indexOf(this);
+    if (curIdx === -1) return;
+    if (!expanded.includes(this)) {
+      this.parentNode = null;
+    }
+    parent.childNodes.splice(curIdx, 1, ...expanded);
   }
 
   get textContent() {
@@ -270,6 +275,22 @@ export class ShimDocumentFragment extends ShimNode {
     return frag;
   }
 
+  getElementById(id) {
+    const target = String(id ?? '');
+    if (!target) return null;
+    const walk = (node) => {
+      for (const child of node.childNodes) {
+        if (child.nodeType === NODE_TYPES.ELEMENT_NODE) {
+          if (child.getAttribute('id') === target) return child;
+          const hit = walk(child);
+          if (hit) return hit;
+        }
+      }
+      return null;
+    };
+    return walk(this);
+  }
+
   querySelector(selector) {
     return querySelectorFirst(this, selector, this);
   }
@@ -286,6 +307,7 @@ export class ShimElement extends ShimNode {
     this.tagName = namespaceURI ? String(tagName) : String(tagName).toUpperCase();
     this._localName = String(tagName).toLowerCase();
     this._attrs = new Map();
+    this._nsAttrs = new Map();
   }
 
   get localName() {
@@ -306,6 +328,36 @@ export class ShimElement extends ShimNode {
 
   set className(v) {
     this.setAttribute('class', v);
+  }
+
+  get dataset() {
+    const el = this;
+    const toAttr = (prop) => `data-${String(prop).replace(/[A-Z]/g, (ch) => `-${ch.toLowerCase()}`)}`;
+    return new Proxy(
+      {},
+      {
+        get(_t, prop) {
+          if (typeof prop !== 'string') return undefined;
+          const val = el.getAttribute(toAttr(prop));
+          return val === null ? undefined : val;
+        },
+        set(_t, prop, value) {
+          if (typeof prop === 'string') {
+            el.setAttribute(toAttr(prop), String(value));
+          }
+          return true;
+        },
+        deleteProperty(_t, prop) {
+          if (typeof prop === 'string') {
+            el.removeAttribute(toAttr(prop));
+          }
+          return true;
+        },
+        has(_t, prop) {
+          return typeof prop === 'string' && el.hasAttribute(toAttr(prop));
+        }
+      }
+    );
   }
 
   get attributes() {
@@ -330,12 +382,50 @@ export class ShimElement extends ShimNode {
   removeAttribute(name) {
     const key = this.namespaceURI ? name : String(name).toLowerCase();
     this._attrs.delete(key);
+    for (const [nsKey, entry] of this._nsAttrs.entries()) {
+      if (entry.qName === key || (!this.namespaceURI && entry.qName.toLowerCase() === key)) {
+        this._nsAttrs.delete(nsKey);
+      }
+    }
+  }
+
+  getAttributeNS(ns, localName) {
+    const k = `${ns || ''}\0${localName}`;
+    if (this._nsAttrs.has(k)) return this._nsAttrs.get(k).value;
+    if (!ns && this._attrs.has(localName)) return this._attrs.get(localName);
+    return null;
+  }
+
+  setAttributeNS(ns, qualifiedName, value) {
+    const strVal = String(value);
+    const qName = String(qualifiedName);
+    const local = qName.includes(':') ? qName.split(':').pop() : qName;
+    const nsKey = `${ns || ''}\0${local}`;
+    this._nsAttrs.set(nsKey, { ns: ns || null, local, qName, value: strVal });
+    this._attrs.set(this.namespaceURI ? qName : qName.toLowerCase(), strVal);
+  }
+
+  hasAttributeNS(ns, localName) {
+    const k = `${ns || ''}\0${localName}`;
+    return this._nsAttrs.has(k) || (!ns && this._attrs.has(localName));
+  }
+
+  removeAttributeNS(ns, localName) {
+    const k = `${ns || ''}\0${localName}`;
+    const prev = this._nsAttrs.get(k);
+    if (prev) {
+      this._nsAttrs.delete(k);
+      this._attrs.delete(this.namespaceURI ? prev.qName : prev.qName.toLowerCase());
+    }
   }
 
   cloneNode(deep = false) {
-    const copy = new ShimElement(this._localName, this.ownerDocument, this.namespaceURI);
+    const copy = new ShimElement(this.tagName, this.ownerDocument, this.namespaceURI);
     for (const [k, v] of this._attrs.entries()) {
       copy._attrs.set(k, v);
+    }
+    for (const [k, v] of this._nsAttrs.entries()) {
+      copy._nsAttrs.set(k, { ...v });
     }
     if (deep) {
       for (const child of this.childNodes) {
@@ -364,6 +454,52 @@ export class ShimElement extends ShimNode {
 
   querySelectorAll(selector) {
     return querySelectorAllNodes(this, selector, this);
+  }
+
+  getElementsByTagName(tagName) {
+    const out = [];
+    const raw = String(tagName);
+    const targetLower = raw.toLowerCase();
+    const walk = (node) => {
+      for (const child of node.childNodes) {
+        if (child.nodeType === NODE_TYPES.ELEMENT_NODE) {
+          if (
+            raw === '*' ||
+            (child.ownerDocument?.isXml
+              ? child.tagName === raw || child._localName === targetLower
+              : child._localName === targetLower)
+          ) {
+            out.push(child);
+          }
+          walk(child);
+        }
+      }
+    };
+    walk(this);
+    return out;
+  }
+
+  getElementsByTagName(tagName) {
+    const out = [];
+    const raw = String(tagName);
+    const targetLower = raw.toLowerCase();
+    const walk = (node) => {
+      for (const child of node.childNodes) {
+        if (child.nodeType === NODE_TYPES.ELEMENT_NODE) {
+          if (
+            raw === '*' ||
+            (child.ownerDocument?.isXml
+              ? child.tagName === raw || child._localName === targetLower
+              : child._localName === targetLower)
+          ) {
+            out.push(child);
+          }
+          walk(child);
+        }
+      }
+    };
+    walk(this);
+    return out;
   }
 
   getElementsByTagNameNS(ns, localName) {
@@ -450,6 +586,29 @@ export class ShimDocument extends ShimNode {
     return new ShimDocumentFragment(this);
   }
 
+  getElementsByTagName(tagName) {
+    const out = [];
+    const raw = String(tagName);
+    const targetLower = raw.toLowerCase();
+    const walk = (node) => {
+      for (const child of node.childNodes) {
+        if (child.nodeType === NODE_TYPES.ELEMENT_NODE) {
+          if (
+            raw === '*' ||
+            (child.ownerDocument?.isXml
+              ? child.tagName === raw || child._localName === targetLower
+              : child._localName === targetLower)
+          ) {
+            out.push(child);
+          }
+          walk(child);
+        }
+      }
+    };
+    walk(this);
+    return out;
+  }
+
   getElementsByTagNameNS(ns, localName) {
     const out = [];
     const targetLocal = String(localName).toLowerCase();
@@ -468,6 +627,22 @@ export class ShimDocument extends ShimNode {
     };
     walk(this);
     return out;
+  }
+
+  getElementById(id) {
+    const target = String(id ?? '');
+    if (!target) return null;
+    const walk = (node) => {
+      for (const child of node.childNodes) {
+        if (child.nodeType === NODE_TYPES.ELEMENT_NODE) {
+          if (child.getAttribute('id') === target) return child;
+          const hit = walk(child);
+          if (hit) return hit;
+        }
+      }
+      return null;
+    };
+    return walk(this);
   }
 
   querySelector(selector) {
@@ -743,7 +918,12 @@ function matchesCompound(el, compound, scopeNode) {
       if (attr.op === '*=' && (!expected || !actual.includes(expected))) return false;
       if (attr.op === '^=' && (!expected || !actual.startsWith(expected))) return false;
       if (attr.op === '$=' && (!expected || !actual.endsWith(expected))) return false;
-      if (attr.op === '~=' && !actual.split(/\s+/).includes(expected)) return false;
+      if (
+        attr.op === '~=' &&
+        (!expected || /\s/.test(expected) || !actual.split(/\s+/).filter(Boolean).includes(expected))
+      ) {
+        return false;
+      }
       if (attr.op === '|=' && actual !== expected && !actual.startsWith(`${expected}-`)) return false;
     }
   }
@@ -824,7 +1004,11 @@ function matchesHasPseudo(el, rawArg) {
       }
       continue;
     }
-    const relSelector = trimmed.startsWith('>') ? `:scope ${trimmed}` : trimmed;
+    const relSelector = /^[>~+]/.test(trimmed)
+      ? `:scope ${trimmed}`
+      : trimmed.startsWith(':scope')
+        ? trimmed
+        : `:scope ${trimmed}`;
     if (querySelectorFirst(el, relSelector, el) !== null) {
       return true;
     }
@@ -981,7 +1165,10 @@ function parseAttributes(attrSource, isXml) {
     if (isXml && attrs.has(key)) {
       throw new Error(`Duplicate XML attribute: ${key}`);
     }
-    attrs.set(key, decodeEntities(val));
+    if (isXml && val.includes('<')) {
+      throw new Error(`Invalid "<" in XML attribute value for ${rawName}`);
+    }
+    attrs.set(key, isXml ? decodeXmlEntities(val) : decodeEntities(val));
   }
   return attrs;
 }
@@ -1003,19 +1190,36 @@ function findTagEnd(src, startIdx) {
   return -1;
 }
 
+const HTML_HEAD_ONLY_TAGS = new Set(['title', 'meta', 'link', 'style', 'base', 'noscript']);
+
 function parseHtml(html) {
   const doc = new ShimDocument(false, null);
   const stack = [];
   let rootHtml = null;
+  let headEl = null;
+  let bodyEl = null;
   let i = 0;
-
-  const currentParent = () => (stack.length > 0 ? stack[stack.length - 1] : rootHtml || doc);
 
   const ensureHtmlStructure = () => {
     if (!rootHtml) {
       rootHtml = doc.createElement('html');
       doc.appendChild(rootHtml);
     }
+    if (!headEl) {
+      headEl = doc.createElement('head');
+      rootHtml.appendChild(headEl);
+    }
+    if (!bodyEl) {
+      bodyEl = doc.createElement('body');
+      rootHtml.appendChild(bodyEl);
+    }
+  };
+
+  const currentParent = () => {
+    if (stack.length === 0) return bodyEl || rootHtml || doc;
+    const top = stack[stack.length - 1];
+    if (top === rootHtml && bodyEl) return bodyEl;
+    return top;
   };
 
   while (i < html.length) {
@@ -1086,14 +1290,9 @@ function parseHtml(html) {
     const attrs = parseAttributes(attrSource, false);
 
     if (tagName === 'html') {
-      if (!rootHtml) {
-        rootHtml = doc.createElement('html');
-        for (const [k, v] of attrs.entries()) rootHtml.setAttribute(k, v);
-        doc.appendChild(rootHtml);
-      } else {
-        for (const [k, v] of attrs.entries()) {
-          if (!rootHtml.hasAttribute(k)) rootHtml.setAttribute(k, v);
-        }
+      ensureHtmlStructure();
+      for (const [k, v] of attrs.entries()) {
+        if (!rootHtml.hasAttribute(k)) rootHtml.setAttribute(k, v);
       }
       stack.length = 0;
       stack.push(rootHtml);
@@ -1101,15 +1300,45 @@ function parseHtml(html) {
     }
 
     ensureHtmlStructure();
+
+    if (tagName === 'head') {
+      for (const [k, v] of attrs.entries()) {
+        if (!headEl.hasAttribute(k)) headEl.setAttribute(k, v);
+      }
+      stack.length = 0;
+      stack.push(rootHtml, headEl);
+      continue;
+    }
+
+    if (tagName === 'body') {
+      for (const [k, v] of attrs.entries()) {
+        if (!bodyEl.hasAttribute(k)) bodyEl.setAttribute(k, v);
+      }
+      stack.length = 0;
+      stack.push(rootHtml, bodyEl);
+      continue;
+    }
+
     const el = doc.createElement(tagName);
     for (const [k, v] of attrs.entries()) el.setAttribute(k, v);
 
-    // Avoid nesting head/body inside each other if unclosed
-    if ((tagName === 'head' || tagName === 'body') && stack.some((s) => s._localName === 'html')) {
-      stack.length = 1;
+    const top = stack[stack.length - 1];
+    let targetParent;
+    if (stack.length === 0 || top === rootHtml) {
+      if (HTML_HEAD_ONLY_TAGS.has(tagName)) {
+        stack.length = 0;
+        stack.push(rootHtml, headEl);
+        targetParent = headEl;
+      } else {
+        stack.length = 0;
+        stack.push(rootHtml, bodyEl);
+        targetParent = bodyEl;
+      }
+    } else {
+      targetParent = top;
     }
 
-    currentParent().appendChild(el);
+    targetParent.appendChild(el);
 
     if (RAW_TEXT_TAGS.has(tagName) && !selfClosing) {
       const closeRx = new RegExp(`</${tagName}\\s*>`, 'i');
@@ -1146,6 +1375,15 @@ function parseXmlStrict(xml, mimeType) {
   const defaultNs = mimeType === 'application/xhtml+xml' ? 'http://www.w3.org/1999/xhtml' : null;
   const doc = new ShimDocument(true, defaultNs);
   const stack = [];
+  const nsStack = [
+    {
+      defaultNs,
+      prefixes: new Map([
+        ['xml', 'http://www.w3.org/XML/1998/namespace'],
+        ['xmlns', 'http://www.w3.org/2000/xmlns/']
+      ])
+    }
+  ];
   let rootCount = 0;
   let i = 0;
 
@@ -1212,6 +1450,7 @@ function parseXmlStrict(xml, mimeType) {
         const closeName = inside.slice(1).trim();
         if (stack.length === 0) throw new Error(`Unexpected closing tag </${closeName}>`);
         const top = stack.pop();
+        nsStack.pop();
         if (top.tagName !== closeName) {
           throw new Error(`Mismatched closing tag </${closeName}> for <${top.tagName}>`);
         }
@@ -1225,9 +1464,43 @@ function parseXmlStrict(xml, mimeType) {
 
       const tagName = tagMatch[1];
       const attrs = parseAttributes(tagMatch[2] || '', true);
-      const currentNs = attrs.get('xmlns') || (stack.length > 0 ? stack[stack.length - 1].namespaceURI : defaultNs);
+      const parentScope = nsStack[nsStack.length - 1];
+      const curPrefixes = new Map(parentScope.prefixes);
+      let curDefaultNs = parentScope.defaultNs;
+      for (const [k, v] of attrs.entries()) {
+        if (k === 'xmlns') {
+          curDefaultNs = v || null;
+        } else if (k.startsWith('xmlns:')) {
+          const pfx = k.slice(6);
+          if (!pfx || !v) throw new Error(`Invalid XML namespace declaration: ${k}`);
+          curPrefixes.set(pfx, v);
+        }
+      }
+
+      let currentNs = curDefaultNs;
+      let resolvedLocal = tagName;
+      if (tagName.includes(':')) {
+        const [pfx, local] = tagName.split(':', 2);
+        if (!curPrefixes.has(pfx)) {
+          throw new Error(`Undeclared XML namespace prefix "${pfx}" on <${tagName}>`);
+        }
+        currentNs = curPrefixes.get(pfx);
+        resolvedLocal = local;
+      }
+
       const el = doc.createElementNS(currentNs, tagName);
-      for (const [k, v] of attrs.entries()) el.setAttribute(k, v);
+      el._localName = resolvedLocal.toLowerCase();
+      for (const [k, v] of attrs.entries()) {
+        if (k !== 'xmlns' && k.includes(':') && !k.startsWith('xmlns:')) {
+          const [aPfx] = k.split(':', 2);
+          if (!curPrefixes.has(aPfx)) {
+            throw new Error(`Undeclared XML attribute namespace prefix "${aPfx}" on "${k}"`);
+          }
+          el.setAttributeNS(curPrefixes.get(aPfx), k, v);
+        } else {
+          el.setAttribute(k, v);
+        }
+      }
 
       if (stack.length === 0) {
         rootCount++;
@@ -1237,7 +1510,10 @@ function parseXmlStrict(xml, mimeType) {
         stack[stack.length - 1].appendChild(el);
       }
 
-      if (!selfClosing) stack.push(el);
+      if (!selfClosing) {
+        stack.push(el);
+        nsStack.push({ defaultNs: curDefaultNs, prefixes: curPrefixes });
+      }
     }
 
     if (stack.length > 0) {
@@ -1258,7 +1534,25 @@ function decodeXmlEntities(str) {
   if (stripped.includes('&')) {
     throw new Error('Unescaped "&" in XML text');
   }
-  return decodeEntities(str);
+  return String(str).replace(/&(#x[0-9a-fA-F]+|#[0-9]+|amp|lt|gt|quot|apos);/g, (full, ent) => {
+    if (ent[0] === '#') {
+      const cp = ent[1] === 'x' || ent[1] === 'X'
+        ? parseInt(ent.slice(2), 16)
+        : parseInt(ent.slice(1), 10);
+      if (
+        !Number.isFinite(cp) ||
+        cp > 0x10ffff ||
+        (cp >= 0xd800 && cp <= 0xdfff) ||
+        cp === 0xfffe ||
+        cp === 0xffff ||
+        (cp < 0x20 && cp !== 0x09 && cp !== 0x0a && cp !== 0x0d)
+      ) {
+        throw new Error(`Invalid XML character reference: ${full}`);
+      }
+      return String.fromCodePoint(cp);
+    }
+    return NAMED_ENTITIES[ent];
+  });
 }
 
 /* ---------------- Serialization ---------------- */

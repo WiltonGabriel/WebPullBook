@@ -1050,3 +1050,106 @@ test('looksLikeSpaShell detects React skeleton SPA even when noscript SEO fallba
   assert.equal(looksLikeSpaShell(spaWithNoscriptDoc), true);
 });
 
+test('BaseParser never caches anti-bot chapter responses in PageDomCache and RoyalRoadParser rejects mismatched fiction ID', async () => {
+  const { PageDomCache } = await import('../src/core/parser-engine.js');
+  const pageDomCache = new PageDomCache();
+  globalThis.fetch = async () =>
+    new Response('<html><title>Just a moment...</title><body>Checking your browser before accessing... Enable JavaScript and cookies to continue</body></html>', {
+      status: 200,
+      headers: { 'content-type': 'text/html' }
+    });
+  await assert.rejects(
+    () =>
+      genericHtmlParser.downloadChapter(
+        { url: 'https://novel.example.org/cf-ch', displayTitle: 'CF' },
+        { pageDomCache, maxRetries: 0 }
+      ),
+    (err) => Boolean(err.isAntiBotChallenge)
+  );
+  assert.equal(pageDomCache.get('https://novel.example.org/cf-ch'), null);
+
+  const chapterWrongFiction = new DOMParser().parseFromString(
+    `<html><body>
+      <a href="/fiction/99999/other-story">Fiction Home</a>
+      <div class="chapter-content"><p>Content</p></div>
+    </body></html>`,
+    'text/html'
+  );
+  const requestedUrls = [];
+  globalThis.fetch = async (url) => {
+    const s = String(url);
+    requestedUrls.push(s);
+    if (s.includes('/fiction/12345/')) {
+      return new Response(
+        '<html><body><table id="chapters"><tbody><tr><td><a href="/fiction/12345/my-story/chapter/1">Ch 1</a></td></tr></tbody></table></body></html>',
+        { status: 200, headers: { 'content-type': 'text/html' } }
+      );
+    }
+    return new Response('Not Found', { status: 404 });
+  };
+  const resolved = await royalRoadParser.resolveIndexDocument(
+    'https://www.royalroad.com/fiction/12345/my-story/chapter/1',
+    chapterWrongFiction
+  );
+  assert.equal(requestedUrls.some((u) => u.includes('/fiction/99999/')), false);
+  assert.ok(resolved.targetUrl.includes('/fiction/12345/'));
+
+  const fakeScribblePrevLoop = new DOMParser().parseFromString(
+    '<div id="pagination-mesh-toc"><a class="page-link next" href="?toc=1">Next</a></div>',
+    'text/html'
+  );
+  assert.equal(
+    scribbleHubParser.findNextPageUrl(fakeScribblePrevLoop, 'https://www.scribblehub.com/series/1/t/?toc=abc'),
+    null
+  );
+  const fakeScribbleInvalidNext = new DOMParser().parseFromString(
+    '<div id="pagination-mesh-toc"><a class="page-link next" href="?toc=xyz">Next</a></div>',
+    'text/html'
+  );
+  assert.equal(
+    scribbleHubParser.findNextPageUrl(fakeScribbleInvalidNext, 'https://www.scribblehub.com/series/1/t/?toc=1'),
+    null
+  );
+  const fakeScribbleAdvance = new DOMParser().parseFromString(
+    '<div id="pagination-mesh-toc"><a class="page-link next" href="?toc=2">Next</a></div>',
+    'text/html'
+  );
+  assert.equal(
+    scribbleHubParser.findNextPageUrl(fakeScribbleAdvance, 'https://www.scribblehub.com/series/1/t/?toc=abc'),
+    'https://www.scribblehub.com/series/1/t/?toc=2'
+  );
+});
+
+test('MadaraThemeParser fetches POST /ajax/chapters/ when SSR listing wrapper is empty', async () => {
+  const { madaraThemeParser } = await import('../src/parsers/madara-theme.js');
+  const origFetch = globalThis.fetch;
+  let postedAjaxUrl = '';
+  let postedMethod = '';
+  globalThis.fetch = async (url, init = {}) => {
+    postedAjaxUrl = String(url);
+    postedMethod = String(init.method || 'GET').toUpperCase();
+    return new Response(
+      '<ul class="main version-chap"><li class="wp-manga-chapter"><a href="https://madara.example.org/novel/my-story/chapter-2/">Chapter 2</a></li><li class="wp-manga-chapter"><a href="https://madara.example.org/novel/my-story/chapter-1/">Chapter 1</a></li></ul>',
+      { status: 200, headers: { 'content-type': 'text/html' } }
+    );
+  };
+  try {
+    const ssrDoc = new DOMParser().parseFromString(
+      '<html><body><div class="post-title"><h1>My Madara Story</h1></div><div class="listing-chapters_wrap"></div></body></html>',
+      'text/html'
+    );
+    const resolved = await madaraThemeParser.resolveIndexDocument(
+      'https://madara.example.org/novel/my-story/',
+      ssrDoc
+    );
+    assert.equal(postedMethod, 'POST');
+    assert.equal(postedAjaxUrl, 'https://madara.example.org/novel/my-story/ajax/chapters/');
+    const chapters = madaraThemeParser.collectChapterNodes(resolved.doc, resolved.targetUrl);
+    assert.equal(chapters.length, 2);
+    assert.equal(chapters[0].titleText, 'Chapter 1');
+    assert.equal(chapters[1].titleText, 'Chapter 2');
+  } finally {
+    globalThis.fetch = origFetch;
+  }
+});
+

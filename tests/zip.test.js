@@ -68,3 +68,17 @@ test('readZipArchive rejects truncated or corrupted ZIP buffers', async () => {
   corrupted[30 + 'test.txt'.length + 1] ^= 0xff;
   await assert.rejects(() => readZipArchive(corrupted), /CRC-32 mismatch/);
 });
+
+test('createZipBlob rejects unsafe traversal paths and duplicate entry names', async () => {
+  await assert.rejects(() => createZipBlob([{ name: '../evil.txt', data: 'x' }]), /unsafe ZIP entry path/i);
+  await assert.rejects(() => createZipBlob([{ name: '/abs.txt', data: 'x' }]), /unsafe ZIP entry path/i);
+  await assert.rejects(() => createZipBlob([{ name: 'a\\b.txt', data: 'x' }]), /unsafe ZIP entry path/i);
+  await assert.rejects(
+    () =>
+      createZipBlob([
+        { name: 'OEBPS/ch1.xhtml', data: 'a' },
+        { name: 'OEBPS/ch1.xhtml', data: 'b' }
+      ]),
+    /Duplicate ZIP entry/i
+  );
+});

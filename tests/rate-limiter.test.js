@@ -30,3 +30,23 @@ test('AdaptiveRateLimiter adapts concurrency, Retry-After, latency backoff, and 
   await rl.waitCooperatively(5000, { isSafeModeActive: () => safeOn });
   assert.ok(Date.now() - t0 < 1500, 'Cooperative wait should exit early when Safe Mode is disabled live');
 });
+
+test('AdaptiveRateLimiter scales backoff cleanly up to 3.5 without clamping down on slow responses and honors allowSafeModeEarlyExit=false', async () => {
+  const rl = new AdaptiveRateLimiter();
+  rl.backoffFactor = 3.5;
+  rl.recordSuccess(4000);
+  assert.equal(rl.backoffFactor, 3.5);
+  rl.recordThrottle();
+  assert.equal(rl.backoffFactor, 3.5);
+
+  let safeOn = true;
+  setTimeout(() => {
+    safeOn = false;
+  }, 40);
+  const t0 = Date.now();
+  await rl.waitCooperatively(180, {
+    isSafeModeActive: () => safeOn,
+    allowSafeModeEarlyExit: false
+  });
+  assert.ok(Date.now() - t0 >= 150, 'Mandatory Retry-After wait should not exit early on Safe Mode toggle');
+});

@@ -10,6 +10,8 @@ permissions:
 
 env:
   EPUBCHECK_VERSION: "5.4.0"
+  EPUBCHECK_SHA256: "33350c61038e71dfb3d45a76aed04bf5481e6d5500cb780f6e98db8bbd15a28c"
+  ADDONS_LINTER_VERSION: "10.16.0"
 
 jobs:
   release:
@@ -63,6 +65,7 @@ jobs:
         run: |
           mkdir -p .tools/epubcheck
           curl -fsSL -o /tmp/epubcheck.zip "https://github.com/w3c/epubcheck/releases/download/v${EPUBCHECK_VERSION}/epubcheck-${EPUBCHECK_VERSION}.zip"
+          echo "${EPUBCHECK_SHA256}  /tmp/epubcheck.zip" | sha256sum -c -
           unzip -q /tmp/epubcheck.zip -d .tools/epubcheck
           rm -f /tmp/epubcheck.zip
 
@@ -87,9 +90,11 @@ jobs:
             echo "HAS_CHANGELOG_NOTES=false" >> "$GITHUB_ENV"
           fi
 
-      - name: Build extension archive
+      - name: Build & verify extension archive
         run: |
           zip -r "WebPullBook-v${VERSION}.zip" manifest.json _locales icons src LICENSE README.md README.pt.md docs
+          unzip -t "WebPullBook-v${VERSION}.zip"
+          npx --yes "addons-linter@${ADDONS_LINTER_VERSION}" "WebPullBook-v${VERSION}.zip"
           sha256sum "WebPullBook-v${VERSION}.zip" > "WebPullBook-v${VERSION}.zip.sha256"
 
       - name: Create or update GitHub Release

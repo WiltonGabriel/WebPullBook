@@ -19,6 +19,9 @@ export function mockFetchRoutes(routes) {
       return new Response('Not Found', { status: 404 });
     }
     const res = typeof handler === 'function' ? handler(calls.filter((u) => u === key).length) : handler;
+    if (res instanceof Response) {
+      return res;
+    }
     if (typeof res === 'string') {
       return new Response(res, { status: 200, headers: { 'content-type': 'text/html; charset=utf-8' } });
     }

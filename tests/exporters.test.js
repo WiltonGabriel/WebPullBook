@@ -5,6 +5,7 @@ import { readZipArchive } from './helpers/zip-reader.js';
 import { HtmlSanitizer, serializeChapterXhtml } from '../src/core/sanitizer.js';
 import { buildEpubStylesheet } from '../src/core/parser-engine.js';
 import { fetchImageBytes, hashImageBytes, isAnimatedImage, sniffImageMime } from '../src/core/image-processor.js';
+import { assertSafeHttpUrl } from '../src/core/parser-engine.js';
 import { BaseExporter } from '../src/exporters/base-exporter.js';
 import { exporterRegistry } from '../src/exporters/index.js';
 
@@ -566,4 +567,137 @@ test('fetchImageBytes installs temporary DNR Referer rule when credentialed and 
   assert.equal(ruleInstalledDuringRetry, true, 'DNR Referer rule ID 120 should be active during hotlink retry');
   assert.equal(sessionRules.length, 0, 'Temporary DNR Referer rule must be cleared after fetchImageBytes returns');
   assert.equal(result.mime, 'image/png');
+});
+
+test('sniffImageMime and fetchImageBytes reject SVGs, BOM-prefixed HTML, and non-HTTP schemes', async () => {
+  const svgBytes = new TextEncoder().encode('<!-- c --><svg xmlns="http://www.w3.org/2000/svg"></svg>');
+  assert.equal(sniffImageMime(svgBytes), 'image/svg+xml');
+  const bomHtml = new TextEncoder().encode('\uFEFF<!-- lead --><html><body>Err</body></html>');
+  assert.equal(sniffImageMime(bomHtml), 'text/html');
+
+  assert.throws(() => assertSafeHttpUrl('file:///etc/passwd'), /Protocolo bloqueado/);
+  await assert.rejects(
+    () => fetchImageBytes('data:image/svg+xml;base64,PHN2Zz48L3N2Zz4='),
+    /Unsupported|SVG|image/i
+  );
+  globalThis.fetch = async () =>
+    new Response('<svg xmlns="http://www.w3.org/2000/svg"><circle r="1"/></svg>', {
+      status: 200,
+      headers: { 'content-type': 'image/png' }
+    });
+  await assert.rejects(() => fetchImageBytes('https://cdn.example.org/disguised.png'), /SVG|image/i);
+});
+
+test('HtmlExporter escapes </style>, normalizes lang, scopes chapter IDs, and MarkdownExporter omits empty source spacing', async () => {
+  const chDoc = new DOMParser().parseFromString('<p id="intro"><strong>First</strong> <span style="font-weight:bold;font-style:italic">Both</span></p>', 'text/html');
+  const sanitizeChapter = (title) => {
+    const clean = new HtmlSanitizer().sanitize(chDoc.body, 'https://example.org/c');
+    return { chapter: { displayTitle: title }, chapterTitle: title, subtitle: '', nodes: clean.nodes, images: [] };
+  };
+  const ch1 = sanitizeChapter('Ch 1');
+  const ch2 = sanitizeChapter('Ch 2');
+
+  const htmlBlob = await exporterRegistry.get('html').exportBook({
+    metadata: { title: 'Test Book', author: 'A', language: 'pt_BR', coverUrl: 'data:image/svg+xml,<svg/>', genres: [] },
+    bookTitle: 'Test Book',
+    parsedChapters: [ch1, ch2],
+    options: { stylesheet: 'body { color: #111; } </style><script>alert(1)</script>' }
+  });
+  const htmlText = await htmlBlob.text();
+  assert.match(htmlText, /<html lang="pt-BR">/);
+  assert.doesNotMatch(htmlText, /<\/style><script>/i);
+  assert.match(htmlText, /<\\\/style><script>alert\(1\)<\/script>/);
+  assert.match(htmlText, /id="ch-1-intro"/);
+  assert.match(htmlText, /id="ch-2-intro"/);
+  assert.doesNotMatch(htmlText, /image\/svg\+xml/);
+
+  const mdBlob = await exporterRegistry.get('md').exportBook({
+    metadata: { title: 'MD Book', author: 'A', genres: [] },
+    bookTitle: 'MD Book',
+    parsedChapters: [sanitizeChapter('Only')],
+    options: {}
+  });
+  const mdText = await mdBlob.text();
+  assert.ok(!mdText.includes('\n\n\n'), 'Markdown header should not have extra blank lines when startingUrl is absent');
+  assert.match(mdText, /\*\*\*Both\*\*\*|\*\*_\s*Both|_\*\*Both/);
+});
+
+test('HtmlExporter embeds chapter images as data URIs and all exporters localize English book labels', async () => {
+  const origFetch = globalThis.fetch;
+  globalThis.fetch = async (url) => {
+    if (String(url).includes('chapter-pic.png')) {
+      return new Response(PNG_1X1, { status: 200, headers: { 'content-type': 'image/png' } });
+    }
+    return new Response(PNG_1X1, { status: 200, headers: { 'content-type': 'image/png' } });
+  };
+  try {
+    const ch = buildParsedChapter(
+      1,
+      '',
+      '<p>Scene <img src="https://cdn.example.org/chapter-pic.png" alt="Scene"/></p>',
+      'https://example.org'
+    );
+    ch.chapter.displayTitle = 'Chapter 1';
+    ch.chapterTitle = 'Chapter 1';
+    const enMeta = {
+      startingUrl: 'https://example.org/book',
+      title: 'English Novel',
+      author: 'Jane Doe',
+      language: 'en',
+      coverUrl: 'https://cdn.example.org/cover.png',
+      genres: ['Fantasy'],
+      synopsis: 'An adventure.'
+    };
+
+    const htmlBlob = await exporterRegistry.get('html').exportBook({
+      metadata: enMeta,
+      bookTitle: 'English Novel',
+      parsedChapters: [ch],
+      options: {}
+    });
+    const html = await htmlBlob.text();
+    assert.match(html, /<strong>Author:<\/strong>/);
+    assert.match(html, /<h2>Table of Contents \(1 chapter\)<\/h2>/);
+    assert.match(html, /data:image\/png;base64,/);
+    assert.doesNotMatch(html, /https:\/\/cdn\.example\.org\/chapter-pic\.png/);
+
+    const epubZip = await readZipArchive(
+      await exporterRegistry.get('epub').exportBook({
+        metadata: enMeta,
+        bookTitle: 'English Novel',
+        parsedChapters: [ch],
+        options: { createEpub3: true }
+      })
+    );
+    const navXhtml = epubZip.files.get('OEBPS/nav.xhtml').text();
+    const infoXhtml = epubZip.files.get('OEBPS/text/info.xhtml').text();
+    assert.match(navXhtml, />Cover</);
+    assert.match(navXhtml, />Start</);
+    assert.match(infoXhtml, /<h2>Synopsis<\/h2>/);
+    assert.match(infoXhtml, /<strong>Author:<\/strong>/);
+
+    const mdText = await (
+      await exporterRegistry.get('md').exportBook({
+        metadata: enMeta,
+        bookTitle: 'English Novel',
+        parsedChapters: [ch],
+        options: {}
+      })
+    ).text();
+    assert.match(mdText, /- \*\*Author:\*\*/);
+    assert.match(mdText, /## Synopsis/);
+
+    const txtText = await (
+      await exporterRegistry.get('txt').exportBook({
+        metadata: enMeta,
+        bookTitle: 'English Novel',
+        parsedChapters: [ch],
+        options: {}
+      })
+    ).text();
+    assert.match(txtText, /^English Novel\n\nAuthor: Jane Doe/m);
+    assert.match(txtText, /Synopsis:\nAn adventure\./);
+  } finally {
+    globalThis.fetch = origFetch;
+  }
 });

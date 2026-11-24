@@ -9,6 +9,8 @@ import {
   decodeHtmlBytes,
   fetchDocumentWithOptions,
   fetchRenderedTabDocument,
+  fetchWithRetry,
+  isAntiBotChallengeDocument,
   isSpaDomainCircuitOpen,
   resolveSafeHttpUrl
 } from '../src/core/parser-engine.js';
@@ -293,4 +295,49 @@ test('TabRenderPool waits until tab URL transitions off previous chapter when ta
   assert.match(ch1.body.textContent, /chapter-1/);
   assert.match(ch2.body.textContent, /chapter-2/);
   assert.ok(pollCount >= 2, 'Should poll until tab URL transitions off chapter-1');
+});
+
+test('PageDomCache keeps query parameters distinct, long prose does not trip anti-bot detection, and DNR image slots are ref-counted', async () => {
+  const domCache = new PageDomCache();
+  const d1 = new DOMParser().parseFromString('<p>Page 1</p>', 'text/html');
+  const d2 = new DOMParser().parseFromString('<p>Page 2</p>', 'text/html');
+  domCache.set('https://example.org/list?page=1', d1);
+  domCache.set('https://example.org/list?page=2', d2);
+  assert.equal(domCache.get('https://example.org/list?page=1').body.textContent.trim(), 'Page 1');
+  assert.equal(domCache.get('https://example.org/list?page=2').body.textContent.trim(), 'Page 2');
+
+  const longProse = '<article><p>' + 'Story text mentioning Cloudflare and human verification. '.repeat(90) + '</p></article>';
+  const longDoc = new DOMParser().parseFromString(longProse, 'text/html');
+  assert.equal(isAntiBotChallengeDocument(longDoc), false);
+
+  let sessionRules = [{ id: 1, priority: 1, action: { type: 'modifyHeaders' }, condition: {} }];
+  globalThis.chrome = {
+    runtime: { getURL: (p = '') => `moz-extension://uuid/${p}` },
+    declarativeNetRequest: {
+      getSessionRules: async () => [...sessionRules],
+      updateSessionRules: async ({ removeRuleIds = [], addRules = [] }) => {
+        sessionRules = sessionRules.filter((r) => !removeRuleIds.includes(r.id)).concat(addRules);
+      }
+    }
+  };
+  await applyImageRefererRule('https://cdn1.example.org/a.jpg', 'https://origin.example.org/1');
+  await applyImageRefererRule('https://cdn1.example.org/c.jpg', 'https://origin.example.org/1');
+  await applyImageRefererRule('https://cdn2.example.org/b.jpg', 'https://origin.example.org/1');
+  assert.equal(sessionRules.filter((r) => r.id >= 120 && r.id <= 129).length, 2);
+
+  await clearImageRefererRules('https://cdn1.example.org/a.jpg', 'https://origin.example.org/1');
+  assert.equal(sessionRules.filter((r) => r.id >= 120 && r.id <= 129).length, 2, 'Ref-counted slot stays until last holder releases');
+  await clearImageRefererRules('https://cdn1.example.org/c.jpg', 'https://origin.example.org/1');
+  assert.equal(sessionRules.filter((r) => r.id >= 120 && r.id <= 129).length, 1);
+  await clearImageRefererRules();
+  assert.equal(sessionRules.length, 1);
+  assert.equal(sessionRules[0].id, 1);
+
+  let fetchAttempts = 0;
+  globalThis.fetch = async () => {
+    fetchAttempts++;
+    return new Response('ok');
+  };
+  await assert.rejects(() => fetchWithRetry('file:///etc/passwd', {}, 3), /Protocolo bloqueado/);
+  assert.equal(fetchAttempts, 0);
 });

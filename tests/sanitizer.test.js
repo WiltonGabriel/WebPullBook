@@ -7,7 +7,8 @@ import {
   escapeXml,
   extractHiddenClassesFromStyles,
   sanitizeChapterContent,
-  serializeChapterXhtml
+  serializeChapterXhtml,
+  stripInvalidXmlChars
 } from '../src/core/sanitizer.js';
 
 let restoreDom;
@@ -364,4 +365,57 @@ test('dom-shim evaluates :empty, CSS escapes, modern pseudo-classes, and rejects
   assert.ok(doc.querySelector('em:first-of-type'));
 
   assert.throws(() => doc.querySelector('div:nonexistent-pseudo'), SyntaxError);
+});
+
+test('HtmlSanitizer and serializeChapterXhtml strip invalid XML chars, parse comma srcset, map u/s, prune dangling refs, and normalize EPUB 2', () => {
+  const dirtyStr = `Hello\x00\x0B\uFFFEWorld${String.fromCharCode(0xd800)}!`;
+  assert.equal(stripInvalidXmlChars(dirtyStr), 'HelloWorld!');
+  assert.equal(escapeXml('A\x01&\x0CB'), 'A&amp;B');
+
+  // Encode UTF-8 string "olá@ex.org" with key 0x42 for __cf_email__
+  const utf8Bytes = new TextEncoder().encode('olá@ex.org');
+  const cfHex = '42' + Array.from(utf8Bytes, (b) => (b ^ 0x42).toString(16).padStart(2, '0')).join('');
+
+  const root = parseHtmlBodyFragment(`
+    <p>Text\x00with control char <u>underlined</u> <s>struck</s> and <a data-cfemail="${cfHex}">[email]</a>.</p>
+    <p><a href="#kept">Kept Note</a> and <a href="#dropped-unused">Dangling Note</a></p>
+    <p id="kept">Real footnote target <a href="#ref-back">↩</a></p>
+    <div id="dropped-unused" style="display:none">Hidden content</div>
+    <figure><img src="https://cdn.example.com/sm.jpg" srcset="https://res.cloudinary.com/demo/image/upload/w_900,f_auto/art.jpg 2x, https://res.cloudinary.com/demo/image/upload/w_300,f_auto/art.jpg 1x" alt="Art\x07" /><figcaption>Caption text</figcaption></figure>
+    <blockquote>Quote inline text</blockquote>
+  `);
+
+  const res = sanitizeChapterContent(root, 'https://example.com/ch1');
+  const xhtmlEpub2 = serializeChapterXhtml({
+    title: '\x00',
+    subtitle: '',
+    xmlDoc: res.xmlDoc,
+    nodes: res.nodes,
+    epub3: false,
+    popupFootnotes: false
+  });
+  // Calling serializeChapterXhtml twice must stay idempotent even without EPUB 3 pop-up notes
+  const xhtmlEpub2Again = serializeChapterXhtml({
+    title: 'Chapter',
+    subtitle: '',
+    xmlDoc: res.xmlDoc,
+    nodes: res.nodes,
+    epub3: true,
+    popupFootnotes: true
+  });
+
+  assert.doesNotMatch(xhtmlEpub2, /[\x00-\x08\x0B\x0C\x0E-\x1F]/);
+  assert.match(xhtmlEpub2, /olá@ex\.org/);
+  assert.match(xhtmlEpub2, /class="wpb-underline"/);
+  assert.match(xhtmlEpub2, /class="wpb-strike"/);
+  assert.doesNotMatch(xhtmlEpub2, /<\/?u\b|<\/?s\b/i);
+  assert.match(xhtmlEpub2, /w_900,f_auto\/art\.jpg/);
+  assert.match(xhtmlEpub2, /alt="Art"/);
+  assert.match(xhtmlEpub2, /<a href="#kept">/);
+  assert.doesNotMatch(xhtmlEpub2, /href="#dropped-unused"/);
+  assert.match(xhtmlEpub2, /class="wpb-figure"/);
+  assert.match(xhtmlEpub2, /class="wpb-figcaption"/);
+  assert.doesNotMatch(xhtmlEpub2, /<figure|<figcaption|xmlns:epub/);
+  assert.match(xhtmlEpub2, /<blockquote><p>Quote inline text<\/p><\/blockquote>/);
+  assert.doesNotMatch(xhtmlEpub2Again, /<aside[^>]+id="ref-back"/);
 });

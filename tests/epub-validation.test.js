@@ -63,10 +63,6 @@ test('Generated EPUB 3 (nested volumes + SVG cover) and EPUB 2 pass W3C EPUBChec
   };
 
   const { parser, series } = await loadSeriesWithParser('https://novel.example.org/series/torre-cinzenta/');
-  const parsedChapters = [];
-  for (const ch of series.chapters) {
-    parsedChapters.push(await parser.downloadChapter(ch));
-  }
 
   const outDir = fs.mkdtempSync(path.join(os.tmpdir(), 'wpb-epubcheck-suite-'));
   try {

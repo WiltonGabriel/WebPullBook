@@ -215,8 +215,7 @@ function resolveChromiumExecutablePath() {
     const dirs = fs
       .readdirSync(cacheDir)
       .filter((d) => /^chromium-\d+$/.test(d))
-      .sort()
-      .reverse();
+      .sort((a, b) => Number(b.slice('chromium-'.length)) - Number(a.slice('chromium-'.length)));
     for (const d of dirs) {
       const candidate = path.join(cacheDir, d, 'chrome-linux64', 'chrome');
       if (fs.existsSync(candidate)) return candidate;
@@ -534,9 +533,16 @@ async function runE2E() {
       true,
       'Loading overlay should be hidden once loading finishes'
     );
+    const infoLogsBeforeFilter = await page.locator('.log-line.log-info').count();
+    assert.ok(infoLogsBeforeFilter > 0, 'Logs should render info entries before filtering');
     await page.click('#log-filter-warn');
+    assert.equal(await page.locator('.log-line.log-info').count(), 0, 'Warn filter should hide info lines');
     assert.equal(await page.locator('.log-line.log-error').count(), 0, 'Warn filter should hide error lines');
+    await page.click('#log-filter-error');
+    assert.equal(await page.locator('.log-line.log-warn').count(), 0, 'Error filter should hide warn lines');
+    assert.equal(await page.locator('.log-line.log-info').count(), 0, 'Error filter should hide info lines');
     await page.click('#log-filter-all');
+    assert.ok((await page.locator('.log-line.log-info').count()) > 0, 'All filter should restore info lines');
     assert.equal(await page.isVisible('#btn-copy-logs'), true, 'Copy logs button should be visible');
     await page.click('.tab-btn[data-tab="main"]');
     await page.waitForSelector('#tab-main:not(.hidden)', { timeout: 5000 });

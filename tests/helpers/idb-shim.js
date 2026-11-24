@@ -107,12 +107,19 @@ class ShimObjectStore {
       const req = new ShimRequest();
       tx._pending++;
       queueMicrotask(() => {
+        if (tx._aborted) {
+          tx._finishOne();
+          return;
+        }
         try {
           req.result = fn();
           req.onsuccess?.({ target: req });
         } catch (err) {
           req.error = err;
+          tx.error = err;
+          tx._hasError = true;
           req.onerror?.({ target: req });
+          tx.onerror?.({ target: tx });
         } finally {
           tx._finishOne();
         }
@@ -120,12 +127,33 @@ class ShimObjectStore {
       return req;
     };
 
-    const makeCursorApi = (entriesList) => {
+    const makeCursorApi = (buildEntriesList, direction = 'next') => {
       const req = new ShimRequest();
       tx._pending++;
       let idx = 0;
+      let entriesList = null;
 
       const step = () => {
+        if (tx._aborted) {
+          tx._finishOne();
+          return;
+        }
+        if (entriesList === null) {
+          entriesList = buildEntriesList();
+          if (direction === 'nextunique' || direction === 'prevunique') {
+            const seenKeys = [];
+            entriesList = entriesList.filter((item) => {
+              if (seenKeys.some((prevKey) => compareIdbKeys(prevKey, item.cursorKey) === 0)) {
+                return false;
+              }
+              seenKeys.push(item.cursorKey);
+              return true;
+            });
+          }
+          if (direction === 'prev' || direction === 'prevunique') {
+            entriesList.reverse();
+          }
+        }
         if (idx >= entriesList.length) {
           req.result = null;
           req.onsuccess?.({ target: req });
@@ -159,7 +187,24 @@ class ShimObjectStore {
       put: (record) => {
         assertWritable();
         return reqWrap(() => {
+          if (!record || typeof record !== 'object') {
+            throw new DOMException('Invalid record', 'DataError');
+          }
           const k = record[this.keyPath];
+          if (k === undefined || k === null) {
+            throw new DOMException(`Missing keyPath "${this.keyPath}"`, 'DataError');
+          }
+          for (const [idxName, idxDef] of this._indexes.entries()) {
+            if (!idxDef.unique) continue;
+            const idxVal = record[idxDef.keyPath];
+            if (idxVal === undefined || idxVal === null) continue;
+            for (const [existingPk, existingVal] of storeData.entries()) {
+              if (compareIdbKeys(existingPk, k) === 0) continue;
+              if (compareIdbKeys(existingVal?.[idxDef.keyPath], idxVal) === 0) {
+                throw new DOMException(`Unique constraint failed on index "${idxName}"`, 'ConstraintError');
+              }
+            }
+          }
           storeData.set(k, cloneValue(record));
           return k;
         });
@@ -178,36 +223,36 @@ class ShimObjectStore {
           return undefined;
         });
       },
-      openCursor: (range = null, direction = 'next') => {
-        const list = [];
-        for (const [k, v] of storeData.entries()) {
-          if (!range || range.matches(k)) {
-            list.push({ cursorKey: k, primaryKey: k, value: v });
+      openCursor: (range = null, direction = 'next') =>
+        makeCursorApi(() => {
+          const list = [];
+          for (const [k, v] of storeData.entries()) {
+            if (!range || range.matches(k)) {
+              list.push({ cursorKey: k, primaryKey: k, value: v });
+            }
           }
-        }
-        list.sort((a, b) => compareIdbKeys(a.cursorKey, b.cursorKey));
-        if (direction === 'prev' || direction === 'prevunique') list.reverse();
-        return makeCursorApi(list);
-      },
+          list.sort((a, b) => compareIdbKeys(a.cursorKey, b.cursorKey));
+          return list;
+        }, direction),
       index: (indexName) => {
         const idxDef = this._indexes.get(indexName);
         if (!idxDef) throw new Error(`Missing index: ${indexName}`);
         return {
-          openCursor: (range = null, direction = 'next') => {
-            const list = [];
-            for (const [k, v] of storeData.entries()) {
-              const idxVal = v[idxDef.keyPath];
-              if (idxVal === undefined || idxVal === null) continue;
-              if (!range || range.matches(idxVal)) {
-                list.push({ cursorKey: idxVal, primaryKey: k, value: v });
+          openCursor: (range = null, direction = 'next') =>
+            makeCursorApi(() => {
+              const list = [];
+              for (const [k, v] of storeData.entries()) {
+                const idxVal = v[idxDef.keyPath];
+                if (idxVal === undefined || idxVal === null) continue;
+                if (!range || range.matches(idxVal)) {
+                  list.push({ cursorKey: idxVal, primaryKey: k, value: v });
+                }
               }
-            }
-            list.sort(
-              (a, b) => compareIdbKeys(a.cursorKey, b.cursorKey) || compareIdbKeys(a.primaryKey, b.primaryKey)
-            );
-            if (direction === 'prev' || direction === 'prevunique') list.reverse();
-            return makeCursorApi(list);
-          }
+              list.sort(
+                (a, b) => compareIdbKeys(a.cursorKey, b.cursorKey) || compareIdbKeys(a.primaryKey, b.primaryKey)
+              );
+              return list;
+            }, direction)
         };
       }
     };
@@ -240,14 +285,33 @@ class ShimDatabase {
     const tx = {
       mode,
       _pending: 0,
+      _aborted: false,
+      _hasError: false,
+      _done: false,
+      error: null,
       oncomplete: null,
       onerror: null,
       onabort: null,
+      abort() {
+        if (this._aborted || this._done) return;
+        this._aborted = true;
+        this.error = new DOMException('Transaction aborted', 'AbortError');
+        queueMicrotask(() => {
+          this._done = true;
+          this.onabort?.({ target: this });
+        });
+      },
       _finishOne() {
         this._pending--;
-        if (this._pending <= 0) {
+        if (this._pending <= 0 && !this._done) {
           queueMicrotask(() => {
-            this.oncomplete?.();
+            if (this._done) return;
+            this._done = true;
+            if (this._aborted || this._hasError) {
+              this.onabort?.({ target: this });
+            } else {
+              this.oncomplete?.();
+            }
           });
         }
       },
@@ -270,10 +334,17 @@ export function createMemoryIndexedDb() {
       const req = new ShimRequest();
       queueMicrotask(() => {
         let db = dbs.get(name);
+        if (db && version < db.version) {
+          req.error = new DOMException('Requested version is lower than existing version', 'VersionError');
+          req.onerror?.({ target: req });
+          return;
+        }
         const isNew = !db || db.version < version;
         if (!db) {
           db = new ShimDatabase(name, version);
           dbs.set(name, db);
+        } else if (isNew) {
+          db.version = version;
         }
         req.result = db;
         if (isNew && req.onupgradeneeded) {
