@@ -23,13 +23,34 @@ function crc32(bytes) {
   return (crc ^ 0xffffffff) >>> 0;
 }
 
+const MAX_ZIP32_UINT16 = 0xffff;
+const MAX_ZIP32_UINT32 = 0xffffffff;
+
+function validateZipEntryName(name, seenNames) {
+  if (name.includes('\u0000') || name.includes('\\') || name.startsWith('/')) {
+    throw new Error(`Unsafe ZIP entry path: ${name}`);
+  }
+  const segments = name.split('/');
+  if (segments.some((seg) => seg === '' || seg === '.' || seg === '..')) {
+    throw new Error(`Unsafe ZIP entry path segment in: ${name}`);
+  }
+  if (seenNames.has(name)) {
+    throw new Error(`Duplicate ZIP entry name: ${name}`);
+  }
+  seenNames.add(name);
+}
+
 async function deflateRaw(bytes) {
   if (typeof CompressionStream === 'undefined' || bytes.length === 0) {
     return null;
   }
-  const stream = new Blob([bytes]).stream().pipeThrough(new CompressionStream('deflate-raw'));
-  const buffer = await new Response(stream).arrayBuffer();
-  return new Uint8Array(buffer);
+  try {
+    const stream = new Blob([bytes]).stream().pipeThrough(new CompressionStream('deflate-raw'));
+    const buffer = await new Response(stream).arrayBuffer();
+    return new Uint8Array(buffer);
+  } catch {
+    return null;
+  }
 }
 
 function dosDateTime(date = new Date()) {
@@ -61,17 +82,22 @@ export async function createZipBlob(entries) {
   if (!Array.isArray(entries)) {
     throw new TypeError('createZipBlob expects an array of entries');
   }
+  if (entries.length > MAX_ZIP32_UINT16) {
+    throw new RangeError(`ZIP entry count exceeds ZIP32 limit (${MAX_ZIP32_UINT16})`);
+  }
 
   const encoder = new TextEncoder();
   const { dosTime, dosDate } = dosDateTime();
   const localParts = [];
   const centralRecords = [];
+  const seenNames = new Set();
   let offset = 0;
 
   for (const entry of entries) {
     if (!entry || typeof entry.name !== 'string' || entry.name.length === 0) {
       throw new Error('ZIP entry must define a non-empty string name');
     }
+    validateZipEntryName(entry.name, seenNames);
     if (entry.data === undefined || entry.data === null) {
       throw new TypeError(`ZIP entry "${entry.name}" is missing data`);
     }
@@ -87,8 +113,11 @@ export async function createZipBlob(entries) {
     }
 
     const nameBytes = encoder.encode(entry.name);
-    if (nameBytes.length > 0xffff) {
+    if (nameBytes.length > MAX_ZIP32_UINT16) {
       throw new RangeError(`ZIP entry name exceeds 65535 bytes: ${entry.name}`);
+    }
+    if (rawBytes.length > MAX_ZIP32_UINT32) {
+      throw new RangeError(`ZIP entry "${entry.name}" exceeds 4 GiB ZIP32 limit`);
     }
     const crc = crc32(rawBytes);
 
@@ -102,6 +131,9 @@ export async function createZipBlob(entries) {
 
     const method = compressed ? 8 : 0;
     const payload = compressed ?? rawBytes;
+    if (payload.length > MAX_ZIP32_UINT32 || offset > MAX_ZIP32_UINT32) {
+      throw new RangeError(`ZIP archive exceeds 4 GiB ZIP32 offset/size limit at "${entry.name}"`);
+    }
     const flags = isAscii(nameBytes) ? 0x0000 : 0x0800;
 
     const localHeader = new Uint8Array(30 + nameBytes.length);
@@ -144,10 +176,16 @@ export async function createZipBlob(entries) {
 
     centralRecords.push(centralHeader);
     offset += localHeader.length + payload.length;
+    if (offset > MAX_ZIP32_UINT32) {
+      throw new RangeError(`ZIP archive exceeds 4 GiB ZIP32 offset limit after "${entry.name}"`);
+    }
   }
 
   let centralSize = 0;
   for (const rec of centralRecords) centralSize += rec.length;
+  if (centralSize > MAX_ZIP32_UINT32) {
+    throw new RangeError('ZIP central directory exceeds 4 GiB ZIP32 limit');
+  }
 
   const eocd = new Uint8Array(22);
   const ev = new DataView(eocd.buffer);

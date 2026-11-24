@@ -16,6 +16,7 @@ import {
   buildInfoXhtml,
   buildNavXhtml,
   buildTocNcx,
+  getBookLocaleLabels,
   groupTocByVolume
 } from './epub-templates.js';
 
@@ -85,7 +86,8 @@ export async function buildEpubBlob({
       let bytes = rawBytes;
       let finalMime = mime;
       let converted = false;
-      const needsCoverCompat = /^image\/avif$/i.test(mime) || (!epub3 && /^image\/webp$/i.test(mime));
+      const needsCoverCompat =
+        /^image\/(?:avif|bmp)$/i.test(mime) || (!epub3 && /^image\/webp$/i.test(mime));
       const isGif = /^image\/gif$/i.test(mime);
       const shouldConvertCover =
         Boolean(options.restrictCoverJpeg) ||
@@ -93,13 +95,14 @@ export async function buildEpubBlob({
         Boolean(options.grayscaleImages) ||
         (Boolean(options.compressImages) && !isGif);
       if (shouldConvertCover) {
+        const forceCoverJpeg = Boolean(options.restrictCoverJpeg) || needsCoverCompat;
         const conv = await tryConvertImage(
           blob,
           rawBytes,
           mime,
           {
             maxDim: options.compressImages ? (options.compressedResolution || 1200) : 1600,
-            forceJpeg: Boolean(options.restrictCoverJpeg) || needsCoverCompat,
+            forceJpeg: forceCoverJpeg,
             quality: customImageQuality ?? 0.9,
             grayscale: Boolean(options.grayscaleImages)
           },
@@ -120,7 +123,9 @@ export async function buildEpubBlob({
           title: bookTitle,
           coverHref: `../${href}`,
           useSvg: Boolean(options.useSvgForImages),
-          epub3
+          epub3,
+          lang: metadata.language || '',
+          uiLang: options.uiLang || ''
         })
       });
       onLog(
@@ -146,11 +151,12 @@ export async function buildEpubBlob({
   const hasInfoPage = options.addInfoPage !== false;
   const hasEndPage = options.addEndPage !== false;
   const includeTocPage = options.includeTocPage !== false;
-  const isEnLang = /^en\b/i.test(metadata.language || '');
-  const defaultTocLabel = isEnLang ? 'Table of Contents' : 'Sumário';
-  const tocHeading = String(options.tocTitle || '').trim() || defaultTocLabel;
-  const infoLabel = String(options.infoPageTitle || '').trim() || (isEnLang ? 'Information' : 'Informações');
-  const endLabel = String(options.endPageTitle || '').trim() || (isEnLang ? 'End of Book' : 'Fim do Livro');
+  const bookLabels = getBookLocaleLabels(metadata.language || '', options.uiLang || '');
+  const tocHeading = String(options.tocTitle || '').trim() || bookLabels.toc;
+  const infoLabel = String(options.infoPageTitle || '').trim() || bookLabels.info;
+  const endLabel = String(options.endPageTitle || '').trim() || bookLabels.endOfBook;
+  const coverLabel = bookLabels.cover;
+  const startLabel = bookLabels.start;
 
   if (hasInfoPage) {
     entries.push({
@@ -165,15 +171,41 @@ export async function buildEpubBlob({
     });
   }
 
-  // Map every chapter's normalized source URL to its internal EPUB filename for cross-chapter hyperlink rewriting
-  const chapterUrlToFile = new Map();
-  for (let i = 0; i < parsedChapters.length; i++) {
-    const srcUrl = parsedChapters[i]?.chapter?.url;
-    if (!srcUrl || !/^https?:\/\//i.test(srcUrl)) continue;
-    const norm = normalizeUrl(srcUrl);
-    if (!chapterUrlToFile.has(norm)) {
-      chapterUrlToFile.set(norm, `ch_${String(i + 1).padStart(4, '0')}.xhtml`);
+  // Map every chapter's normalized source URL to its internal EPUB filename and surviving IDs
+  const normalizeChapterHrefKey = (rawUrl) => {
+    const norm = normalizeUrl(rawUrl);
+    if (!norm) return '';
+    try {
+      const u = new URL(norm);
+      u.hash = '';
+      return u.toString().replace(/\/+$/, '');
+    } catch {
+      return norm.replace(/\/+$/, '');
     }
+  };
+  const chapterUrlToFile = new Map();
+  const chapterIdsMap = new Map();
+  for (let i = 0; i < parsedChapters.length; i++) {
+    const pc = parsedChapters[i];
+    const targetFile = `ch_${String(i + 1).padStart(4, '0')}.xhtml`;
+    const srcUrl = pc?.chapter?.url;
+    if (srcUrl && /^https?:\/\//i.test(srcUrl)) {
+      const norm = normalizeChapterHrefKey(srcUrl);
+      if (norm && !chapterUrlToFile.has(norm)) {
+        chapterUrlToFile.set(norm, targetFile);
+      }
+    }
+    const ids = new Set();
+    for (const root of pc?.nodes || []) {
+      if (!root || root.nodeType !== 1) continue;
+      const ownId = root.getAttribute?.('id');
+      if (ownId) ids.add(ownId);
+      for (const el of root.querySelectorAll?.('[id]') || []) {
+        const id = el.getAttribute('id');
+        if (id) ids.add(id);
+      }
+    }
+    chapterIdsMap.set(targetFile, ids);
   }
 
   const rewriteInternalChapterLinks = (nodes) => {
@@ -191,9 +223,11 @@ export async function buildEpubBlob({
           const u = new URL(href);
           const hash = u.hash || '';
           u.hash = '';
-          const targetFile = chapterUrlToFile.get(normalizeUrl(u.toString()));
+          const targetFile = chapterUrlToFile.get(normalizeChapterHrefKey(u.toString()));
           if (targetFile) {
-            a.setAttribute('href', `${targetFile}${hash}`);
+            const fragId = hash.startsWith('#') ? hash.slice(1) : '';
+            const validFrag = fragId && chapterIdsMap.get(targetFile)?.has(fragId) ? `#${fragId}` : '';
+            a.setAttribute('href', `${targetFile}${validFrag}`);
           }
         } catch {
           // keep original href
@@ -250,7 +284,8 @@ export async function buildEpubBlob({
           let bytes = rawBytes;
           let finalMime = mime;
           let converted = false;
-          const needsEpub2Convert = /^image\/avif$/i.test(mime) || (!epub3 && /^image\/webp$/i.test(mime));
+          const needsEpub2Convert =
+            /^image\/(?:avif|bmp)$/i.test(mime) || (!epub3 && /^image\/webp$/i.test(mime));
           const isAnimated = /^image\/gif$/i.test(mime) || isAnimatedImage(rawBytes, mime);
           const shouldConvertImg =
             needsEpub2Convert ||
@@ -258,6 +293,8 @@ export async function buildEpubBlob({
             (Boolean(options.compressImages) && !isAnimated);
           if (shouldConvertImg) {
             const forceJpeg = needsEpub2Convert || (options.compressedFormat || 'jpg') === 'jpg';
+            const outputMime =
+              !forceJpeg && (options.compressedFormat || '').toLowerCase() === 'png' ? 'image/png' : '';
             const conv = await tryConvertImage(
               blob,
               rawBytes,
@@ -265,6 +302,7 @@ export async function buildEpubBlob({
               {
                 maxDim: options.compressImages ? (options.compressedResolution || 1080) : 0,
                 forceJpeg,
+                outputMime,
                 quality: options.compressImages ? (customImageQuality ?? 0.85) : 0.92,
                 grayscale: Boolean(options.grayscaleImages)
               },
@@ -363,7 +401,17 @@ export async function buildEpubBlob({
   const tocGroups = groupTocByVolume(chapterRecords, groupNestedVolumes);
   entries.push({
     name: 'OEBPS/toc.ncx',
-    data: buildTocNcx({ uuid, bookTitle, hasCoverPage, hasInfoPage, infoLabel, hasEndPage, endLabel, tocGroups })
+    data: buildTocNcx({
+      uuid,
+      bookTitle,
+      coverLabel,
+      hasCoverPage,
+      hasInfoPage,
+      infoLabel,
+      hasEndPage,
+      endLabel,
+      tocGroups
+    })
   });
   if (epub3) {
     entries.push({
@@ -372,6 +420,8 @@ export async function buildEpubBlob({
         bookTitle,
         lang: metadata.language || 'pt',
         tocHeading,
+        coverLabel,
+        startLabel,
         infoLabel,
         hasEndPage,
         endLabel,
@@ -387,6 +437,7 @@ export async function buildEpubBlob({
       data: buildEpub2TocXhtml({
         bookTitle,
         tocHeading,
+        coverLabel,
         hasCoverPage,
         hasInfoPage,
         infoLabel,
@@ -415,6 +466,7 @@ export async function buildEpubBlob({
       hasInfoPage,
       hasEndPage,
       includeTocPage,
+      coverLabel,
       tocHeading,
       chapterRecords,
       imageRecords

@@ -5,6 +5,105 @@
 export const XHTML_NS = 'http://www.w3.org/1999/xhtml';
 export const EPUB_NS = 'http://www.idpf.org/2007/ops';
 
+const XML_UNSAFE_CHECK_RX = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\uD800-\uDFFF\ufffe\uffff]/;
+
+/**
+ * Remove characters forbidden by XML 1.0 (C0 controls except TAB/LF/CR, U+FFFE/U+FFFF,
+ * and unpaired UTF-16 surrogates) while preserving valid supplementary-plane surrogate pairs.
+ */
+export function stripInvalidXmlChars(str) {
+  const s = String(str ?? '');
+  if (!s || !XML_UNSAFE_CHECK_RX.test(s)) return s;
+  let out = '';
+  for (let i = 0; i < s.length; i++) {
+    const code = s.charCodeAt(i);
+    if (
+      (code <= 0x08) ||
+      code === 0x0b ||
+      code === 0x0c ||
+      (code >= 0x0e && code <= 0x1f) ||
+      code === 0xfffe ||
+      code === 0xffff
+    ) {
+      continue;
+    }
+    if (code >= 0xd800 && code <= 0xdbff) {
+      const next = i + 1 < s.length ? s.charCodeAt(i + 1) : 0;
+      if (next >= 0xdc00 && next <= 0xdfff) {
+        out += s[i] + s[i + 1];
+        i++;
+      }
+      continue;
+    }
+    if (code >= 0xdc00 && code <= 0xdfff) {
+      continue;
+    }
+    out += s[i];
+  }
+  return out;
+}
+
+function normalizeXhtmlForEpub2(xmlDoc, contentDiv) {
+  const INLINE_ONLY_TAGS = new Set([
+    'a', 'b', 'strong', 'i', 'em', 'u', 's', 'del', 'sup', 'sub', 'small', 'span', 'code', 'br', 'img'
+  ]);
+
+  for (const fig of Array.from(contentDiv.querySelectorAll('figure'))) {
+    const div = xmlDoc.createElementNS(XHTML_NS, 'div');
+    const existingCls = (fig.getAttribute('class') || '').trim();
+    div.setAttribute('class', existingCls ? `${existingCls} wpb-figure` : 'wpb-figure');
+    if (fig.hasAttribute('id')) div.setAttribute('id', fig.getAttribute('id'));
+    while (fig.firstChild) div.appendChild(fig.firstChild);
+    fig.replaceWith(div);
+  }
+
+  for (const cap of Array.from(contentDiv.querySelectorAll('figcaption'))) {
+    const p = xmlDoc.createElementNS(XHTML_NS, 'p');
+    const existingCls = (cap.getAttribute('class') || '').trim();
+    p.setAttribute('class', existingCls ? `${existingCls} wpb-figcaption` : 'wpb-figcaption');
+    if (cap.hasAttribute('id')) p.setAttribute('id', cap.getAttribute('id'));
+    while (cap.firstChild) p.appendChild(cap.firstChild);
+    cap.replaceWith(p);
+  }
+
+  // XHTML 1.1 Strict requires block elements (e.g., <p>) inside <blockquote>, not bare inline/text nodes
+  for (const bq of Array.from(contentDiv.querySelectorAll('blockquote'))) {
+    const children = Array.from(bq.childNodes);
+    const hasBareInline = children.some(
+      (c) =>
+        (c.nodeType === 3 && (c.nodeValue || '').trim().length > 0) ||
+        (c.nodeType === 1 && INLINE_ONLY_TAGS.has(c.tagName?.toLowerCase()))
+    );
+    if (!hasBareInline) continue;
+
+    const rebuilt = [];
+    let pendingInline = [];
+    const flushInline = () => {
+      const hasSignificant = pendingInline.some(
+        (n) => (n.nodeType === 3 && (n.nodeValue || '').trim().length > 0) || n.nodeType === 1
+      );
+      if (hasSignificant) {
+        const p = xmlDoc.createElementNS(XHTML_NS, 'p');
+        for (const n of pendingInline) p.appendChild(n);
+        rebuilt.push(p);
+      }
+      pendingInline = [];
+    };
+
+    for (const child of children) {
+      const tag = child.nodeType === 1 ? child.tagName?.toLowerCase() : '';
+      if (child.nodeType === 3 || (child.nodeType === 1 && INLINE_ONLY_TAGS.has(tag))) {
+        pendingInline.push(child);
+      } else {
+        flushInline();
+        rebuilt.push(child);
+      }
+    }
+    flushInline();
+    for (const node of rebuilt) bq.appendChild(node);
+  }
+}
+
 function enhancePopupFootnotesInDoc(xmlDoc, contentDiv) {
   const idMap = new Map();
   for (const el of contentDiv.querySelectorAll('[id]')) {
@@ -47,8 +146,12 @@ function enhancePopupFootnotesInDoc(xmlDoc, contentDiv) {
 
     const target = idMap.get(targetId);
     if (!target) continue;
+    if (target.closest?.('aside')) continue;
 
     const aText = (a.textContent || '').trim();
+    if (/^(?:↩|↑|⏎|back|voltar)$/i.test(aText)) continue;
+    if (/^(?:(?:fn|note|nota|foot)[_-]?ref|ref[-_])/i.test(targetId)) continue;
+
     const looksLikeRef =
       Boolean(a.closest('sup')) ||
       /^(?:\[\d+\]|\(?\d{1,3}\)?|[¹²³⁴⁵⁶⁷⁸⁹⁰]+|\*{1,3}|†|‡|§|nota\s*\d*|note\s*\d*|fn\s*\d*)$/i.test(aText) ||
@@ -122,10 +225,15 @@ export function serializeChapterXhtml({
   epub3 = true,
   popupFootnotes = false
 }) {
+  const safeTitle = stripInvalidXmlChars(title) || 'Chapter';
+  const safeSubtitle = stripInvalidXmlChars(subtitle);
+
   const html = xmlDoc.documentElement;
   html.setAttribute('xmlns', XHTML_NS);
   if (epub3) {
     html.setAttribute('xmlns:epub', EPUB_NS);
+  } else {
+    html.removeAttribute('xmlns:epub');
   }
 
   const head = xmlDoc.createElementNS(XHTML_NS, 'head');
@@ -139,7 +247,7 @@ export function serializeChapterXhtml({
   head.appendChild(metaCharset);
 
   const titleEl = xmlDoc.createElementNS(XHTML_NS, 'title');
-  titleEl.textContent = title;
+  titleEl.textContent = safeTitle;
   head.appendChild(titleEl);
 
   const linkEl = xmlDoc.createElementNS(XHTML_NS, 'link');
@@ -151,23 +259,26 @@ export function serializeChapterXhtml({
   const body = xmlDoc.createElementNS(XHTML_NS, 'body');
   const h2 = xmlDoc.createElementNS(XHTML_NS, 'h2');
   h2.setAttribute('class', 'chapter-title');
-  h2.textContent = title;
+  h2.textContent = safeTitle;
   body.appendChild(h2);
 
-  if (subtitle && subtitle !== title) {
+  if (safeSubtitle && safeSubtitle !== safeTitle) {
     const pSub = xmlDoc.createElementNS(XHTML_NS, 'p');
     pSub.setAttribute('class', 'chapter-subtitle');
-    pSub.textContent = subtitle;
+    pSub.textContent = safeSubtitle;
     body.appendChild(pSub);
   }
 
   const contentDiv = xmlDoc.createElementNS(XHTML_NS, 'div');
   contentDiv.setAttribute('class', 'chapter-content');
   for (const n of nodes) {
-    contentDiv.appendChild(n);
+    if (!n) continue;
+    contentDiv.appendChild(typeof n.cloneNode === 'function' ? n.cloneNode(true) : n);
   }
   if (epub3 && popupFootnotes) {
     enhancePopupFootnotesInDoc(xmlDoc, contentDiv);
+  } else if (!epub3) {
+    normalizeXhtmlForEpub2(xmlDoc, contentDiv);
   }
   body.appendChild(contentDiv);
 
@@ -186,7 +297,7 @@ export function serializeChapterXhtml({
 }
 
 export function escapeXml(str) {
-  return String(str ?? '')
+  return stripInvalidXmlChars(str)
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')

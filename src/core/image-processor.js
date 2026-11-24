@@ -3,6 +3,22 @@
  * (credentialed + anonymous retry + DNR Referer fallback), and safe canvas optimization.
  */
 import { applyImageRefererRule, clearImageRefererRules } from './dnr-rules.js';
+import { assertSafeHttpUrl } from './net-fetcher.js';
+
+const ALLOWED_RASTER_MIMES = new Set([
+  'image/png',
+  'image/jpeg',
+  'image/gif',
+  'image/webp',
+  'image/avif',
+  'image/bmp'
+]);
+
+function normalizeDeclaredImageMime(rawMime) {
+  const clean = String(rawMime || '').split(';')[0].trim().toLowerCase();
+  if (clean === 'image/jpg') return 'image/jpeg';
+  return clean;
+}
 
 export function sniffImageMime(bytes) {
   if (!bytes || bytes.length < 4) return null;
@@ -59,17 +75,19 @@ export function sniffImageMime(bytes) {
   if (bytes[0] === 0x42 && bytes[1] === 0x4d) {
     return 'image/bmp';
   }
-  // Detect mislabeled HTML error pages returned as HTTP 200
+  // Detect mislabeled HTML error pages or SVG XML payloads (skipping optional UTF-8 BOM and leading comments)
+  const startOffset =
+    bytes.length >= 3 && bytes[0] === 0xef && bytes[1] === 0xbb && bytes[2] === 0xbf ? 3 : 0;
   let head = '';
-  const limit = Math.min(bytes.length, 96);
-  for (let i = 0; i < limit; i++) {
+  const limit = Math.min(bytes.length, startOffset + 512);
+  for (let i = startOffset; i < limit; i++) {
     head += String.fromCharCode(bytes[i]);
   }
-  const trimmed = head.trimStart().toLowerCase();
-  if (/^(?:<!doctype\s+html|<html\b|<head\b|<body\b|<script\b)/i.test(trimmed)) {
+  const withoutComments = head.replace(/^\s*(?:<!--[\s\S]*?-->\s*)*/i, '').trimStart();
+  if (/^(?:<!doctype\s+html|<html\b|<head\b|<body\b|<script\b|<iframe\b)/i.test(withoutComments)) {
     return 'text/html';
   }
-  if (/^<svg\b/i.test(trimmed)) {
+  if (/^(?:<\?xml\b[^>]*\?>\s*)?(?:<!doctype\s+svg\b[^>]*>\s*)?(?:<!--[\s\S]*?-->\s*)*<svg\b/i.test(withoutComments)) {
     return 'image/svg+xml';
   }
   return null;
@@ -78,7 +96,10 @@ export function sniffImageMime(bytes) {
 export function decodeDataUrlToBlob(dataUrl) {
   const match = String(dataUrl).match(/^data:([^;,]+)?(?:;charset=[^;,]+)?(;base64)?,(.*)$/is);
   if (!match) throw new Error('Invalid data URL for image');
-  const declaredMime = (match[1] || 'image/png').trim().toLowerCase();
+  const declaredMime = normalizeDeclaredImageMime(match[1] || 'image/png');
+  if (declaredMime === 'image/svg+xml' || declaredMime === 'text/html') {
+    throw new Error(`Unsafe image data URL MIME (${declaredMime})`);
+  }
   const isBase64 = Boolean(match[2]);
   const payload = match[3] || '';
   let bytes;
@@ -89,19 +110,29 @@ export function decodeDataUrlToBlob(dataUrl) {
   } else {
     bytes = new TextEncoder().encode(decodeURIComponent(payload));
   }
+  if (bytes.length === 0) {
+    throw new Error('Empty image data URL payload');
+  }
   const sniffed = sniffImageMime(bytes);
-  const mime = sniffed && sniffed !== 'text/html' ? sniffed : declaredMime;
+  if (sniffed === 'text/html' || sniffed === 'image/svg+xml') {
+    throw new Error(`Unsafe image data URL payload (${sniffed})`);
+  }
+  const mime = sniffed || (ALLOWED_RASTER_MIMES.has(declaredMime) ? declaredMime : null);
+  if (!mime) {
+    throw new Error(`Unsupported image data URL MIME (${declaredMime})`);
+  }
   return { blob: new Blob([bytes], { type: mime }), bytes, mime };
 }
 
 export async function fetchImageBytes(url, signal, { refererUrl = '' } = {}) {
-  if (/^data:/i.test(String(url || ''))) {
+  if (/^data:/i.test(String(url || '').trim())) {
     return decodeDataUrlToBlob(url);
   }
+  const safeUrl = assertSafeHttpUrl(url);
   let resp = null;
   let firstErr = null;
   try {
-    resp = await fetch(url, { credentials: 'include', signal });
+    resp = await fetch(safeUrl, { credentials: 'include', signal });
   } catch (err) {
     if (err.name === 'AbortError') throw err;
     firstErr = err;
@@ -110,7 +141,7 @@ export async function fetchImageBytes(url, signal, { refererUrl = '' } = {}) {
   // Some CDNs / S3 buckets reject credentialed requests or Referer headers with 400/401/403/404/406 or CORS errors
   if (!resp || !resp.ok) {
     try {
-      const anonResp = await fetch(url, {
+      const anonResp = await fetch(safeUrl, {
         credentials: 'omit',
         referrerPolicy: 'no-referrer',
         signal
@@ -127,10 +158,10 @@ export async function fetchImageBytes(url, signal, { refererUrl = '' } = {}) {
 
   // Some hotlink-protected CDNs reject fetches lacking a same-site/source Referer header
   if ((!resp || !resp.ok) && refererUrl && /^https?:\/\//i.test(refererUrl)) {
-    const installed = await applyImageRefererRule(url, refererUrl);
+    const installed = await applyImageRefererRule(safeUrl, refererUrl);
     if (installed) {
       try {
-        const refResp = await fetch(url, { credentials: 'include', signal });
+        const refResp = await fetch(safeUrl, { credentials: 'include', signal });
         if (refResp.ok || !resp) {
           resp = refResp;
         }
@@ -139,40 +170,43 @@ export async function fetchImageBytes(url, signal, { refererUrl = '' } = {}) {
         if (!resp && firstErr) throw firstErr;
         if (!resp) throw err;
       } finally {
-        await clearImageRefererRules();
+        await clearImageRefererRules(safeUrl, refererUrl);
       }
     }
   }
 
   if (!resp.ok) {
-    throw new Error(`HTTP ${resp.status} while fetching image ${url}`);
+    throw new Error(`HTTP ${resp.status} while fetching image ${safeUrl}`);
   }
   const rawBlob = await resp.blob();
   const bytes = new Uint8Array(await rawBlob.arrayBuffer());
   if (bytes.length === 0) {
-    throw new Error(`Empty image payload while fetching ${url}`);
+    throw new Error(`Empty image payload while fetching ${safeUrl}`);
   }
-  const declaredMime = (rawBlob.type || '').split(';')[0].trim().toLowerCase();
+  const declaredMime = normalizeDeclaredImageMime(rawBlob.type);
   if (
     declaredMime &&
-    (/^text\//i.test(declaredMime) || /^application\/(?:json|xml|xhtml\+xml)/i.test(declaredMime))
+    (declaredMime === 'image/svg+xml' ||
+      /^text\//i.test(declaredMime) ||
+      /^application\/(?:json|xml|xhtml\+xml)/i.test(declaredMime))
   ) {
-    throw new Error(`Invalid image MIME (${declaredMime}) while fetching ${url}`);
+    throw new Error(`Invalid image MIME (${declaredMime}) while fetching ${safeUrl}`);
   }
   const sniffed = sniffImageMime(bytes);
-  if (sniffed === 'text/html') {
-    throw new Error(`Invalid image payload (HTML) while fetching ${url}`);
+  if (sniffed === 'text/html' || sniffed === 'image/svg+xml') {
+    throw new Error(`Invalid image payload (${sniffed}) while fetching ${safeUrl}`);
   }
-  const mime =
-    sniffed ||
-    (declaredMime && /^image\//i.test(declaredMime) ? declaredMime : 'image/jpeg');
+  const mime = sniffed || (ALLOWED_RASTER_MIMES.has(declaredMime) ? declaredMime : null);
+  if (!mime) {
+    throw new Error(`Unrecognized image payload (${declaredMime || 'unknown'}) while fetching ${safeUrl}`);
+  }
   const blob = rawBlob.type === mime ? rawBlob : new Blob([bytes], { type: mime });
   return { blob, bytes, mime };
 }
 
 export async function convertImageViaCanvas(
   blob,
-  { maxDim = 1080, forceJpeg = false, quality = 0.88, grayscale = false }
+  { maxDim = 1080, forceJpeg = false, outputMime = '', quality = 0.88, grayscale = false }
 ) {
   const bitmap = await createImageBitmap(blob);
   try {
@@ -183,11 +217,18 @@ export async function convertImageViaCanvas(
       height = Math.max(1, Math.round(height * scale));
     }
 
+    const reqMime = normalizeDeclaredImageMime(outputMime);
+    const outMime = forceJpeg
+      ? 'image/jpeg'
+      : reqMime === 'image/png' || reqMime === 'image/jpeg'
+        ? reqMime
+        : (blob.type === 'image/png' ? 'image/png' : 'image/jpeg');
+
     const canvas = document.createElement('canvas');
     canvas.width = width;
     canvas.height = height;
     const ctx = canvas.getContext('2d');
-    if (forceJpeg) {
+    if (outMime === 'image/jpeg') {
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(0, 0, width, height);
     }
@@ -196,7 +237,6 @@ export async function convertImageViaCanvas(
     }
     ctx.drawImage(bitmap, 0, 0, width, height);
 
-    const outMime = forceJpeg ? 'image/jpeg' : (blob.type === 'image/png' ? 'image/png' : 'image/jpeg');
     const outBlob = await new Promise((resolve) => canvas.toBlob(resolve, outMime, quality));
     if (!outBlob) {
       return { bytes: new Uint8Array(await blob.arrayBuffer()), mime: blob.type || 'image/jpeg' };

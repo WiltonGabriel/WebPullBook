@@ -3,13 +3,13 @@
  * e-reader-friendly XHTML while preserving semantic typography and inline spacing.
  */
 
-import { EPUB_NS, XHTML_NS, escapeXml, serializeChapterXhtml } from './xhtml-serializer.js';
+import { EPUB_NS, XHTML_NS, escapeXml, serializeChapterXhtml, stripInvalidXmlChars } from './xhtml-serializer.js';
 
-export { EPUB_NS, XHTML_NS, escapeXml, serializeChapterXhtml };
+export { EPUB_NS, XHTML_NS, escapeXml, serializeChapterXhtml, stripInvalidXmlChars };
 
 const ALLOWED_TAGS = new Set([
   'p', 'div', 'span', 'br', 'hr',
-  'b', 'strong', 'i', 'em', 'u', 's', 'del', 'sup', 'sub', 'small',
+  'b', 'strong', 'i', 'em', 'del', 'sup', 'sub', 'small',
   'blockquote', 'pre', 'code',
   'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
   'ul', 'ol', 'li', 'dl', 'dt', 'dd',
@@ -44,11 +44,12 @@ export function decodeCloudflareEmail(hex) {
   const clean = String(hex || '').trim();
   if (!/^[0-9a-f]{4,}$/i.test(clean) || clean.length % 2 !== 0) return '';
   const key = parseInt(clean.slice(0, 2), 16);
-  let out = '';
-  for (let i = 2; i < clean.length; i += 2) {
-    out += String.fromCharCode(parseInt(clean.slice(i, i + 2), 16) ^ key);
+  const bytes = new Uint8Array((clean.length - 2) / 2);
+  for (let i = 2, idx = 0; i < clean.length; i += 2, idx++) {
+    bytes[idx] = parseInt(clean.slice(i, i + 2), 16) ^ key;
   }
-  return out;
+  const decoded = new TextDecoder('utf-8', { fatal: false }).decode(bytes);
+  return stripInvalidXmlChars(decoded);
 }
 
 function hasBlockChild(el) {
@@ -157,20 +158,24 @@ export class HtmlSanitizer {
   }
 
   isHiddenElement(el) {
-    const style = (el.getAttribute('style') || '').toLowerCase();
-    if (el.hasAttribute('hidden')) return true;
-    if (el.getAttribute('aria-hidden') === 'true' && !el.querySelector?.('img')) return true;
-    if (/display\s*:\s*none/i.test(style) || /visibility\s*:\s*hidden/i.test(style)) {
-      return true;
-    }
     const isLazyImg =
       el.tagName?.toLowerCase() === 'img' &&
       (el.hasAttribute('data-src') ||
         el.hasAttribute('data-lazy-src') ||
         el.hasAttribute('data-original') ||
         el.hasAttribute('data-orig-file') ||
+        el.hasAttribute('data-cfsrc') ||
+        el.hasAttribute('data-full-url') ||
+        el.hasAttribute('data-url') ||
+        el.hasAttribute('data-image') ||
         el.hasAttribute('data-srcset') ||
         el.hasAttribute('data-lazy'));
+    const style = (el.getAttribute('style') || '').toLowerCase();
+    if (el.hasAttribute('hidden')) return true;
+    if (el.getAttribute('aria-hidden') === 'true' && !el.querySelector?.('img') && !isLazyImg) return true;
+    if (!isLazyImg && (/display\s*:\s*none/i.test(style) || /visibility\s*:\s*hidden/i.test(style))) {
+      return true;
+    }
     const rawCls = el.getAttribute('class') || '';
     if (!isLazyImg && this.hiddenClasses.size > 0 && rawCls) {
       for (const token of rawCls.trim().split(/\s+/)) {
@@ -178,7 +183,7 @@ export class HtmlSanitizer {
       }
     }
     const cls = rawCls.toLowerCase();
-    if (/(^|\s)(sr-only|visually-hidden)(\s|$)/.test(cls) && !el.querySelector?.('img')) {
+    if (/(^|\s)(sr-only|visually-hidden)(\s|$)/.test(cls) && !el.querySelector?.('img') && !isLazyImg) {
       return true;
     }
     return /(^|\s)(code-block|ads|ad-slot|adsby|share-?buttons|naveg|nextprev|wp-block-buttons)(\s|$)/.test(cls);
@@ -198,13 +203,34 @@ export class HtmlSanitizer {
     if (!raw || /^data:/i.test(raw)) return null;
     let bestUrl = null;
     let bestScore = -1;
-    for (const part of raw.split(',')) {
-      const tokens = part.trim().split(/\s+/).filter(Boolean);
-      if (tokens.length === 0) continue;
-      const url = tokens[0];
+    let pos = 0;
+    const len = raw.length;
+
+    while (pos < len) {
+      while (pos < len && (raw[pos] === ',' || /\s/.test(raw[pos]))) pos++;
+      if (pos >= len) break;
+
+      const urlStart = pos;
+      while (pos < len && !/\s/.test(raw[pos])) pos++;
+      let url = raw.slice(urlStart, pos);
+      let hasDesc = true;
+      if (url.endsWith(',')) {
+        url = url.replace(/,+$/, '');
+        hasDesc = false;
+      }
+
+      let desc = '';
+      if (hasDesc) {
+        while (pos < len && /\s/.test(raw[pos])) pos++;
+        const descStart = pos;
+        while (pos < len && raw[pos] !== ',') pos++;
+        desc = raw.slice(descStart, pos).trim();
+        if (pos < len && raw[pos] === ',') pos++;
+      }
+
       if (!url || /^data:/i.test(url)) continue;
-      const desc = tokens[1] || '';
-      const numMatch = desc.match(/^(\d+(?:\.\d+)?)(w|x)$/i);
+      const firstDescToken = desc.split(/\s+/)[0] || '';
+      const numMatch = firstDescToken.match(/^(\d+(?:\.\d+)?)(w|x)$/i);
       const score = numMatch
         ? Number(numMatch[1]) * (numMatch[2].toLowerCase() === 'x' ? 1000 : 1)
         : 0;
@@ -350,7 +376,7 @@ export class HtmlSanitizer {
     const cloneClean = (node) => {
       if (node.nodeType === Node.TEXT_NODE) {
         // eslint-disable-next-line no-control-regex
-        const cleanText = (node.nodeValue || '').replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f\u200b-\u200d\ufeff]/g, '');
+        const cleanText = stripInvalidXmlChars(node.nodeValue || '').replace(/[\u007f\u200b-\u200d\ufeff]/g, '');
         return cleanText ? xmlDoc.createTextNode(cleanText) : null;
       }
       if (node.nodeType !== Node.ELEMENT_NODE) return null;
@@ -398,7 +424,7 @@ export class HtmlSanitizer {
         }
         const cleanImg = xmlDoc.createElementNS(XHTML_NS, 'img');
         cleanImg.setAttribute('src', resolvedUrl);
-        const alt = (node.getAttribute('alt') || '').trim();
+        const alt = stripInvalidXmlChars(node.getAttribute('alt') || '').trim();
         cleanImg.setAttribute('alt', alt || 'Illustration');
         images.push({ originalUrl: resolvedUrl, fallbackUrl, element: cleanImg });
         return cleanImg;
@@ -410,8 +436,13 @@ export class HtmlSanitizer {
           return null;
         }
         const rawId = (node.getAttribute('id') || '').trim();
-        const safeId = activeFragments.has(rawId) && !emittedIds.has(rawId) ? rawId : '';
         const hrefRaw = (node.getAttribute('href') || '').trim();
+        const safeId =
+          validIdRx.test(rawId) &&
+          !emittedIds.has(rawId) &&
+          (activeFragments.has(rawId) || (!/^_?Toc\d/i.test(rawId) && (Boolean(hrefRaw) || linkText.length > 0)))
+            ? rawId
+            : '';
         let safeHref = '';
         if (hrefRaw.startsWith('#')) {
           const frag = hrefRaw.slice(1);
@@ -444,10 +475,6 @@ export class HtmlSanitizer {
           return frag;
         }
         const cleanA = xmlDoc.createElementNS(XHTML_NS, 'a');
-        if (safeId) {
-          cleanA.setAttribute('id', safeId);
-          emittedIds.add(safeId);
-        }
         if (safeHref) {
           cleanA.setAttribute('href', safeHref);
         }
@@ -458,10 +485,14 @@ export class HtmlSanitizer {
         if (INLINE_TAGS.has('a') && hasBlockChild(cleanA)) {
           return unwrapInlineWithBlocks(cleanA, xmlDoc);
         }
+        if (safeId && !emittedIds.has(safeId)) {
+          cleanA.setAttribute('id', safeId);
+          emittedIds.add(safeId);
+        }
         return cleanA;
       }
 
-      // Map legacy formatting tags (<big>, <center>, <font>) cleanly to semantic XHTML
+      // Map legacy formatting tags (<big>, <center>, <font>, <u>, <s>) cleanly to semantic XHTML
       let targetTag = rawTag;
       const semanticClasses = this.extractSemanticClasses(node, rawTag);
       if (rawTag === 'big') {
@@ -469,6 +500,12 @@ export class HtmlSanitizer {
         semanticClasses.push('wpb-lg');
       } else if (rawTag === 'font') {
         targetTag = 'span';
+      } else if (rawTag === 'u') {
+        targetTag = 'span';
+        semanticClasses.push('wpb-underline');
+      } else if (rawTag === 's') {
+        targetTag = 'span';
+        semanticClasses.push('wpb-strike');
       } else if (rawTag === 'center') {
         targetTag = 'div';
       }
@@ -484,10 +521,8 @@ export class HtmlSanitizer {
 
       const cleanEl = xmlDoc.createElementNS(XHTML_NS, targetTag);
       const rawId = (node.getAttribute('id') || '').trim();
-      if (activeFragments.has(rawId) && !emittedIds.has(rawId)) {
-        cleanEl.setAttribute('id', rawId);
-        emittedIds.add(rawId);
-      }
+      const candidateId =
+        validIdRx.test(rawId) && !/^_?Toc\d/i.test(rawId) && !emittedIds.has(rawId) ? rawId : '';
       if (semanticClasses.length > 0) {
         cleanEl.setAttribute('class', [...new Set(semanticClasses)].join(' '));
       }
@@ -495,8 +530,12 @@ export class HtmlSanitizer {
       if (targetTag === 'td' || targetTag === 'th') {
         const colspan = node.getAttribute('colspan');
         const rowspan = node.getAttribute('rowspan');
-        if (colspan && /^\d+$/.test(colspan)) cleanEl.setAttribute('colspan', colspan);
-        if (rowspan && /^\d+$/.test(rowspan)) cleanEl.setAttribute('rowspan', rowspan);
+        if (colspan && /^[1-9]\d*$/.test(colspan)) {
+          cleanEl.setAttribute('colspan', String(Math.min(1000, Number(colspan))));
+        }
+        if (rowspan && /^[1-9]\d*$/.test(rowspan)) {
+          cleanEl.setAttribute('rowspan', String(Math.min(1000, Number(rowspan))));
+        }
       }
 
       for (const child of node.childNodes) {
@@ -505,10 +544,14 @@ export class HtmlSanitizer {
       }
 
       if (targetTag !== 'br' && targetTag !== 'hr' && targetTag !== 'td' && targetTag !== 'th') {
+        const hasActiveChildId = Array.from(cleanEl.querySelectorAll('[id]')).some((el) =>
+          activeFragments.has(el.getAttribute('id'))
+        );
         const hasContent =
           cleanEl.textContent.trim().length > 0 ||
-          cleanEl.hasAttribute('id') ||
-          cleanEl.querySelector('img, br, hr, [id]');
+          (candidateId && activeFragments.has(candidateId)) ||
+          hasActiveChildId ||
+          Boolean(cleanEl.querySelector('img, br, hr'));
         if (!hasContent) {
           if (INLINE_TAGS.has(targetTag) && cleanEl.textContent.length > 0) {
             return xmlDoc.createTextNode(' ');
@@ -519,6 +562,11 @@ export class HtmlSanitizer {
 
       if (INLINE_TAGS.has(targetTag) && hasBlockChild(cleanEl)) {
         return unwrapInlineWithBlocks(cleanEl, xmlDoc);
+      }
+
+      if (candidateId && !emittedIds.has(candidateId)) {
+        cleanEl.setAttribute('id', candidateId);
+        emittedIds.add(candidateId);
       }
 
       return cleanEl;
@@ -573,6 +621,41 @@ export class HtmlSanitizer {
           if (!firstEl.querySelector('img, br, hr, [id]') && !firstEl.textContent.trim()) {
             const idx = outNodes.indexOf(firstEl);
             if (idx !== -1) outNodes.splice(idx, 1);
+          }
+        }
+      }
+    }
+
+    // Prune intra-chapter #fragment links whose target element was dropped/unwrapped during sanitization
+    const survivingIds = new Set();
+    for (const n of outNodes) {
+      if (n.nodeType !== Node.ELEMENT_NODE) continue;
+      const ownId = n.getAttribute?.('id');
+      if (ownId) survivingIds.add(ownId);
+      for (const el of n.querySelectorAll?.('[id]') || []) {
+        const id = el.getAttribute('id');
+        if (id) survivingIds.add(id);
+      }
+    }
+    for (let i = outNodes.length - 1; i >= 0; i--) {
+      const root = outNodes[i];
+      if (root.nodeType !== Node.ELEMENT_NODE) continue;
+      const anchors =
+        root.tagName?.toLowerCase() === 'a'
+          ? [root, ...Array.from(root.querySelectorAll('a[href^="#"]'))]
+          : Array.from(root.querySelectorAll('a[href^="#"]'));
+      for (const a of anchors) {
+        const href = (a.getAttribute('href') || '').trim();
+        if (!href.startsWith('#')) continue;
+        const frag = href.slice(1);
+        if (survivingIds.has(frag)) continue;
+        a.removeAttribute('href');
+        if (!a.getAttribute('id')) {
+          if (a === root) {
+            const children = Array.from(a.childNodes);
+            outNodes.splice(i, 1, ...children);
+          } else if (a.parentNode) {
+            a.replaceWith(...Array.from(a.childNodes));
           }
         }
       }

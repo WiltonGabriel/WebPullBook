@@ -1,4 +1,5 @@
 import { BaseExporter } from './base-exporter.js';
+import { getBookLocaleLabels } from '../core/epub-templates.js';
 
 export class MarkdownExporter extends BaseExporter {
   constructor() {
@@ -10,18 +11,19 @@ export class MarkdownExporter extends BaseExporter {
     });
   }
 
-  async exportBook({ metadata, bookTitle, parsedChapters }) {
+  async exportBook({ metadata, bookTitle, parsedChapters, options = {} }) {
+    const labels = getBookLocaleLabels(metadata?.language, options?.uiLang);
     const parts = [
       `# ${bookTitle}`,
       '',
-      `- **Autor:** ${metadata.author || '<unknown>'}`,
-      `- **Idioma:** ${metadata.language || 'pt'}`,
-      metadata.startingUrl ? `- **Fonte:** ${metadata.startingUrl}` : '',
+      `- **${labels.author}:** ${metadata.author || '<unknown>'}`,
+      `- **${labels.language}:** ${metadata.language || 'pt'}`,
+      metadata.startingUrl ? `- **${labels.source}:** ${metadata.startingUrl}` : null,
       ''
     ].filter((line) => line !== null);
 
     if (metadata.synopsis) {
-      parts.push('## Sinopse', '', metadata.synopsis, '');
+      parts.push(`## ${labels.synopsis}`, '', metadata.synopsis, '');
     }
 
     for (const parsed of parsedChapters) {
