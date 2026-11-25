@@ -1,7 +1,7 @@
 # Chrome Web Store & Mozilla Add-ons Listing Readiness — WebPullBook
 
 > Last Updated: 2026-11-24
-> Current Release Status: **Beta (`v1.7.1-beta`)** — published on [Firefox Add-ons (AMO)](https://addons.mozilla.org/firefox/addon/webpullbook/) and [GitHub Releases](https://github.com/WiltonGabriel/WebPullBook/releases); prepared for Chrome Web Store submission.
+> Current Release Status: **Beta (`v1.7.2-beta`)** — published on [Firefox Add-ons (AMO)](https://addons.mozilla.org/firefox/addon/webpullbook/) and [GitHub Releases](https://github.com/WiltonGabriel/WebPullBook/releases); prepared for Chrome Web Store submission.
 
 ## Store Listing
 
@@ -45,7 +45,7 @@ PERMISSIONS
 SUPPORT
 Found a bug or want to suggest an improvement? Open an issue at https://github.com/WiltonGabriel/WebPullBook/issues or visit https://wiltongabriel.github.io/WebPullBook/
 
-Version 1.7.1-beta — Security, concurrency, XHTML/EPUB 2/3 & ZIP32 integrity hardening, ref-counted DNR image Referer fallback (`120..129`), offline HTML chapter image embedding, Madara `POST /ajax/chapters/` support, localized generated book labels, Firefox MV3 bilingual localization (`_locales/en` & `_locales/pt_BR`), GNU AGPLv3 licensing, and automated website sync.
+Version 1.7.2-beta — Minimalist `createElementNS` SVG icons across the workspace, Madara promotional synopsis stripping, `BaseParser`/`xhtml-serializer` EPUB 2/3 & footnote fixes, compressed lean extension ZIP (`zip -9 -r` without `docs/`), Biome & local `addons-linter` devChecks, automated Firefox 128+ MV3 E2E CI, and restructured 14-page bilingual website with refreshed 1280×800 screenshots.
 
 **Category** [REQUIRED]
 Productivity
@@ -213,7 +213,9 @@ Encontrou algum problema ou deseja sugerir melhoria? Abra uma issue em https://g
 
 | Version | Date | Changes | Status |
 |---------|------|---------|--------|
-| `1.7.0` (`1.7.0-beta`) | 2026-11-23 | Firefox MV3 localization (`_locales/`), optional Firefox website-access banner, DNR Referer image fallback, inline Test Selectors diagnostic, parser/helper deduplication, Chromium `sourceTabId`/SPA E2E coverage, automated website links/sitemap sync, `AGENTS.md` guardrails, and GNU AGPLv3 (`AGPL-3.0-or-later`) migration. | Released (GitHub Release Beta & Firefox Add-ons) |
+| `1.7.2` (`1.7.2-beta`) | 2026-11-24 | Minimalist `createElementNS` SVG icons, Madara synopsis cleanup, `xhtml-serializer`/`BaseParser` refinements, lean `zip -9 -r` archive, Biome/`addons-linter` + Firefox MV3 E2E in CI, restructured 14-page bilingual website, and updated 1280×800 screenshots. | Released (GitHub Release Beta & Firefox Add-ons) |
+| `1.7.1` (`1.7.1-beta`) | 2026-11-23 | Security, concurrency, XHTML/EPUB 2/3 & ZIP32 integrity hardening, ref-counted DNR image Referer fallback (`120..129`), offline HTML image embedding, Madara `POST /ajax/chapters/`, localized book labels, and automated website sync. | Released (GitHub Release Beta) |
+| `1.7.0` (`1.7.0-beta`) | 2026-11-23 | Firefox MV3 localization (`_locales/`), optional Firefox website-access banner, DNR Referer image fallback, inline Test Selectors diagnostic, parser/helper deduplication, Chromium `sourceTabId`/SPA E2E coverage, automated website links/sitemap sync, `AGENTS.md` guardrails, and GNU AGPLv3 (`AGPL-3.0-or-later`) migration. | Released (GitHub Release Beta) |
 | `1.6.1` (`1.6.1-beta`) | 2026-11-20 | Reload Cover button (restores the original series cover in high resolution), vertical 2:3 cover preview, emoji-free language/theme selectors, versioning policy and Firefox for Android roadmap documentation. | Released (GitHub Release Beta & Firefox Add-ons) |
 | `1.6.0` (`1.6.0-beta`) | 2026-11-20 | Verified NovelBin React SPA adapter, generic SPA `TabRenderPool` & DOM stability upgrades, `.sr-only`/duplicate-heading sanitizer hardening, CodeQL security fixes, 5-theme website improvements, and updated policies/docs. | Released (GitHub Release Beta) |
 | `1.5.0` (`1.5.0-beta`) | 2026-11-20 | Automatic default cover fallback with WebPullBook logo, official bilingual GitHub Pages site with dynamic version detection and direct `.zip` download, `AGENTS.md`, `CHROMEWEBSTORE.md`, and quiet/minimalist documentation review. | Released (GitHub Release Beta) |

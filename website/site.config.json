@@ -1,11 +1,11 @@
 {
-  "version": "1.7.1",
-  "versionName": "1.7.1-beta",
+  "version": "1.7.2",
+  "versionName": "1.7.2-beta",
   "baseUrl": "https://wiltongabriel.github.io/WebPullBook",
   "repositoryUrl": "https://github.com/WiltonGabriel/WebPullBook",
   "firefoxAddonsUrl": "https://addons.mozilla.org/firefox/addon/webpullbook/",
   "releasesUrl": "https://github.com/WiltonGabriel/WebPullBook/releases",
-  "releasesLatestUrl": "https://github.com/WiltonGabriel/WebPullBook/releases/tag/v1.7.1",
+  "releasesLatestUrl": "https://github.com/WiltonGabriel/WebPullBook/releases/tag/v1.7.2",
   "issuesUrl": "https://github.com/WiltonGabriel/WebPullBook/issues",
   "socialPreviewImage": "https://wiltongabriel.github.io/WebPullBook/assets/images/social-preview.png",
   "analytics": {

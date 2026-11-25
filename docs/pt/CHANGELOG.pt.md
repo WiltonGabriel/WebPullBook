@@ -4,6 +4,16 @@
 
 Todas as mudanças notáveis do **WebPullBook** estão documentadas neste arquivo (espelho de referência de [CHANGELOG.md](../../CHANGELOG.md)).
 
+## [1.7.2] - 2026-11-24 (Beta)
+
+### Interface, Parsers & Empacotamento Enxuto
+- **Ícones SVG Minimalistas & Seletor de Parser Localizado (`src/workspace/`):** adicionados ícones SVG no estilo Lucide/Tabler criados exclusivamente via `document.createElementNS` (zero emojis, zero `innerHTML`) em botões principais, seletores visuais, modais e banners de status em todos os temas, com `data-i18n` na opção automática do parser para traduzir ao trocar de idioma.
+- **Integridade de Parsers & XHTML (`src/parsers/madara-theme.js`, `src/core/base-parser.js`, `src/core/xhtml-serializer.js`):** removidos textos promocionais iniciais das sinopses no `MadaraThemeParser`, reforçadas as heurísticas de título e sinopse no `BaseParser` (`h1.entry-title` e rejeição de `.entry-content` com sumário) e corrigidos aninhamento de `<aside>` em listas `<ol>` e normalização EPUB 2 em `serializeChapterXhtml()`.
+- **ZIP Enxuto, Ferramentas Dev & CI Cross-Browser (`package.json`, `.github/workflows/`):** pacote da extensão enxugado com `zip -9 -r` apenas com arquivos necessários (`manifest.json _locales icons src LICENSE README.md README.pt.md`, sem `docs/`), migração dos testes para `jsdom` + `fake-indexeddb` mantendo zero dependências em runtime, inclusão de `@biomejs/biome` e `addons-linter` em `devDependencies` e execução automatizada de testes E2E reais do Firefox 128+ MV3 no CI.
+
+### Site Oficial & Documentação
+- **Reformulação do Site Bilíngue (`website/`, `docs/`):** reestruturação das 14 páginas em Inglês e Português com Início focado em leitores comuns, detalhamento das 6 seções de Opções Avançadas, Instalação prática, FAQ ampliado, Política de Privacidade detalhada e guia de Contribuição em duas partes com cartões clicáveis; correção da regra CSS `.callout > strong`, inclusão de favicons e popover único no cabeçalho, realocação de `docs/pt/READER_PRESETS.pt.md`, regeneração das capturas `1280×800` (`aether-archive.example`) e banner social `AGPLv3`, busca/filtro escalável na Compatibilidade e sincronização automatizada de `sitemap.xml` e `robots.txt`.
+
 ## [1.7.1] - 2026-11-23 (Beta)
 
 ### Segurança, Integridade & Confiabilidade EPUB/Exportação

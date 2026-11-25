@@ -4,6 +4,16 @@
 
 All notable changes to **WebPullBook** are documented in this file.
 
+## [1.7.2] - 2026-11-24 (Beta)
+
+### Workspace UI, Parsers & Packaging
+- **Minimalist SVG Icons & Localized Parser Label (`src/workspace/`):** Replaced remaining text/glyph markers across primary buttons, pickers, modals, and status banners with SVG icons built strictly via `document.createElementNS` (zero emojis, zero `innerHTML`) aligned across all themes, and tagged the automatic parser option with `data-i18n` for live language switching.
+- **Parser & XHTML Integrity (`src/parsers/madara-theme.js`, `src/core/base-parser.js`, `src/core/xhtml-serializer.js`):** Stripped promotional leading boilerplate from `MadaraThemeParser` synopses, hardened `BaseParser` title/synopsis heuristics (`h1.entry-title` priority and TOC-heavy `.entry-content` rejection), and fixed `<ol>` footnote `<aside>` nesting and EPUB 2 element normalization in `serializeChapterXhtml()`.
+- **Lean Extension ZIP & Dev Tooling (`package.json`, `.github/workflows/`):** Reduced extension archive size using `zip -9 -r` over core runtime files (`manifest.json _locales icons src LICENSE README.md README.pt.md`, omitting `docs/`), migrated tests from manual shims to `jsdom` + `fake-indexeddb` with zero runtime dependencies, added `@biomejs/biome` and local `addons-linter`, and added automated Firefox 128+ MV3 E2E testing to CI.
+
+### Official Website & Documentation
+- **Bilingual Website Overhaul (`website/`, `docs/`):** Rebuilt all 14 English and Portuguese pages with a layperson-first Home summary, deep-dive Advanced Options documentation, practical e-reader Installation tips, expanded FAQ, store-grade Privacy Policy, and a two-part Contributing guide with clickable stretched-link cards and Issue template links; fixed `.callout > strong` inline rendering, added favicons and a unified header language/theme popover, relocated `docs/pt/READER_PRESETS.pt.md`, regenerated 1280×800 dark-mode screenshots (`aether-archive.example`) and the AGPLv3 social preview banner, and added scalable Compatibility search/filtering with automated `sitemap.xml`/`robots.txt` verification.
+
 ## [1.7.1] - 2026-11-23 (Beta)
 
 ### Security, Integrity & EPUB/Export Reliability
