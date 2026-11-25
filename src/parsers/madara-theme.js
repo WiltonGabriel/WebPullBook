@@ -177,8 +177,11 @@ export class MadaraThemeParser extends BaseParser {
     const genres = extractUniqueTexts(doc, '.genres-content a');
     if (genres.length > 0) out.genres = genres;
 
-    const syn = extractCleanSynopsis(doc.querySelector('.summary__content, .description-summary .summary__content'));
-    if (syn) out.synopsis = syn;
+    const rawSyn = extractCleanSynopsis(doc.querySelector('.summary__content, .description-summary .summary__content'));
+    const syn = rawSyn
+      .replace(/^you(?:['’]re|\s+are)\s+reading\s+["“”]?[^\n]{1,180}?["“”]?\s+novel\s+at\s+[^\n]+(?:\n+|$)/i, '')
+      .trim();
+    if (syn || rawSyn) out.synopsis = syn || rawSyn;
 
     const img = doc.querySelector('.summary_image img');
     const rawSrc = img?.getAttribute('data-src') || img?.getAttribute('data-lazy-src') || img?.getAttribute('src');

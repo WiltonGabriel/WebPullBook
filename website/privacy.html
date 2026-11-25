@@ -142,11 +142,11 @@
     <section class="section alt">
       <div class="container">
         <div class="section-header">
-          <h2>3. What Data Is Stored Locally on Your Device</h2>
-          <p>All persistent extension settings and caches remain inside your local browser profile (never synced via <code>chrome.storage.sync</code>) and can be cleared at any time:</p>
+          <h2 id="storage-table-heading">3. What Data Is Stored Locally on Your Device</h2>
+          <p>All persistent extension settings and caches remain inside your local browser profile (never synced via <code>chrome.storage.sync</code>) and can be exported, inspected, or wiped at any time:</p>
         </div>
 
-        <div class="table-wrap">
+        <div class="table-wrap" tabindex="0" role="region" aria-labelledby="storage-table-heading">
           <table>
             <thead>
               <tr>
@@ -202,11 +202,11 @@
     <section class="section">
       <div class="container">
         <div class="section-header">
-          <h2>4. Technical Justification of Manifest V3 Permissions</h2>
-          <p>WebPullBook declares the following browser permissions in <code>manifest.json</code>:</p>
+          <h2 id="perms-table-heading">4. Technical Justification of Manifest V3 Permissions</h2>
+          <p>WebPullBook declares only the permissions needed for local webpage extraction and ebook file creation in <code>manifest.json</code>:</p>
         </div>
 
-        <div class="table-wrap">
+        <div class="table-wrap" tabindex="0" role="region" aria-labelledby="perms-table-heading">
           <table>
             <thead>
               <tr>
@@ -251,6 +251,23 @@
         </div>
 
         <p style="margin-block-start: 1rem;">For Mozilla Firefox Add-ons (AMO), <code>manifest.json</code> also declares <code>data_collection_permissions: { "required": ["none"] }</code> under <code>browser_specific_settings.gecko</code>, reflecting that WebPullBook collects or transmits no user data.</p>
+
+        <div class="grid-3" style="margin-block-start: 1.75rem;">
+          <article class="card">
+            <h3>Firefox Runtime Host Control</h3>
+            <p>In Firefox 128+, MV3 host access is granted explicitly by the user. WebPullBook detects missing host permissions cleanly, displays a guided status banner instead of failing silently, and refreshes session rules via <code>chrome.permissions.onAdded</code> as soon as access is granted.</p>
+          </article>
+
+          <article class="card">
+            <h3>Strict CSP, Sanitization &amp; Auditability</h3>
+            <p>WebPullBook ships unbundled, unobfuscated vanilla ES modules under <code>src/</code> with zero external runtime packages, strict <code>script-src 'self'</code> CSP (zero <code>eval</code> or inline handlers), URL validation via <code>assertSafeHttpUrl()</code>, and whitelist HTML sanitization before writing any ebook.</p>
+          </article>
+
+          <article class="card">
+            <h3>How to Inspect or Erase Everything</h3>
+            <p>Click <strong>Clear Cache</strong> in the Library tab to wipe cached chapters, <strong>Reset All Advanced Options</strong> to restore defaults, export settings as local JSON for inspection, or clear extension data / uninstall in browser settings to remove every stored key and folder handle.</p>
+          </article>
+        </div>
       </div>
     </section>
 

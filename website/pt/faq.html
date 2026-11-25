@@ -58,6 +58,22 @@
       },
       {
         "@type": "Question",
+        "name": "Consigo baixar apenas capítulos novos de uma obra em andamento?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Sim. Salve qualquer obra na Biblioteca local e use Verificar Todas ou Baixar Novidades na aba Biblioteca para baixar e empacotar somente os capítulos publicados após seu último download."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "E se o site que eu leio não estiver na página de Compatibilidade?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Você ainda pode extrair sites fora da lista com o Universal Smart Extractor (generic-html), rastreamento sequencial de Próximo Capítulo, Modo SPA por aba, seletor visual Apontar e Juntar Abas."
+        }
+      },
+      {
+        "@type": "Question",
         "name": "Por que o WebPullBook ainda não está na Chrome Web Store?",
         "acceptedAnswer": {
           "@type": "Answer",
@@ -142,8 +158,14 @@
 
     <section class="section">
       <div class="container">
-        <h2>Leitores Digitais, Perfis Kindle &amp; Kobo</h2>
-        <div class="accordion" aria-label="Perguntas sobre Leitores e Perfis">
+        <div class="faq-section-head">
+          <h2 id="faq-ereaders-pt">Leitores Digitais, Perfis &amp; Formatos</h2>
+          <button type="button" class="btn secondary sm accordion-toggle-all" data-target-accordion="acc-ereaders-pt" aria-expanded="false">
+            <span class="expand">Expandir tudo</span>
+            <span class="collapse">Recolher tudo</span>
+          </button>
+        </div>
+        <div id="acc-ereaders-pt" class="accordion" aria-labelledby="faq-ereaders-pt">
           <details>
             <summary>Qual a diferença entre Kindle (Antigo) e Kindle (Moderno)?</summary>
             <div class="details-body">
@@ -153,9 +175,9 @@
           </details>
 
           <details>
-            <summary>Qual perfil devo usar para Kobo, Tolino ou PocketBook?</summary>
+            <summary>Qual perfil devo usar para Kobo, Tolino, PocketBook ou celular?</summary>
             <div class="details-body">
-              <p>Escolha <strong>Kobo e Leitores Digitais</strong>. Ele exporta em EPUB 3 com notas pop-up, metadados de série/volume e imagens JPEG otimizadas a 1080px, preservando as cores em telas E-Ink coloridas.</p>
+              <p>Para <strong>Kobo, Tolino ou PocketBook</strong>, escolha <strong>Kobo e Leitores Digitais</strong> (EPUB 3 com notas pop-up, metadados de série/volume e JPEG a 1080px preservando cores em telas E-Ink coloridas). Para <strong>celular, tablet, Apple Books ou Thorium Reader</strong>, escolha <strong>Padrão Moderno</strong> para manter as imagens originais.</p>
             </div>
           </details>
 
@@ -167,44 +189,118 @@
           </details>
 
           <details>
-            <summary>O que acontece quando a página do livro não possui imagem de capa?</summary>
+            <summary>O que acontece quando o site não tem capa ou usa imagem WebP?</summary>
             <div class="details-body">
-              <p>Quando o WebPullBook não detecta uma imagem de capa na página de origem (ou ao criar um livro via <strong>Juntar Abas</strong>), ele gera automaticamente uma capa padrão com o emblema oficial do WebPullBook, o título da obra e o autor. Você também pode enviar um arquivo de imagem do computador, clicar em <strong>Gerar Capa</strong> após editar o título ou clicar em <strong>Limpar Capa</strong> se preferir o livro sem capa.</p>
+              <p>Quando não há capa na página (ou ao criar livros via <strong>Juntar Abas</strong>), o WebPullBook gera automaticamente uma capa padrão com o emblema oficial, título e autor. Você também pode enviar uma imagem local, clicar em <strong>Gerar Capa</strong> após editar os metadados ou em <strong>Limpar Capa</strong>. Se uma capa WebP/AVIF for detectada sem conversão JPEG ativada, um aviso aparece para evitar problemas em leitores antigos.</p>
+            </div>
+          </details>
+
+          <details>
+            <summary>Posso baixar só parte de uma história longa ou dividir um arquivo por volume?</summary>
+            <div class="details-body">
+              <p>Sim. Use os seletores <strong>Primeiro Capítulo</strong> / <strong>Último Capítulo</strong>, o filtro de busca, seleção de intervalo com <code>Shift+Clique</code> ou os chips de <strong>Volumes</strong> para marcar só o que deseja. Em Modo de Saída, escolha <strong>1 Arquivo por Volume</strong> para gerar arquivos separados ou <strong>Arquivo Único</strong> para juntar tudo até o limite configurado.</p>
+            </div>
+          </details>
+
+          <details>
+            <summary>Quando vale exportar em HTML Único, Markdown ou Texto Puro em vez de EPUB?</summary>
+            <div class="details-body">
+              <p>Escolha <strong>HTML Único (Offline)</strong> quando quiser abrir o livro completo em qualquer navegador do PC ou celular sem precisar de aplicativo leitor. Escolha <strong>Markdown (<code>.md</code>)</strong> para guardar em cofres de notas como Obsidian ou Logseq, ou <strong>Texto Puro (<code>.txt</code>)</strong> para arquivos leves.</p>
             </div>
           </details>
         </div>
 
-        <h2 style="margin-block-start: 2.5rem;">Extração de Sites, Seletores CSS &amp; Modo SPA</h2>
-        <div class="accordion" aria-label="Perguntas sobre Extração e Seletores">
+        <div class="faq-section-head" style="margin-block-start: 2.5rem;">
+          <h2 id="faq-extraction-pt">Extração de Sites, Seletores CSS &amp; Páginas SPA</h2>
+          <button type="button" class="btn secondary sm accordion-toggle-all" data-target-accordion="acc-extraction-pt" aria-expanded="false">
+            <span class="expand">Expandir tudo</span>
+            <span class="collapse">Recolher tudo</span>
+          </button>
+        </div>
+        <div id="acc-extraction-pt" class="accordion" aria-labelledby="faq-extraction-pt">
+          <details>
+            <summary>E se o site que eu acompanho não estiver na página de Compatibilidade?</summary>
+            <div class="details-body">
+              <p>Vale testar carregando a URL mesmo assim. O <strong>Universal Smart Extractor</strong> (<code>generic-html</code>) é um foco central do WebPullBook: ele identifica listas de capítulos automaticamente, segue links de <em>"Próximo Capítulo"</em>, renderiza páginas em JavaScript via aba auxiliar quando o HTML estático vem vazio e traz o seletor visual <strong>Apontar</strong>.</p>
+            </div>
+          </details>
+
           <details>
             <summary>O que fazer quando um site carrega 0 capítulos ou não encontra o texto?</summary>
             <div class="details-body">
-              <p>O WebPullBook tenta captura do DOM da aba ativa, renderização SPA e detecção heurística automaticamente. Se um layout personalizado precisar de ajuste manual:</p>
-              <p>1. Abra a aba <strong>Opções Avançadas &rarr; Extração, Parser &amp; Regras</strong>.<br>
-              2. Clique em <strong>Apontar</strong> ao lado do <em>Seletor CSS da lista de capítulos</em> ou <em>Seletor CSS do conteúdo do capítulo</em> para clicar diretamente no elemento na página aberta — ou clique em <strong>Auto-detectar seletores</strong>.<br>
-              3. Clique em <strong>Salvar p/ Domínio</strong> para guardar a regra daquele domínio e clique novamente em <strong>Carregar Obra</strong>.</p>
+              <p>Abra <strong>Opções Avançadas &rarr; Extração, Parser &amp; Regras</strong>, clique em <strong>Apontar</strong> ao lado do seletor da lista ou do conteúdo para clicar direto na página aberta (ou use <strong>Auto-detectar seletores</strong>), confira em <strong>Testar seletores</strong> e clique em <strong>Salvar p/ Domínio</strong> antes de clicar em <strong>Carregar Obra</strong>. Regras por domínio ficam isoladas e nunca interferem em outros sites.</p>
+            </div>
+          </details>
+
+          <details>
+            <summary>Como apagar notas repetidas de tradução, avisos ou banners do texto?</summary>
+            <div class="details-body">
+              <p>A limpeza automática já remove scripts, blocos de anúncio, links de capítulo anterior/próximo e textos ocultos via CSS usados contra scrapers. Para frases ou avisos específicos de um site, adicione seletores em <strong>Elementos a excluir</strong> (com <strong>Apontar</strong>) ou linhas/expressões regulares (como <code>/[Nota do Tradutor:.*?]/gi</code>) em <strong>Filtro de texto / Regex</strong>.</p>
             </div>
           </details>
 
           <details>
             <summary>Como baixar uma obra ou blog que não possui página de sumário (índice)?</summary>
             <div class="details-body">
-              <p>Há duas opções para sites sem página de índice:</p>
-              <p>• <strong>Rastreamento de "Próximo Capítulo":</strong> Abra o primeiro capítulo desejado e carregue a URL dele no WebPullBook. Com a opção <em>Seguir link "Próximo Capítulo" automaticamente</em> ativada (padrão), o extrator segue os links sequenciais em ordem.<br>
-              • <strong>Juntar Abas (Merge Tabs):</strong> Abra os capítulos ou artigos em abas do navegador, clique em <strong>Juntar Abas</strong> na barra superior do WebPullBook, reordene ou pré-visualize a lista e exporte em um único livro ou em arquivos separados.</p>
+              <p>Existem duas maneiras nativas:</p>
+              <p>• <strong>Rastreamento de "Próximo Capítulo":</strong> Abra o primeiro capítulo desejado e carregue a URL dele no WebPullBook. Com <em>Seguir link "Próximo Capítulo" automaticamente</em> ligado (padrão), o extrator segue os links sequenciais em ordem.<br>
+              • <strong>Juntar Abas:</strong> Abra os capítulos ou artigos em abas do navegador, clique em <strong>Juntar Abas</strong> na barra superior, organize a ordem ou pré-visualize e exporte como livro único ou separado.</p>
+            </div>
+          </details>
+
+          <details>
+            <summary>Funciona em sites onde preciso fazer login na minha conta primeiro?</summary>
+            <div class="details-body">
+              <p>Sim, desde que sua sessão logada já consiga ler o texto HTML padrão em uma aba aberta. Entre na conta normalmente em uma aba do navegador primeiro e depois abra o WebPullBook a partir dela. A extensão não contorna assinaturas pagas sem acesso, leitores com DRM criptografado nem capítulos renderizados somente em imagens <code>&lt;canvas&gt;</code>.</p>
+            </div>
+          </details>
+        </div>
+
+        <div class="faq-section-head" style="margin-block-start: 2.5rem;">
+          <h2 id="faq-resilience-pt">Obras em Andamento, Erros &amp; Pastas de Saída</h2>
+          <button type="button" class="btn secondary sm accordion-toggle-all" data-target-accordion="acc-resilience-pt" aria-expanded="false">
+            <span class="expand">Expandir tudo</span>
+            <span class="collapse">Recolher tudo</span>
+          </button>
+        </div>
+        <div id="acc-resilience-pt" class="accordion" aria-labelledby="faq-resilience-pt">
+          <details>
+            <summary>Como acompanhar obras em andamento e baixar apenas capítulos novos?</summary>
+            <div class="details-body">
+              <p>Após carregar ou exportar uma história, clique em <strong>Salvar na Biblioteca</strong>. Depois, abra a aba <strong>Biblioteca</strong> e use <strong>Verificar Todas</strong> para checar atualizações ou <strong>Baixar Novidades</strong> para exportar em lote somente os capítulos publicados após seu último download.</p>
             </div>
           </details>
 
           <details>
             <summary>Por que o download pausou com aviso de Verificação Anti-Bot (Cloudflare) ou Rate Limit?</summary>
             <div class="details-body">
-              <p>Quando um servidor responde com desafio anti-bot (Cloudflare) ou limite de taxa (HTTP 429/503), o WebPullBook pausa a fila para evitar requisições bloqueadas em sequência. Clique em <strong>Abrir página para verificar</strong> no banner, conclua a verificação na aba aberta, marque o <strong>Modo Seguro</strong> e clique em <strong>Retomar</strong>. Os capítulos já baixados permanecem salvos no cache <code>IndexedDB</code>.</p>
+              <p>Quando um servidor responde com desafio Cloudflare ou HTTP 429/503, o WebPullBook pausa a fila imediatamente para evitar bloqueios em sequência. Clique em <strong>Abrir página para verificar</strong> no banner, conclua a verificação humana nessa aba, mantenha o <strong>Modo Seguro</strong> ativo e clique em <strong>Retomar</strong>. Os capítulos já baixados ficam salvos no <code>IndexedDB</code>.</p>
+            </div>
+          </details>
+
+          <details>
+            <summary>O que acontece se alguns capítulos falharem ou a internet cair no meio?</summary>
+            <div class="details-body">
+              <p>Todo capítulo já baixado fica guardado no cache local <code>IndexedDB</code> (validade padrão de 7 dias). Você pode clicar em <strong>Tentar Falhos</strong> após a execução parcial ou reabrir a sessão na aba <strong>Biblioteca</strong> em <strong>Downloads Recentes &amp; Cache Local</strong> clicando em <strong>Retomar Download</strong> (ou <strong>Empacotar só os em cache</strong>).</p>
+            </div>
+          </details>
+
+          <details>
+            <summary>Posso escolher em qual pasta os ebooks são salvos no meu computador?</summary>
+            <div class="details-body">
+              <p>Dentro da pasta Downloads, modelos relativos de subpastas (ex.: <code>WebPullBook/%Author%/%Title%</code>) funcionam tanto no <strong>Firefox quanto no Chromium</strong>. No <strong>Chrome, Edge e Brave</strong>, você também pode clicar em <strong>Escolher Pasta no PC...</strong> em Opções Avançadas para gravar direto em qualquer diretório via <code>showDirectoryPicker</code>.</p>
             </div>
           </details>
         </div>
 
-        <h2 style="margin-block-start: 2.5rem;">Privacidade, Status Beta &amp; Suporte</h2>
-        <div class="accordion" aria-label="Perguntas sobre Privacidade e Beta">
+        <div class="faq-section-head" style="margin-block-start: 2.5rem;">
+          <h2 id="faq-privacy-beta-pt">Privacidade, Status Beta, Licença &amp; Suporte</h2>
+          <button type="button" class="btn secondary sm accordion-toggle-all" data-target-accordion="acc-privacy-beta-pt" aria-expanded="false">
+            <span class="expand">Expandir tudo</span>
+            <span class="collapse">Recolher tudo</span>
+          </button>
+        </div>
+        <div id="acc-privacy-beta-pt" class="accordion" aria-labelledby="faq-privacy-beta-pt">
           <details>
             <summary>Algum dado sai do meu navegador?</summary>
             <div class="details-body">
@@ -216,6 +312,13 @@
             <summary>Por que o WebPullBook ainda não está na Chrome Web Store?</summary>
             <div class="details-body">
               <p>O WebPullBook já está publicado oficialmente no <a href="https://addons.mozilla.org/firefox/addon/webpullbook/" data-wpb-link="firefoxAddons">Firefox Add-ons (AMO)</a> para Mozilla Firefox 128+. A publicação na Chrome Web Store está prevista em seguida; durante a fase <strong>Beta open source</strong>, quem usa Chrome, Edge ou Brave pode instalar o pacote oficial pelo <a href="https://github.com/WiltonGabriel/WebPullBook/releases" data-wpb-link="releases">GitHub Releases</a>.</p>
+            </div>
+          </details>
+
+          <details>
+            <summary>Qual licença o projeto WebPullBook adota?</summary>
+            <div class="details-body">
+              <p>A partir da versão <code>v1.7.0-beta</code>, o WebPullBook passou a utilizar a licença <a href="https://github.com/WiltonGabriel/WebPullBook/blob/main/LICENSE">GNU Affero General Public License v3.0 (<code>AGPL-3.0-or-later</code>)</a>. Versões históricas anteriores até <code>v1.6.1-beta</code> permanecem sob a Licença MIT.</p>
             </div>
           </details>
 

@@ -151,12 +151,12 @@
     <section class="section alt">
       <div class="container">
         <div class="section-header">
-          <h2>How to Build and Add a New Parser Adapter</h2>
-          <p>All parser adapters inherit from <code>BaseParser</code> (<code>src/core/base-parser.js</code>) and use structural DOM scoring (<code>matchScore</code>) so they remain resilient even when a website changes domains.</p>
+          <h2>5-Stage Pipeline &amp; Adding a New Parser Adapter</h2>
+          <p>WebPullBook splits extraction into five clean modules under <code>src/</code>: <strong>Discovery &amp; Scoring</strong> (<code>ParserRegistry</code>), <strong>Collection</strong> (<code>collectAllChapters</code> / SPA <code>TabRenderPool</code>), <strong>Download &amp; Whitelist Sanitization</strong> (<code>AdaptiveRateLimiter</code> / <code>HtmlSanitizer</code> / <code>serializeChapterXhtml</code>), <strong>Media &amp; Cache</strong> (<code>fetchImageBytes</code> / DNR slots <code>120..129</code> / <code>WebPullBookCache</code>), and <strong>Packaging</strong> (<code>exporterRegistry</code> + <code>createZipBlob</code>).</p>
         </div>
 
         <figure>
-          <figcaption id="parser-example-caption">Minimal 4-step structure for adding a new parser adapter in <code>src/parsers/</code>:</figcaption>
+          <figcaption id="parser-example-caption">Minimal 4-step structure for adding a new <code>BaseParser</code> subclass in <code>src/parsers/</code>:</figcaption>
           <pre role="region" aria-labelledby="parser-example-caption" tabindex="0"><code>// 1. Create src/parsers/my-layout-adapter.js extending BaseParser
 import { BaseParser } from '../core/parser-engine.js';
 
@@ -193,49 +193,64 @@ export class MyLayoutParser extends BaseParser {
 
 // 2. Register an instance in src/parsers/index.js before genericHtmlParser
 // 3. Add anonymized HTML fixtures in tests/fixtures/ and expectations in snapshots.json
-// 4. Run `npm run check` and document the adapter in docs/COMPATIBILITY.md</code></pre>
+// 4. Run `npm run check` and document the layout in docs/COMPATIBILITY.md</code></pre>
         </figure>
+
+        <div class="grid-3" style="margin-block-start: 1.75rem;">
+          <article class="card">
+            <h3>Zero Runtime Dependencies &amp; Minimal Design</h3>
+            <p>Keep <code>dependencies</code> in <code>package.json</code> empty, reuse helpers in <code>src/core/parser-helpers.js</code>, build UI icons via <code>document.createElementNS</code> (zero emojis, zero <code>innerHTML</code>), and maintain strict EN/PT-BR key parity across <code>src/workspace/locales/</code> and <code>_locales/</code>.</p>
+          </article>
+
+          <article class="card">
+            <h3>Single Sources of Truth</h3>
+            <p>Edit <a href="https://github.com/WiltonGabriel/WebPullBook/blob/main/docs/COMPATIBILITY.md">docs/COMPATIBILITY.md</a> and <code>docs/READER_PRESETS*.md</code> only—never paste site URLs or domains in docs, and run <code>node scripts/sync-website.mjs</code> twice to update the static website cleanly.</p>
+          </article>
+
+          <article class="card">
+            <h3>No Access-Control Bypass</h3>
+            <p>Never attempt to circumvent DRM, paywalls, or anti-bot CAPTCHAs. When Cloudflare or HTTP 429/503 gates appear, trip the circuit breaker and let the user intervene manually in a standard browser tab.</p>
+          </article>
+        </div>
       </div>
     </section>
 
     <section class="section">
       <div class="container">
         <div class="section-header">
-          <h2>Local Development &amp; Testing</h2>
-          <p>Static linting runs on the Node.js 22+ standard library without installing packages. Unit/snapshot tests use <code>jsdom</code> and <code>fake-indexeddb</code>, and the Chromium browser E2E test uses Playwright (via <code>npm install</code>).</p>
+          <h2>Local Development &amp; Cross-Browser Testing</h2>
+          <p>Static linting runs on the Node.js 22+ standard library without installing packages. Unit and snapshot tests use <code>jsdom</code> and <code>fake-indexeddb</code>, static analysis uses <code>@biomejs/biome</code> and <code>addons-linter</code>, and real E2E tests verify both Playwright Chromium and Firefox 128+ MV3.</p>
         </div>
 
         <figure>
-          <figcaption id="dev-commands-caption">Verification commands:</figcaption>
-          <pre role="region" aria-labelledby="dev-commands-caption" tabindex="0"><code># 1. Static lint, JS syntax, MV3 CSP, Markdown links, i18n parity, and website checks (no npm install)
+          <figcaption id="dev-commands-caption">Full verification workflow:</figcaption>
+          <pre role="region" aria-labelledby="dev-commands-caption" tabindex="0"><code># 1. Static lint, JS syntax, MV3 CSP, Markdown links, i18n parity, and website checks (zero dependencies)
 npm run lint
 
-# 2. Install test devDependencies (jsdom, fake-indexeddb, playwright)
-npm install
+# 2. Install test &amp; linter devDependencies
+npm ci
 
-# 3. Unit, sanitizer, ZIP, cache, exporter, and parser fixture snapshot tests
-npm test
+# 3. Static JS analysis &amp; Mozilla AMO extension ZIP check
+npm run lint:biome
+npm run lint:amo
 
-# 4. Run both lint and unit tests together
-npm run check
-
-# 5. Validate generated EPUB 2 &amp; EPUB 3 files with W3C EPUBCheck (requires Java 21+ &amp; EPUBCheck)
-REQUIRE_EPUBCHECK=1 npm run test:epubcheck
-
-# 6. End-to-End Chromium extension test (requires Playwright Chromium)
-npx playwright install chromium
-npm run test:e2e</code></pre>
+# 4. Unit tests, snapshots, W3C EPUBCheck validation, Chromium E2E &amp; Firefox MV3 E2E
+REQUIRE_EPUBCHECK=1 npm test
+REQUIRE_EPUBCHECK=1 npm run test:e2e
+REQUIRE_EPUBCHECK=1 npm run test:e2e:firefox</code></pre>
         </figure>
+
+        <p style="color: var(--muted); margin-block-start: 0.75rem;">Want to test real external websites locally while developing parsers without committing third-party URLs to Git? Place your local target list or scripts under the gitignored <code>.local-e2e/</code> directory.</p>
 
         <div class="grid-2" style="margin-block-start: 2rem;">
           <article class="card">
             <h3>Developer Documentation (<a href="https://github.com/WiltonGabriel/WebPullBook/blob/main/CONTRIBUTING.md">CONTRIBUTING.md</a>)</h3>
-            <p>See the contributor guide in the repository for instructions on creating a <code>BaseParser</code> subclass, adding anonymized HTML fixtures under <code>tests/fixtures/</code>, and running the pre-PR checklist.</p>
+            <p>See the contributor guide in the repository for complete instructions on creating <code>BaseParser</code> subclasses, adding anonymized HTML fixtures under <code>tests/fixtures/</code>, and preparing Pull Requests.</p>
           </article>
 
           <article class="card">
             <h3>AI Coding Agent Instructions (<a href="https://github.com/WiltonGabriel/WebPullBook/blob/main/AGENTS.md">AGENTS.md</a>)</h3>
-            <p>The repository includes an <code>AGENTS.md</code> file for AI coding tools (Codex, Cursor, Claude Code, Antigravity, Copilot), documenting module responsibilities, SRP boundaries, MV3 CSP rules, and verification steps.</p>
+            <p>The repository includes an <code>AGENTS.md</code> guide documenting module boundaries, SRP contracts, MV3 CSP constraints, and the single-source-of-truth website sync workflow.</p>
           </article>
         </div>
       </div>

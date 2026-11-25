@@ -1326,3 +1326,34 @@ test('BaseParser prefers h1.entry-title over site-header h1 and ignores TOC-heav
   assert.equal(articleHeading.chapterTitle, 'Arc 3.4');
 });
 
+test('MadaraThemeParser strips leading promotional boilerplate from synopsis while keeping real paragraphs', async () => {
+  const { madaraThemeParser } = await import('../src/parsers/madara-theme.js');
+  const boilerplateDoc = new DOMParser().parseFromString(
+    `<!DOCTYPE html><html><body>
+      <div class="post-title"><h1>Martial Story</h1></div>
+      <div class="summary__content">
+        <p>You’re Reading “Martial Story” Novel at WuxiaWorld.Site</p>
+        <p>The dimensional rifts link earth and sky.</p>
+      </div>
+    </body></html>`,
+    'text/html'
+  );
+  const meta = madaraThemeParser.extractSiteMetadata(
+    boilerplateDoc,
+    'https://madara.example.org/novel/martial-story/'
+  );
+  assert.equal(meta.synopsis, 'The dimensional rifts link earth and sky.');
+
+  const onlyPromoDoc = new DOMParser().parseFromString(
+    `<!DOCTYPE html><html><body>
+      <div class="summary__content"><p>You are reading Demo Novel at ExampleSite</p></div>
+    </body></html>`,
+    'text/html'
+  );
+  const fallbackMeta = madaraThemeParser.extractSiteMetadata(
+    onlyPromoDoc,
+    'https://madara.example.org/novel/demo/'
+  );
+  assert.equal(fallbackMeta.synopsis, 'You are reading Demo Novel at ExampleSite');
+});
+

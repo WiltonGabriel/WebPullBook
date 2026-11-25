@@ -231,39 +231,39 @@
     <section class="section">
       <div class="container">
         <div class="section-header">
-          <h2>Recursos para Leitura no Dia a Dia</h2>
-          <p>Livros limpos, sem menus, propagandas ou poluição da página—processados localmente no seu dispositivo.</p>
+          <h2>Recursos Pensados para Leitura no Dia a Dia</h2>
+          <p>Transforme páginas cheias de menus e anúncios em livros limpos e organizados para ler offline em qualquer aparelho.</p>
         </div>
 
         <div class="grid-3">
           <article class="card">
             <h3>Lê Direto da Aba Aberta</h3>
-            <p>Aproveita a página que você já carregou no navegador, inclusive em sites mais modernos onde os capítulos aparecem só depois da página terminar de abrir.</p>
+            <p>Usa a página que você já carregou no navegador — inclusive em sites modernos em JavaScript ou onde você já está logado — sem senhas ou servidores externos.</p>
           </article>
 
           <article class="card">
-            <h3>Capítulos e Volumes Automáticos</h3>
-            <p>Identifica o índice e separa os volumes sozinho, segue botões de <em>"Próximo Capítulo"</em> quando não existe lista e traz uma ferramenta visual para marcar o texto em sites diferentes.</p>
+            <h3>Texto Limpo, Sem Anúncios ou Sobras</h3>
+            <p>Remove automaticamente menus, avisos ocultos contra cópia e links de próximo/anterior, além de permitir filtros próprios para apagar notas repetidas de tradução.</p>
+          </article>
+
+          <article class="card">
+            <h3>Obras Longas, Volumes e Intervalos</h3>
+            <p>Organiza histórias com milhares de capítulos por volume, deixa você baixar só um trecho (ex.: do capítulo 500 ao 620) ou dividir cada volume em um arquivo.</p>
           </article>
 
           <article class="card">
             <h3>Perfis Prontos para Kindle e Kobo</h3>
-            <p>Escolha um perfil pronto para <em>Send to Kindle</em>, Calibre USB, Kobo ou celular—o formato do arquivo, notas de rodapé e tamanho das imagens se ajustam automaticamente.</p>
+            <p>Com um clique, configura EPUB 2 (<em>Send to Kindle</em>), EPUB 3 (<em>Kobo</em> e <em>Calibre USB</em>), capa otimizada, notas de rodapé pop-up e ficha completa de metadados.</p>
           </article>
 
           <article class="card">
-            <h3>Revisar, Editar, Juntar Abas e Capa</h3>
-            <p>Leia o texto antes de baixar, corrija títulos ou parágrafos, una várias abas abertas em um livro só (<strong>Juntar Abas</strong>) e crie uma capa limpa se o site não tiver nenhuma.</p>
+            <h3>Biblioteca e Só Capítulos Novos</h3>
+            <p>Salve histórias em andamento na Biblioteca para verificar lançamentos e baixar apenas os capítulos novos, sem precisar baixar toda a obra do zero toda semana.</p>
           </article>
 
           <article class="card">
-            <h3>Capas e Ilustrações Preservadas</h3>
-            <p>Salva a capa e as imagens da história com fidelidade, descarta avisos falsos no lugar de imagens, preserva GIFs animados quando necessário e evita imagens repetidas no arquivo.</p>
-          </article>
-
-          <article class="card">
-            <h3>Ritmo Seguro, Retomada e Biblioteca</h3>
-            <p>O Modo Seguro ajusta a velocidade para evitar bloqueios nos sites. Seu progresso fica guardado localmente por 7 dias e a Biblioteca verifica capítulos novos das obras salvas.</p>
+            <h3>Edição, Juntar Abas, Retomada e Ritmo</h3>
+            <p>Revise e edite capítulos antes de salvar, una várias abas abertas em um livro, gere capas automáticas, evite bloqueios com o Modo Seguro e retome falhas em até 7 dias.</p>
           </article>
         </div>
       </div>
@@ -272,11 +272,11 @@
     <section class="section alt">
       <div class="container">
         <div class="section-header">
-          <h2>Escolha o Formato Ideal</h2>
+          <h2 id="formats-heading-pt">Escolha o Formato Ideal</h2>
           <p>Exporte seus livros no arquivo certo para o seu e-reader, celular ou aplicativo de notas.</p>
         </div>
 
-        <div class="table-wrap">
+        <div class="table-wrap" tabindex="0" role="region" aria-labelledby="formats-heading-pt">
           <table>
             <thead>
               <tr>
@@ -316,8 +316,8 @@
         </div>
 
         <div class="cta-row" style="margin-block-start: 1.75rem;">
-          <a class="btn secondary" href="features.html">Ver Funcionalidades e Perfis de Leitor &rarr;</a>
-          <a class="btn secondary" href="compatibility.html">Compatibilidade e Limitações &rarr;</a>
+          <a class="btn secondary" href="features.html">Explorar Funcionalidades e Arquitetura &rarr;</a>
+          <a class="btn secondary" href="compatibility.html">Compatibilidade &amp; Extrator Universal &rarr;</a>
         </div>
       </div>
     </section>
@@ -326,7 +326,7 @@
       <div class="container">
         <div class="section-header">
           <h2>Dúvidas Comuns</h2>
-          <p>Respostas diretas sobre leitores digitais, privacidade e sites compatíveis.</p>
+          <p>Respostas diretas sobre leitores digitais, obras em andamento, privacidade e sites compatíveis.</p>
         </div>
 
         <div class="accordion" aria-label="Dúvidas Rápidas">
@@ -334,6 +334,20 @@
             <summary>Qual perfil devo escolher para Kindle ou Kobo?</summary>
             <div class="details-body">
               <p>Se você envia livros pelo <strong>Send to Kindle</strong> (e-mail, site ou app da Amazon), escolha <strong>Kindle (Antigo)</strong> para evitar rejeições na conversão da Amazon. Se você passa livros pelo cabo usando o <strong>Calibre</strong>, escolha <strong>Kindle (Moderno)</strong>. Para <strong>Kobo, Tolino ou PocketBook</strong>, use <strong>Kobo e Leitores Digitais</strong>.</p>
+            </div>
+          </details>
+
+          <details>
+            <summary>Consigo baixar só capítulos novos sem refazer o livro inteiro?</summary>
+            <div class="details-body">
+              <p>Sim. Clique em <strong>Salvar na Biblioteca</strong> em qualquer obra carregada. Depois, abra a aba <strong>Biblioteca</strong> e use <strong>Verificar Todas</strong> ou <strong>Baixar Novidades</strong> para baixar e empacotar apenas o que saiu desde o seu último download — e, se cair a conexão, capítulos já baixados ficam salvos por 7 dias no cache local.</p>
+            </div>
+          </details>
+
+          <details>
+            <summary>E se o site que eu leio não estiver listado na página de Compatibilidade?</summary>
+            <div class="details-body">
+              <p>Você pode testar mesmo assim. O <strong>Universal Smart Extractor</strong> (<code>generic-html</code>) detecta listas de capítulos automaticamente, segue links de <em>"Próximo Capítulo"</em>, renderiza sites em JavaScript via aba auxiliar e traz o botão <strong>Apontar</strong> para marcar elementos na tela. Veja detalhes em <a href="compatibility.html">Compatibilidade</a>.</p>
             </div>
           </details>
 

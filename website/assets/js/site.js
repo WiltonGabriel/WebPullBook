@@ -268,5 +268,119 @@
         }
       });
     }
+
+    // Compatibility Tier-1 live filter & progressive collapse for scalability
+    const compatTbody = document.querySelector('tbody[data-sync-table="compat-tier-1"]');
+    const compatSearch = document.getElementById('compat-search');
+    const compatAdapterFilter = document.getElementById('compat-adapter-filter');
+    const compatCount = document.getElementById('compat-count');
+    const compatToggle = document.getElementById('compat-toggle-all');
+    if (compatTbody && (compatSearch || compatAdapterFilter || compatToggle)) {
+      const isPt = (root.lang || '').toLowerCase().startsWith('pt');
+      const rows = Array.from(compatTbody.querySelectorAll('tr'));
+      const collapsedLimit = Number(compatToggle?.getAttribute('data-collapsed-limit')) || 8;
+      let expandedAll = false;
+
+      if (compatAdapterFilter) {
+        const adapters = Array.from(
+          new Set(
+            rows
+              .map((tr) => tr.querySelector('td:nth-child(2) code')?.textContent?.trim() || '')
+              .filter(Boolean)
+          )
+        ).sort();
+        for (const id of adapters) {
+          const opt = document.createElement('option');
+          opt.value = id;
+          opt.textContent = id;
+          compatAdapterFilter.appendChild(opt);
+        }
+      }
+
+      const updateCompatTable = () => {
+        const query = (compatSearch?.value || '').trim().toLowerCase();
+        const selectedAdapter = compatAdapterFilter?.value || 'all';
+        const isFiltered = Boolean(query) || selectedAdapter !== 'all';
+        let matched = 0;
+        let visible = 0;
+
+        for (const tr of rows) {
+          const rowText = (tr.textContent || '').toLowerCase();
+          const rowAdapter = tr.querySelector('td:nth-child(2) code')?.textContent?.trim() || '';
+          const matchesQuery = !query || rowText.includes(query);
+          const matchesAdapter = selectedAdapter === 'all' || rowAdapter === selectedAdapter;
+          const isMatch = matchesQuery && matchesAdapter;
+          let show = isMatch;
+          if (isMatch) {
+            matched += 1;
+            if (!isFiltered && !expandedAll && matched > collapsedLimit) {
+              show = false;
+            }
+          }
+          if (show) visible += 1;
+          tr.classList.toggle('compat-row-hidden', !show);
+        }
+
+        if (compatToggle) {
+          const canToggle = !isFiltered && rows.length > collapsedLimit;
+          compatToggle.hidden = !canToggle;
+          compatToggle.setAttribute('aria-expanded', String(expandedAll));
+        }
+
+        if (compatCount) {
+          if (matched === 0) {
+            compatCount.textContent = isPt
+              ? 'Nenhuma entrada filtrada encontrada — sites fora da lista continuam compatíveis via Universal Smart Extractor.'
+              : 'No verified entries match this filter — unlisted sites still work via Universal Smart Extractor.';
+          } else {
+            compatCount.textContent = isPt
+              ? `Exibindo ${visible} de ${rows.length} entradas verificadas`
+              : `Showing ${visible} of ${rows.length} verified entries`;
+          }
+        }
+      };
+
+      compatSearch?.addEventListener('input', updateCompatTable);
+      compatAdapterFilter?.addEventListener('change', updateCompatTable);
+      compatToggle?.addEventListener('click', () => {
+        expandedAll = !expandedAll;
+        updateCompatTable();
+      });
+      updateCompatTable();
+    }
+
+    // FAQ Expand/Collapse All progressive buttons paired with capture-phase toggle sync
+    const toggleAllButtons = Array.from(document.querySelectorAll('.accordion-toggle-all[data-target-accordion]'));
+    if (toggleAllButtons.length > 0) {
+      const btnByAccordion = new Map();
+      for (const btn of toggleAllButtons) {
+        const targetId = btn.getAttribute('data-target-accordion') || '';
+        const accordion = targetId ? document.getElementById(targetId) : null;
+        if (!accordion) continue;
+        btnByAccordion.set(accordion, btn);
+        btn.addEventListener('click', () => {
+          const expand = btn.getAttribute('aria-expanded') !== 'true';
+          for (const item of accordion.querySelectorAll(':scope > details')) {
+            item.open = expand;
+          }
+          btn.setAttribute('aria-expanded', String(expand));
+        });
+      }
+
+      document.addEventListener(
+        'toggle',
+        (e) => {
+          const target = e.target;
+          if (!(target instanceof HTMLDetailsElement)) return;
+          const accordion = target.parentElement;
+          const btn = accordion ? btnByAccordion.get(accordion) : null;
+          if (!btn) return;
+          const items = Array.from(accordion.querySelectorAll(':scope > details'));
+          const allOpen = items.length > 0 && items.every((d) => d.open);
+          btn.setAttribute('aria-expanded', String(allOpen));
+        },
+        { capture: true }
+      );
+    }
   });
 })();

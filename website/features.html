@@ -102,60 +102,19 @@
   <main id="main-content">
     <section class="page-hero">
       <div class="container">
-        <h1>Features &amp; Extraction Architecture</h1>
-        <p>An overview of how WebPullBook extracts multi-chapter web content, handles dynamic pages, formats EPUB 2 and EPUB 3 archives, and manages local caching.</p>
+        <h1>Features, Reader Profiles &amp; Architecture</h1>
+        <p>From one-click presets for Kindle and Kobo to adaptive throttling, local caching, and the zero-dependency extraction pipeline underneath.</p>
       </div>
     </section>
 
     <section class="section">
       <div class="container">
         <div class="section-header">
-          <h2>1. Extraction &amp; Dynamic Page Handling</h2>
-          <p>WebPullBook combines structural DOM scoring, heuristic discovery, and browser tab capture for both static HTML pages and client-rendered JavaScript sites.</p>
+          <h2 id="profiles-heading">1. Reader Profiles &amp; Output Formats</h2>
+          <p>Reader Profiles are fixed presets available in both the main <strong>Series</strong> panel and <strong>Advanced Options</strong>. Selecting a profile configures EPUB standard, pop-up footnotes, JPEG cover conversion, image resolution, compression, and typography together. Editing any field switches to <strong>Custom</strong> automatically so manual tweaks are preserved.</p>
         </div>
 
-        <div class="grid-3">
-          <article class="card">
-            <h3>Active-Tab DOM Capture</h3>
-            <p>Clicking the toolbar icon reads the already-rendered DOM from the active tab (<code>sourceTabId</code>), avoiding an extra cold HTTP fetch on pages you already have open.</p>
-          </article>
-
-          <article class="card">
-            <h3>Generic Heuristic Extractor</h3>
-            <p>Scores link clusters and prose density (using the <em>"Innermost Node Wins"</em> rule), supports <code>&lt;br&gt;</code>-separated paragraphs, and extracts JSON-LD <code>@graph</code>, Open Graph, and volume headings on generic HTML sites.</p>
-          </article>
-
-          <article class="card">
-            <h3>SPA / JavaScript Tab Mode</h3>
-            <p>Detects unhydrated SPA shells and renders chapters in a single reusable background tab (<code>TabRenderPool</code>), waiting for DOM mutations to settle and pausing if an anti-bot challenge appears.</p>
-          </article>
-
-          <article class="card">
-            <h3>Visual Selector Picker (Pick)</h3>
-            <p>In Advanced Options, click <strong>Pick</strong> to select the chapter list, chapter body, or excluded elements directly on the page, or run the automatic selector assistant.</p>
-          </article>
-
-          <article class="card">
-            <h3>Per-Domain Selector Isolation</h3>
-            <p>Custom CSS selectors and regex filters stay restricted to the current site session or saved <strong>Domain Rules</strong>, with automatic fallback to the native adapter if a custom list selector matches zero chapters.</p>
-          </article>
-
-          <article class="card">
-            <h3>Sequential "Next Chapter" Crawler</h3>
-            <p>When a site does not have an index page, WebPullBook can start from a chapter URL and follow sequential <em>"Next Chapter"</em> links automatically.</p>
-          </article>
-        </div>
-      </div>
-    </section>
-
-    <section class="section alt">
-      <div class="container">
-        <div class="section-header">
-          <h2>2. Reader Profiles (Kindle, Kobo &amp; Mobile)</h2>
-          <p>Reader Profiles are fixed presets available in the <strong>Series</strong> tab and in <strong>Advanced Options</strong>. Picking a profile configures EPUB version, pop-up footnotes, cover JPEG conversion, image compression, resolution, and typography at once.</p>
-        </div>
-
-        <div class="table-wrap">
+        <div class="table-wrap" tabindex="0" role="region" aria-labelledby="profiles-heading">
           <table>
             <thead>
               <tr>
@@ -235,36 +194,21 @@
             </tbody>
           </table>
         </div>
-      </div>
-    </section>
 
-    <section class="section">
-      <div class="container">
-        <div class="section-header">
-          <h2>3. Book Structure, Curation &amp; Image Pipeline</h2>
-          <p>Options for organizing volumes, reviewing chapter text before packaging, and handling cover and inline images.</p>
-        </div>
-
-        <div class="grid-2">
+        <div class="grid-3" style="margin-block-start: 1.5rem;">
           <article class="card">
-            <h3>EPUB Structure &amp; Default Cover</h3>
-            <ul>
-              <li><strong>Cover Page &amp; Default Cover Fallback (<code>cover.xhtml</code>):</strong> Uses the detected book cover, a local uploaded image, or automatically generates a default cover with the WebPullBook logo emblem, title, and author when no cover is found on the page.</li>
-              <li><strong>Information Page (<code>info.xhtml</code>):</strong> Optional front page displaying title, author, language, chapter count, genre tags, source link, and synopsis.</li>
-              <li><strong>Start-of-Book Table of Contents (<code>nav.xhtml</code> / <code>toc.xhtml</code>):</strong> Placed at the beginning of the book when enabled, supporting nested volumes.</li>
-              <li><strong>End-of-Book Page (<code>end.xhtml</code>):</strong> Optional closing page with a custom message, book summary, source link, and generation date.</li>
-              <li><strong>Pop-up Footnotes &amp; Internal Links:</strong> Intra-chapter footnote anchors convert to EPUB 3 pop-up footnotes, and links between chapters in the same book rewrite to internal EPUB file paths.</li>
-            </ul>
+            <h3>EPUB 2 &amp; EPUB 3 (<code>.epub</code>)</h3>
+            <p>Produces W3C-valid EPUB archives packaged locally with an uncompressed <code>mimetype</code> header first. EPUB 2 emits strict XHTML 1.1 and <code>toc.ncx</code>; EPUB 3 emits XHTML5, <code>nav.xhtml</code> landmarks, <code>epub:type="footnote"</code> pop-ups, and collection metadata.</p>
           </article>
 
           <article class="card">
-            <h3>Chapter Curation &amp; Image Processing</h3>
-            <ul>
-              <li><strong>Preview &amp; Quick Edit:</strong> Preview any chapter and edit its title or paragraph text inline before exporting.</li>
-              <li><strong>Merge Chapters &amp; Merge Open Tabs:</strong> Combine checked chapters into one, or capture open browser tabs into a single anthology or separate volume files.</li>
-              <li><strong>Volume &amp; Range Selection:</strong> Toggle all volumes at once, or select individual items and ranges with <code>Ctrl+Click</code> and <code>Shift+Click</code> on volume chips and chapter rows.</li>
-              <li><strong>Magic-Byte MIME Detection &amp; Deduplication:</strong> Verifies binary raster image headers (PNG, JPEG, GIF, WebP, AVIF, BMP), rejects disguised HTML or SVG payloads, retries HTTP failures anonymously, preserves animated GIF/APNG/WebP, and deduplicates identical images by content hash.</li>
-            </ul>
+            <h3>Single-File HTML (<code>.html</code>)</h3>
+            <p>Bundles cover, Table of Contents, and images as embedded data URIs inside one self-contained offline HTML document with clean reader typography and theme support.</p>
+          </article>
+
+          <article class="card">
+            <h3>Markdown &amp; Plain Text (<code>.md</code> / <code>.txt</code>)</h3>
+            <p>Exports normalized headings, paragraphs, emphasis, and scene separators free of navigation chrome—ideal for note vaults (Obsidian, Logseq) or minimal text archives.</p>
           </article>
         </div>
       </div>
@@ -273,37 +217,125 @@
     <section class="section alt">
       <div class="container">
         <div class="section-header">
-          <h2>4. Safe Mode, Local Cache &amp; Library</h2>
-          <p>Tools for pacing requests on rate-limited servers, resuming interrupted downloads, and tracking ongoing works.</p>
+          <h2>2. Book Structure, Volumes &amp; Output Organization</h2>
+          <p>Fine-grained control over volume splitting, front and back matter, typography, and where exported files land on disk.</p>
+        </div>
+
+        <div class="grid-2">
+          <article class="card">
+            <h3>Front Matter, Colophon &amp; Typography</h3>
+            <ul>
+              <li><strong>Cover Page &amp; Fallback Emblem (<code>cover.xhtml</code>):</strong> Fetches high-resolution covers (unwrapping WordPress Jetpack <code>i0.wp.com</code> resizing proxies), accepts local image uploads, or generates a branded default cover when missing. Alerts if a cover uses WebP/AVIF when JPEG conversion is off.</li>
+              <li><strong>Information &amp; Closing Pages (<code>info.xhtml</code> / <code>end.xhtml</code>):</strong> Customizable metadata sheet (title, author, language, genres, synopsis, source URL) and optional End-of-Book colophon with custom closing text.</li>
+              <li><strong>Start-of-Book Table of Contents (<code>nav.xhtml</code> / <code>toc.xhtml</code>):</strong> Nested volume and chapter navigation placed upfront, with internal chapter links automatically rewritten to relative book paths.</li>
+              <li><strong>Book Stylesheet Controls:</strong> Customize font family, base size, line height, paragraph spacing, text alignment, and indented paragraphs—or inspect the generated CSS live.</li>
+            </ul>
+          </article>
+
+          <article class="card">
+            <h3>Volumes, Folder Layouts &amp; Custom Folders</h3>
+            <ul>
+              <li><strong>One File per Volume or Single Book:</strong> Automatically groups chapters by detected volume (with manual volume override and re-detection), exports separate volume books, or merges everything up to a configurable max chapter limit.</li>
+              <li><strong>Path &amp; Filename Templates:</strong> Organize downloads using tokens like <code>%Root%</code>, <code>%Title%</code>, <code>%Filename%</code>, <code>%Author%</code>, <code>%Volume%</code>, <code>%Format%</code>, and <code>%Language%</code> with illegal path character sanitization.</li>
+              <li><strong>Browser Downloads or Direct PC Folder:</strong> Save into a structured Downloads subfolder via <code>chrome.downloads</code>, or grant access to a local folder in Chromium using <code>showDirectoryPicker</code> (<code>FileSystemDirectoryHandle</code>).</li>
+            </ul>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <div class="section-header">
+          <h2>3. Curation, Text Cleaning &amp; Media Pipeline</h2>
+          <p>Inspect and clean content before saving, while strict binary checks keep images crisp and standards-compliant.</p>
         </div>
 
         <div class="grid-3">
           <article class="card">
-            <h3>Adaptive Safe Mode &amp; Manual Latency</h3>
-            <p>Toggle <strong>Safe Mode</strong> during an export to use 1x sequential requests, dynamic latency backoff, batch rest pauses, and <code>Retry-After</code> headers—or set a manual delay between chapters (<code>0–30,000 ms</code>) in Advanced Options.</p>
+            <h3>Preview, Quick Edit &amp; Merge</h3>
+            <p>Open any chapter in the preview modal to verify sanitized prose and word count, edit titles or paragraphs inline (marking it protected from cache overwrite), reverse order, select ranges via <code>Shift+Click</code> / <code>Ctrl+Click</code>, or combine open tabs via <strong>Merge Tabs</strong>.</p>
           </article>
 
           <article class="card">
-            <h3>7-Day IndexedDB Cache</h3>
-            <p>Downloaded chapters are saved in local <code>IndexedDB</code> (up to 64 MB, configurable TTL from 1 to 14 days) so interrupted downloads can resume without re-fetching completed chapters.</p>
+            <h3>Ad, Watermark &amp; Regex Stripping</h3>
+            <p>Removes scripts, inline handlers, ads, adjacent next/previous navigation links, decoded Cloudflare <code>__cf_email__</code> spans, and hidden decoy text from inline <code>&lt;style&gt;</code> rules—plus custom literal lines or <code>/regex/flags</code> patterns per series.</p>
           </article>
 
           <article class="card">
-            <h3>Library &amp; Batch Updates</h3>
-            <p>Save series to your local Library (viewed unified or grouped by site), check for newly published chapters, and export unread chapters across tracked works with <strong>Download Updates</strong>.</p>
+            <h3>Safe Image Validation &amp; Fallbacks</h3>
+            <p>Inspects magic bytes on every image (PNG, JPEG, GIF, WebP, AVIF, BMP), drops disguised HTML/SVG payloads or 1×1 pixels, preserves animated GIF/APNG/WebP, deduplicates identical assets by content hash, flattens transparent JPEGs on white, and applies temporary DNR <code>Referer</code> rules (slots <code>120..129</code>) only when hotlink protection blocks anonymous fetches.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section alt">
+      <div class="container">
+        <div class="section-header">
+          <h2>4. Safe Mode, Local Cache &amp; Ongoing Library</h2>
+          <p>Built to finish multi-hundred-chapter downloads reliably without hammering source servers or losing progress.</p>
+        </div>
+
+        <div class="grid-3">
+          <article class="card">
+            <h3>Adaptive Safe Mode &amp; Pause Recovery</h3>
+            <p>Toggle <strong>Safe Mode</strong> even mid-download for 1x sequential pacing, latency backoff, batch cooldowns, and HTTP <code>Retry-After</code> handling. Pause cleanly between chapters, cancel safely, or re-queue errors with <strong>Retry Failed</strong>.</p>
+          </article>
+
+          <article class="card">
+            <h3>Resumable IndexedDB Cache</h3>
+            <p>Stores sanitized chapter XHTML in local <code>IndexedDB</code> (capped at 64 MB with automatic LRU cleanup and configurable 1–14 day TTL or disabled mode) so dropped connections resume immediately from completed chapters.</p>
+          </article>
+
+          <article class="card">
+            <h3>Library Tracking &amp; Batch Updates</h3>
+            <p>Track ongoing web novels in one unified grid or grouped by origin domain, check all saved series for newly released chapters, and export only unread chapters across updated books via <strong>Download Updates</strong>.</p>
           </article>
         </div>
 
         <div class="screenshot-grid" style="margin-block-start: 2rem;">
           <figure class="screenshot-card">
-            <img src="assets/screenshots/workspace-preview-edit.png" alt="WebPullBook chapter preview and inline editing modal" width="1280" height="800" loading="lazy">
+            <img src="assets/screenshots/workspace-preview-edit.png" alt="WebPullBook chapter preview and inline editing modal showing sanitized chapter prose and footnote links" width="1280" height="800" loading="lazy">
             <figcaption><strong>Chapter Preview &amp; Inline Edit:</strong> review sanitized XHTML and adjust titles or paragraphs before packing.</figcaption>
           </figure>
 
           <figure class="screenshot-card">
-            <img src="assets/screenshots/workspace-library.png" alt="WebPullBook Library and IndexedDB cache sessions view" width="1280" height="800" loading="lazy">
-            <figcaption><strong>Library &amp; Local Cache:</strong> resume cached sessions and check for new chapters across saved series.</figcaption>
+            <img src="assets/screenshots/workspace-library.png" alt="WebPullBook Library and IndexedDB cache sessions displaying tracked series update badge and resume controls" width="1280" height="800" loading="lazy">
+            <figcaption><strong>Library &amp; Local Cache:</strong> resume cached sessions and detect new chapters across saved series.</figcaption>
           </figure>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <div class="section-header">
+          <h2>5. Under the Hood: Extraction &amp; Security Pipeline</h2>
+          <p>Every extraction runs locally as vanilla ES modules inside your browser—with zero bundler, zero build step, and zero runtime dependencies—combining user convenience tools with clean engineering boundaries.</p>
+        </div>
+
+        <div class="grid-3">
+          <article class="card">
+            <h3>Active-Tab Capture (<code>sourceTabId</code>)</h3>
+            <p>Opening the workspace reads the already-rendered DOM from your active tab when available, avoiding redundant HTTP requests and respecting the session you already authenticated in the browser.</p>
+          </article>
+
+          <article class="card">
+            <h3>DOM Scoring &amp; Universal Extractor</h3>
+            <p>Adapters inheriting from <code>BaseParser</code> compete via structural <code>matchScore</code>. When no specialized layout matches, <strong>Universal Smart Extractor</strong> (<code>generic-html</code>) scores link clusters and prose density (<em>Innermost Node Wins</em>), crawls sequential <em>"Next Chapter"</em> links, or loads JavaScript pages via a single reusable background tab (<code>TabRenderPool</code>).</p>
+          </article>
+
+          <article class="card">
+            <h3>Pick Selectors &amp; Strict Sanitization</h3>
+            <p>Custom CSS selectors via interactive <strong>Pick</strong> stay scoped per domain in <code>wpbDomainRules</code> (falling back automatically if a custom list selector breaks). All extracted HTML passes through whitelist sanitization (<code>HtmlSanitizer</code>) and strict XML 1.0 serialization before <code>CompressionStream</code> builds the final ZIP container.</p>
+          </article>
+        </div>
+
+        <div class="cta-row" style="margin-block-start: 1.75rem;">
+          <a class="btn secondary" href="compatibility.html">View Compatibility &amp; Generic Modes &rarr;</a>
+          <a class="btn secondary" href="contributing.html">Developer &amp; Parser Guide &rarr;</a>
+          <a class="btn secondary" href="privacy.html">Privacy &amp; MV3 Permissions &rarr;</a>
         </div>
       </div>
     </section>

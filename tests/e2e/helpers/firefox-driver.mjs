@@ -20,14 +20,14 @@ function findFreePort() {
 export function resolveFirefoxExecutablePath() {
   const envBin = process.env.FIREFOX_BIN;
   if (envBin && fs.existsSync(envBin)) return envBin;
-  for (const candidate of ['/usr/bin/firefox', '/usr/local/bin/firefox']) {
-    if (fs.existsSync(candidate)) return candidate;
-  }
   try {
     const found = execFileSync('which', ['firefox'], { encoding: 'utf8', stdio: 'pipe' }).trim();
     if (found && fs.existsSync(found)) return found;
   } catch {
-    // fallback to playwright firefox
+    // fallback to known install paths
+  }
+  for (const candidate of ['/usr/bin/firefox', '/usr/local/bin/firefox']) {
+    if (fs.existsSync(candidate)) return candidate;
   }
   const cacheDir = path.join(os.homedir(), '.cache', 'ms-playwright');
   if (fs.existsSync(cacheDir)) {

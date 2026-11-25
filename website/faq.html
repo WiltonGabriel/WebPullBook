@@ -58,6 +58,22 @@
       },
       {
         "@type": "Question",
+        "name": "Can I download only newly released chapters of an ongoing story?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes. Save any series to the local Library, then click Check All or Download Updates in the Library tab to fetch and package only chapters published since your last download."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "What if a website isn't listed on the Compatibility page?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "You can still extract unlisted websites using WebPullBook's Universal Smart Extractor (generic-html), sequential Next Chapter crawling, SPA background tab mode, visual Pick CSS selectors, and Merge Tabs."
+        }
+      },
+      {
+        "@type": "Question",
         "name": "Why is WebPullBook not on the Chrome Web Store yet?",
         "acceptedAnswer": {
           "@type": "Answer",
@@ -142,20 +158,26 @@
 
     <section class="section">
       <div class="container">
-        <h2>E-Readers, Kindle &amp; Kobo Profiles</h2>
-        <div class="accordion" aria-label="E-Readers and Profiles FAQ">
+        <div class="faq-section-head">
+          <h2 id="faq-ereaders">E-Readers, Profiles &amp; Formats</h2>
+          <button type="button" class="btn secondary sm accordion-toggle-all" data-target-accordion="acc-ereaders" aria-expanded="false">
+            <span class="expand">Expand all</span>
+            <span class="collapse">Collapse all</span>
+          </button>
+        </div>
+        <div id="acc-ereaders" class="accordion" aria-labelledby="faq-ereaders">
           <details>
             <summary>What is the difference between Kindle (Legacy) and Kindle (Modern)?</summary>
             <div class="details-body">
-              <p><strong>Kindle (Legacy)</strong> generates an <strong>EPUB 2 (2.0.1)</strong> archive with classic <code>toc.ncx</code> navigation, 1200px JPEG images, and no EPUB 3 HTML5 tags. It is intended for Amazon's <em>Send to Kindle</em> service (email, web uploader, or mobile app), which can reject certain EPUB 3 tags.</p>
+              <p><strong>Kindle (Legacy)</strong> generates an <strong>EPUB 2 (2.0.1)</strong> archive with classic <code>toc.ncx</code> navigation, 1200px JPEG images, and no EPUB 3 HTML5 tags. It is built for Amazon's <em>Send to Kindle</em> service (email, web uploader, or mobile app), which can reject certain EPUB 3 markup.</p>
               <p><strong>Kindle (Modern)</strong> generates an <strong>EPUB 3</strong> archive with semantic <code>nav.xhtml</code>, series collection metadata, 1200px JPEG images, and <strong>EPUB 3 Pop-up Footnotes</strong>. Choose it when converting or transferring via <strong>Calibre (USB &rarr; KFX or AZW3)</strong> or reading in EPUB 3 apps.</p>
             </div>
           </details>
 
           <details>
-            <summary>Which profile should I use for Kobo, Tolino, or PocketBook?</summary>
+            <summary>Which profile should I use for Kobo, Tolino, PocketBook, or phones?</summary>
             <div class="details-body">
-              <p>Choose <strong>Kobo &amp; E-Readers</strong>. It outputs EPUB 3 with pop-up footnotes, series/volume metadata, and 1080px JPEG optimization while preserving full color on color E-Ink displays.</p>
+              <p>For <strong>Kobo, Tolino, or PocketBook</strong>, choose <strong>Kobo &amp; E-Readers</strong> (EPUB 3 with pop-up footnotes, series/volume metadata, and 1080px JPEG images preserving color on color E-Ink screens). For <strong>phones, tablets, Apple Books, or Thorium Reader</strong>, choose <strong>Modern Default</strong> to keep original uncompressed images.</p>
             </div>
           </details>
 
@@ -167,44 +189,118 @@
           </details>
 
           <details>
-            <summary>What happens when a book page does not have a cover image?</summary>
+            <summary>What happens when a book page has no cover or uses a WebP cover?</summary>
             <div class="details-body">
-              <p>When WebPullBook cannot detect a cover image on the source page (or when creating a book via <strong>Merge Tabs</strong>), it automatically generates a default cover with the WebPullBook logo emblem, the book title, and the author. You can also upload a local image file, click <strong>Generate Cover</strong> after editing the title, or click <strong>Clear Cover</strong> if you prefer no cover.</p>
+              <p>When WebPullBook cannot detect a cover image (or when building a book via <strong>Merge Tabs</strong>), it automatically generates a clean default cover with the WebPullBook emblem, title, and author. You can also upload a local image file, click <strong>Generate Cover</strong> after editing metadata, or click <strong>Clear Cover</strong>. If a detected cover is WebP/AVIF while JPEG cover conversion is turned off, a warning note reminds you so older readers don't reject it.</p>
+            </div>
+          </details>
+
+          <details>
+            <summary>Can I download only part of a 1,000+ chapter story or export separate volume books?</summary>
+            <div class="details-body">
+              <p>Yes. Use the <strong>First Chapter</strong> / <strong>Last Chapter</strong> dropdowns, search filter, <code>Shift+Click</code> range selection, or click individual <strong>Volume</strong> chips to keep only the range you want. Choose <strong>1 File per Volume</strong> to generate separate EPUBs per volume, or <strong>Single File</strong> to pack everything (with nested volume navigation) up to your configured chapter limit.</p>
+            </div>
+          </details>
+
+          <details>
+            <summary>When should I export Single-File HTML, Markdown, or Plain Text instead of EPUB?</summary>
+            <div class="details-body">
+              <p>Choose <strong>Single-File HTML</strong> when you want one offline web page (with embedded cover and images) that opens in any browser with no e-reader app needed. Choose <strong>Markdown (<code>.md</code>)</strong> for note-taking tools like Obsidian or Logseq, or <strong>Plain Text (<code>.txt</code>)</strong> for minimal lightweight archives.</p>
             </div>
           </details>
         </div>
 
-        <h2 style="margin-block-start: 2.5rem;">Website Extraction, Selectors &amp; SPA Mode</h2>
-        <div class="accordion" aria-label="Extraction and Selectors FAQ">
+        <div class="faq-section-head" style="margin-block-start: 2.5rem;">
+          <h2 id="faq-extraction">Extraction, Selectors &amp; SPA Pages</h2>
+          <button type="button" class="btn secondary sm accordion-toggle-all" data-target-accordion="acc-extraction" aria-expanded="false">
+            <span class="expand">Expand all</span>
+            <span class="collapse">Collapse all</span>
+          </button>
+        </div>
+        <div id="acc-extraction" class="accordion" aria-labelledby="faq-extraction">
+          <details>
+            <summary>What if the website I read isn't listed on the Compatibility page?</summary>
+            <div class="details-body">
+              <p>Try pasting its URL or clicking the WebPullBook toolbar icon anyway. <strong>Universal Smart Extractor</strong> (<code>generic-html</code>) is a core focus of WebPullBook: it automatically discovers chapter lists, follows sequential <em>"Next Chapter"</em> links, renders JavaScript pages via background tab when static HTML is empty, and offers the point-and-click <strong>Pick</strong> tool for any custom layout.</p>
+            </div>
+          </details>
+
           <details>
             <summary>What should I do if a website loads 0 chapters or misses chapter content?</summary>
             <div class="details-body">
-              <p>WebPullBook tries active-tab DOM capture, SPA tab rendering, and heuristic selector detection automatically. If a custom layout still needs manual adjustment:</p>
-              <p>1. Open <strong>Advanced Options &rarr; Extraction, Parser &amp; Rules</strong>.<br>
-              2. Click <strong>Pick</strong> next to <em>Chapter list CSS selector</em> or <em>Chapter content CSS selector</em> to click the element directly on the open web page, or click <strong>Auto-detect selectors</strong>.<br>
-              3. Click <strong>Save for Domain</strong> to keep the rule for that domain, then click <strong>Load Series</strong> again.</p>
+              <p>Open <strong>Advanced Options &rarr; Extraction, Parser &amp; Rules</strong>, click <strong>Pick</strong> next to <em>Chapter list CSS selector</em> or <em>Chapter content CSS selector</em> to click directly on the open page (or click <strong>Auto-detect selectors</strong>), test with <strong>Test selectors</strong>, and click <strong>Save for Domain</strong> before clicking <strong>Load Series</strong> again. Domain rules stay isolated so they never interfere with other websites.</p>
+            </div>
+          </details>
+
+          <details>
+            <summary>How do I remove recurring translator notes, banners, or ads from chapters?</summary>
+            <div class="details-body">
+              <p>Built-in sanitization automatically removes scripts, ads, adjacent chapter navigation links, and hidden CSS decoy classes. For recurring text specific to one translation or site, add either an <strong>Excluded elements CSS selector</strong> (via <strong>Pick</strong>) or lines/regular expressions (like <code>/[Translator Note:.*?]/gi</code>) inside <strong>Text / Regex strip filter</strong> in Advanced Options.</p>
             </div>
           </details>
 
           <details>
             <summary>How can I package a story or blog that has no Table of Contents page?</summary>
             <div class="details-body">
-              <p>Two options are available for sites without an index page:</p>
-              <p>• <strong>Sequential "Next Chapter" Crawling:</strong> Open the first chapter you want to include and load its URL in WebPullBook. When <em>Follow "Next Chapter" link automatically</em> is enabled (default), the generic extractor follows the next-chapter links in order.<br>
-              • <strong>Merge Open Tabs:</strong> Open the chapters or articles in browser tabs, click <strong>Merge Tabs</strong> in WebPullBook's top bar, reorder or preview them, and export them as a single book or separate files.</p>
+              <p>Two options work out of the box:</p>
+              <p>• <strong>Sequential "Next Chapter" Crawling:</strong> Open the first chapter you want to include and load its URL in WebPullBook. When <em>Follow "Next Chapter" link automatically</em> is enabled (default), the generic extractor follows next-chapter links in sequence.<br>
+              • <strong>Merge Open Tabs:</strong> Open the chapters or articles in browser tabs, click <strong>Merge Tabs</strong> in WebPullBook's top bar, reorder or preview them, and export them as one book or standalone files.</p>
+            </div>
+          </details>
+
+          <details>
+            <summary>Does WebPullBook work on sites where I need to sign in first?</summary>
+            <div class="details-body">
+              <p>Yes, as long as your logged-in browser session can already read the standard HTML text in an open tab. Sign in normally in a regular browser tab first, then open WebPullBook from that tab. WebPullBook cannot bypass paid subscriptions you do not own, encrypted DRM readers, or <code>&lt;canvas&gt;</code> pixel-only chapters.</p>
+            </div>
+          </details>
+        </div>
+
+        <div class="faq-section-head" style="margin-block-start: 2.5rem;">
+          <h2 id="faq-resilience">Ongoing Series, Errors &amp; Saving Files</h2>
+          <button type="button" class="btn secondary sm accordion-toggle-all" data-target-accordion="acc-resilience" aria-expanded="false">
+            <span class="expand">Expand all</span>
+            <span class="collapse">Collapse all</span>
+          </button>
+        </div>
+        <div id="acc-resilience" class="accordion" aria-labelledby="faq-resilience">
+          <details>
+            <summary>How do I track an ongoing series and download only newly released chapters?</summary>
+            <div class="details-body">
+              <p>After loading or exporting a story, click <strong>Save to Library</strong>. Later, open the <strong>Library</strong> tab and click <strong>Check All</strong> to scan tracked series for newly published chapters, or click <strong>Download Updates</strong> to export only the unread chapters in one batch.</p>
             </div>
           </details>
 
           <details>
             <summary>Why did the export pause with an Anti-Bot (Cloudflare) or Rate-Limit banner?</summary>
             <div class="details-body">
-              <p>When a website responds with a Cloudflare challenge or HTTP 429/503 rate limit, WebPullBook pauses the queue to avoid repeated blocked requests. Click <strong>Open page to verify</strong> on the banner, complete the check in that browser tab, enable <strong>Safe Mode</strong>, and click <strong>Resume</strong>. Already downloaded chapters remain cached in <code>IndexedDB</code>.</p>
+              <p>When a website returns a Cloudflare check or HTTP 429/503 rate limit, WebPullBook pauses immediately so your IP is not flooded with failed requests. Click <strong>Open page to verify</strong> on the banner, solve the verification check in that browser tab, keep <strong>Safe Mode</strong> enabled, and click <strong>Resume</strong>. Completed chapters remain cached locally in <code>IndexedDB</code>.</p>
+            </div>
+          </details>
+
+          <details>
+            <summary>What happens if a few chapters fail or my internet disconnects mid-download?</summary>
+            <div class="details-body">
+              <p>Already downloaded chapters stay cached in <code>IndexedDB</code> (default 7-day retention). You can click <strong>Retry Failed</strong> after a partial export, or reopen the session from <strong>Library &rarr; Recent Downloads &amp; Local Cache</strong> and click <strong>Resume Download</strong> (or <strong>Pack Cached Only</strong>).</p>
+            </div>
+          </details>
+
+          <details>
+            <summary>Can I save books directly to a custom folder on my computer?</summary>
+            <div class="details-body">
+              <p>Inside your Downloads folder, custom relative folder templates work on <strong>both Firefox and Chromium</strong> (for example <code>WebPullBook/%Author%/%Title%</code>). In <strong>Chrome, Edge, and Brave</strong>, you can also click <strong>Choose PC Folder</strong> in Advanced Options to write directly to any folder via <code>showDirectoryPicker</code>.</p>
             </div>
           </details>
         </div>
 
-        <h2 style="margin-block-start: 2.5rem;">Privacy, Beta Status &amp; Troubleshooting</h2>
-        <div class="accordion" aria-label="Privacy and Beta FAQ">
+        <div class="faq-section-head" style="margin-block-start: 2.5rem;">
+          <h2 id="faq-privacy-beta">Privacy, Releases, Licensing &amp; Bug Reports</h2>
+          <button type="button" class="btn secondary sm accordion-toggle-all" data-target-accordion="acc-privacy-beta" aria-expanded="false">
+            <span class="expand">Expand all</span>
+            <span class="collapse">Collapse all</span>
+          </button>
+        </div>
+        <div id="acc-privacy-beta" class="accordion" aria-labelledby="faq-privacy-beta">
           <details>
             <summary>Does any data leave my browser?</summary>
             <div class="details-body">
@@ -216,6 +312,13 @@
             <summary>Why is WebPullBook not on the Chrome Web Store yet?</summary>
             <div class="details-body">
               <p>WebPullBook is officially published on <a href="https://addons.mozilla.org/firefox/addon/webpullbook/" data-wpb-link="firefoxAddons">Firefox Add-ons (AMO)</a> for Mozilla Firefox 128+. Chrome Web Store submission is planned next; during open-source <strong>Beta</strong>, Chrome, Edge, and Brave users can install the release package directly from <a href="https://github.com/WiltonGabriel/WebPullBook/releases" data-wpb-link="releases">GitHub Releases</a>.</p>
+            </div>
+          </details>
+
+          <details>
+            <summary>What license does WebPullBook use?</summary>
+            <div class="details-body">
+              <p>Starting from <code>v1.7.0-beta</code>, WebPullBook is licensed under the <a href="https://github.com/WiltonGabriel/WebPullBook/blob/main/LICENSE">GNU Affero General Public License v3.0 (<code>AGPL-3.0-or-later</code>)</a>. Earlier historical releases up to <code>v1.6.1-beta</code> remain under the MIT License.</p>
             </div>
           </details>
 

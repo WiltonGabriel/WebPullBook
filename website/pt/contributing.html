@@ -151,12 +151,12 @@
     <section class="section alt">
       <div class="container">
         <div class="section-header">
-          <h2>Como Desenvolver e Adicionar um Novo Parser (Adaptador)</h2>
-          <p>Todos os adaptadores herdam de <code>BaseParser</code> (<code>src/core/base-parser.js</code>) e utilizam pontuação estrutural de DOM (<code>matchScore</code>) para continuar funcionando mesmo quando um site muda de domínio.</p>
+          <h2>Pipeline em 5 Etapas &amp; Como Criar um Novo Adaptador</h2>
+          <p>O WebPullBook separa a extração em cinco camadas claras em <code>src/</code>: <strong>Descoberta &amp; Pontuação</strong> (<code>ParserRegistry</code>), <strong>Coleta</strong> (<code>collectAllChapters</code> / SPA <code>TabRenderPool</code>), <strong>Download &amp; Sanitização Whitelist</strong> (<code>AdaptiveRateLimiter</code> / <code>HtmlSanitizer</code> / <code>serializeChapterXhtml</code>), <strong>Mídia &amp; Cache</strong> (<code>fetchImageBytes</code> / regras DNR <code>120..129</code> / <code>WebPullBookCache</code>) e <strong>Empacotamento</strong> (<code>exporterRegistry</code> + <code>createZipBlob</code>).</p>
         </div>
 
         <figure>
-          <figcaption id="parser-example-caption-pt">Estrutura mínima em 4 passos para adicionar um novo parser em <code>src/parsers/</code>:</figcaption>
+          <figcaption id="parser-example-caption-pt">Estrutura mínima em 4 passos para adicionar uma subclasse de <code>BaseParser</code> em <code>src/parsers/</code>:</figcaption>
           <pre role="region" aria-labelledby="parser-example-caption-pt" tabindex="0"><code>// 1. Crie src/parsers/meu-layout-adapter.js estendendo BaseParser
 import { BaseParser } from '../core/parser-engine.js';
 
@@ -193,49 +193,64 @@ export class MeuLayoutParser extends BaseParser {
 
 // 2. Registre uma instância em src/parsers/index.js antes do genericHtmlParser
 // 3. Adicione fixtures HTML anonimizadas em tests/fixtures/ e expectativas em snapshots.json
-// 4. Execute `npm run check` e documente o adaptador em docs/COMPATIBILITY.md</code></pre>
+// 4. Execute `npm run check` e documente o layout em docs/COMPATIBILITY.md</code></pre>
         </figure>
+
+        <div class="grid-3" style="margin-block-start: 1.75rem;">
+          <article class="card">
+            <h3>Zero Dependências de Runtime &amp; Minimalismo</h3>
+            <p>Mantenha <code>dependencies</code> vazio em <code>package.json</code>, reaproveite utilitários de <code>src/core/parser-helpers.js</code>, construa ícones via <code>document.createElementNS</code> (zero emojis, zero <code>innerHTML</code>) e garanta paridade exata entre <code>src/workspace/locales/</code> e <code>_locales/</code>.</p>
+          </article>
+
+          <article class="card">
+            <h3>Fontes Únicas de Verdade</h3>
+            <p>Edite apenas <a href="https://github.com/WiltonGabriel/WebPullBook/blob/main/docs/COMPATIBILITY.md">docs/COMPATIBILITY.md</a> e <code>docs/READER_PRESETS*.md</code> — nunca adicione URLs ou domínios reais em documentação — e execute <code>node scripts/sync-website.mjs</code> duas vezes para atualizar o site estático.</p>
+          </article>
+
+          <article class="card">
+            <h3>Sem Contorno de Controle de Acesso</h3>
+            <p>Nunca tente burlar DRM, paywalls ou desafios CAPTCHA anti-bot. Ao surgir bloqueio Cloudflare ou HTTP 429/503, acione o circuito de pausa e deixe a pessoa concluir a verificação manualmente em aba normal.</p>
+          </article>
+        </div>
       </div>
     </section>
 
     <section class="section">
       <div class="container">
         <div class="section-header">
-          <h2>Desenvolvimento Local &amp; Testes</h2>
-          <p>O lint estático roda apenas com a biblioteca padrão do Node.js 22+. Os testes unitários/snapshots usam <code>jsdom</code> e <code>fake-indexeddb</code>, e o teste E2E no navegador Chromium utiliza Playwright (via <code>npm install</code>).</p>
+          <h2>Desenvolvimento Local &amp; Testes Cross-Browser</h2>
+          <p>O lint estático roda apenas com a biblioteca padrão do Node.js 22+. Testes unitários e snapshots usam <code>jsdom</code> e <code>fake-indexeddb</code>, a análise estática usa <code>@biomejs/biome</code> e <code>addons-linter</code>, e os testes E2E validam tanto Playwright Chromium quanto Firefox 128+ MV3.</p>
         </div>
 
         <figure>
-          <figcaption id="dev-commands-caption-pt">Comandos de verificação:</figcaption>
-          <pre role="region" aria-labelledby="dev-commands-caption-pt" tabindex="0"><code># 1. Lint estático, sintaxe JS, CSP MV3, links Markdown, paridade i18n e validação do site (sem npm install)
+          <figcaption id="dev-commands-caption-pt">Fluxo completo de verificação:</figcaption>
+          <pre role="region" aria-labelledby="dev-commands-caption-pt" tabindex="0"><code># 1. Lint estático, sintaxe JS, CSP MV3, links Markdown, paridade i18n e validação do site (zero dependências)
 npm run lint
 
-# 2. Instalar devDependencies de teste (jsdom, fake-indexeddb, playwright)
-npm install
+# 2. Instalar devDependencies de teste e análise estática
+npm ci
 
-# 3. Testes unitários, sanitizador, ZIP, cache, exportadores e snapshots de parsers
-npm test
+# 3. Análise JS (Biome) e checagem do pacote ZIP pela ferramenta da Mozilla (addons-linter)
+npm run lint:biome
+npm run lint:amo
 
-# 4. Executar lint e testes unitários em sequência
-npm run check
-
-# 5. Validar arquivos EPUB 2 e EPUB 3 com W3C EPUBCheck (requer Java 21+ e EPUBCheck)
-REQUIRE_EPUBCHECK=1 npm run test:epubcheck
-
-# 6. Teste End-to-End da extensão no Chromium (requer Playwright Chromium)
-npx playwright install chromium
-npm run test:e2e</code></pre>
+# 4. Testes unitários, snapshots, W3C EPUBCheck, E2E no Chromium e E2E MV3 no Firefox
+REQUIRE_EPUBCHECK=1 npm test
+REQUIRE_EPUBCHECK=1 npm run test:e2e
+REQUIRE_EPUBCHECK=1 npm run test:e2e:firefox</code></pre>
         </figure>
+
+        <p style="color: var(--muted); margin-block-start: 0.75rem;">Quer testar sites externos reais durante o desenvolvimento de parsers sem expor URLs pessoais no Git? Coloque suas listas e scripts locais dentro do diretório ignorado <code>.local-e2e/</code>.</p>
 
         <div class="grid-2" style="margin-block-start: 2rem;">
           <article class="card">
             <h3>Guia do Desenvolvedor (<a href="https://github.com/WiltonGabriel/WebPullBook/blob/main/CONTRIBUTING.md">CONTRIBUTING.md</a>)</h3>
-            <p>Consulte o guia no repositório para instruções sobre criação de subclasses de <code>BaseParser</code>, adição de fixtures HTML anonimizadas em <code>tests/fixtures/</code> e checklist de Pull Request.</p>
+            <p>Consulte o guia completo no repositório para criar subclasses de <code>BaseParser</code>, adicionar fixtures HTML anonimizadas em <code>tests/fixtures/</code> e preparar Pull Requests.</p>
           </article>
 
           <article class="card">
             <h3>Instruções para Agentes de IA (<a href="https://github.com/WiltonGabriel/WebPullBook/blob/main/AGENTS.md">AGENTS.md</a>)</h3>
-            <p>O repositório inclui um arquivo <code>AGENTS.md</code> para ferramentas de programação com IA (Codex, Cursor, Claude Code, Antigravity, Copilot), documentando responsabilidades de módulos, limites SRP, regras MV3 CSP e etapas de verificação.</p>
+            <p>O repositório mantém um arquivo <code>AGENTS.md</code> documentando arquitetura, limites de responsabilidade entre módulos, regras de CSP MV3 e etapas de sincronização do site.</p>
           </article>
         </div>
       </div>

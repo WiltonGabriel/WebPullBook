@@ -29,14 +29,14 @@ jobs:
           cache: "npm"
 
       - name: Set up Java for EPUBCheck
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: "temurin"
           java-version: "21"
 
       - name: Cache EPUBCheck
         id: cache-epubcheck
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: .tools/epubcheck
           key: epubcheck-${{ env.EPUBCHECK_VERSION }}
@@ -71,6 +71,16 @@ jobs:
         env:
           REQUIRE_EPUBCHECK: "1"
         run: npm run test:e2e
+
+      - name: Setup non-Snap Firefox for MV3 E2E test
+        uses: browser-actions/setup-firefox@v1
+        with:
+          firefox-version: "latest"
+
+      - name: Run Firefox MV3 E2E integration test
+        env:
+          REQUIRE_EPUBCHECK: "1"
+        run: FIREFOX_BIN="$(command -v firefox)" npm run test:e2e:firefox
 
       - name: Dry-run extension ZIP package & Mozilla addons-linter
         run: |

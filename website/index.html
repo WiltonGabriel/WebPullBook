@@ -231,39 +231,39 @@
     <section class="section">
       <div class="container">
         <div class="section-header">
-          <h2>Everyday Features</h2>
-          <p>Clean books without menus, pop-ups, or web clutter—processed locally on your computer.</p>
+          <h2>Built for Everyday Reading</h2>
+          <p>Turn cluttered multi-page web stories into calm, distraction-free books stored offline on your own device.</p>
         </div>
 
         <div class="grid-3">
           <article class="card">
-            <h3>Reads Straight From Your Open Tab</h3>
-            <p>Uses the page you already have open, even on modern sites where chapters only appear after scripts finish loading.</p>
+            <h3>Reads From Your Open Tab</h3>
+            <p>Works directly with the page you already loaded—including modern JavaScript sites and stories you are signed in to—without extra logins or third-party servers.</p>
           </article>
 
           <article class="card">
-            <h3>Automatic Chapters &amp; Volumes</h3>
-            <p>Finds chapter lists and splits books by volume automatically, follows <em>"Next Chapter"</em> links when there is no index, and includes a point-and-click picker for custom sites.</p>
+            <h3>Automatic Clean Text &amp; Noise Removal</h3>
+            <p>Automatically strips website menus, ads, next/previous links, and hidden anti-scraper text, while letting you add custom filters for recurring translator notes or banners.</p>
           </article>
 
           <article class="card">
-            <h3>Ready-Made Kindle &amp; Kobo Presets</h3>
-            <p>Pick a profile for <em>Send to Kindle</em>, Calibre USB, Kobo, or phone/tablet apps—formatting, footnotes, and image sizes are configured for you.</p>
+            <h3>Long Series, Volumes &amp; Partial Ranges</h3>
+            <p>Organizes 1,000+ chapter stories by volume automatically, lets you pick exact chapter ranges (e.g., catching up from chapter 500 to 620), or splits volumes into separate books.</p>
           </article>
 
           <article class="card">
-            <h3>Preview, Fix Text, Merge &amp; Covers</h3>
-            <p>Read any chapter before saving, fix titles or paragraphs, combine multiple open browser tabs into one book (<strong>Merge Tabs</strong>), or generate a clean cover automatically.</p>
+            <h3>Kindle, Kobo &amp; Calibre Ready</h3>
+            <p>One-click presets set EPUB 2 (<em>Send to Kindle</em>), EPUB 3 (<em>Kobo</em> and <em>Calibre USB</em>), cover JPEG conversion, pop-up footnotes, and clean shelves metadata (title, author, genres, synopsis).</p>
           </article>
 
           <article class="card">
-            <h3>Clean Covers &amp; Illustrations</h3>
-            <p>Downloads book covers and in-chapter illustrations reliably, filters broken placeholder images, keeps animated images when needed, and avoids storing duplicate pictures.</p>
+            <h3>Library Tracking &amp; Download New Chapters</h3>
+            <p>Save ongoing series in your Library to check for newly released chapters and export only the latest updates instead of re-downloading the entire book every week.</p>
           </article>
 
           <article class="card">
-            <h3>Safe Speed, Resume &amp; Library</h3>
-            <p>Adaptive Safe Mode adjusts download speed so sites stay responsive. Progress stays saved in your browser for 7 days, and the Library helps you grab newly released chapters.</p>
+            <h3>Covers, Tab Merging, Cache &amp; Safe Speed</h3>
+            <p>Preview and edit text before saving, merge open browser tabs into one anthology, apply a clean default cover when missing, pace downloads safely, and resume interrupted runs for 7 days.</p>
           </article>
         </div>
       </div>
@@ -272,11 +272,11 @@
     <section class="section alt">
       <div class="container">
         <div class="section-header">
-          <h2>Choose Your File Format</h2>
+          <h2 id="formats-heading">Choose Your File Format</h2>
           <p>Save books in the format that works best with your e-reader, phone, or note-taking app.</p>
         </div>
 
-        <div class="table-wrap">
+        <div class="table-wrap" tabindex="0" role="region" aria-labelledby="formats-heading">
           <table>
             <thead>
               <tr>
@@ -316,8 +316,8 @@
         </div>
 
         <div class="cta-row" style="margin-block-start: 1.75rem;">
-          <a class="btn secondary" href="features.html">See All Features &amp; Reader Profiles &rarr;</a>
-          <a class="btn secondary" href="compatibility.html">Compatibility &amp; Limitations &rarr;</a>
+          <a class="btn secondary" href="features.html">Explore Every Feature &amp; Architecture &rarr;</a>
+          <a class="btn secondary" href="compatibility.html">Compatibility &amp; Universal Extractor &rarr;</a>
         </div>
       </div>
     </section>
@@ -326,7 +326,7 @@
       <div class="container">
         <div class="section-header">
           <h2>Common Questions</h2>
-          <p>Quick answers about e-readers, privacy, and supported websites.</p>
+          <p>Quick answers about e-readers, updating ongoing stories, privacy, and supported websites.</p>
         </div>
 
         <div class="accordion" aria-label="Quick FAQ">
@@ -334,6 +334,20 @@
             <summary>Which profile should I pick for Kindle or Kobo?</summary>
             <div class="details-body">
               <p>If you use Amazon <strong>Send to Kindle</strong> (email, website, or mobile app), choose <strong>Kindle (Legacy)</strong> so Amazon's converter accepts every file smoothly. If you transfer books via <strong>Calibre (USB)</strong>, choose <strong>Kindle (Modern)</strong>. On <strong>Kobo, Tolino, or PocketBook</strong>, choose <strong>Kobo &amp; E-Readers</strong>.</p>
+            </div>
+          </details>
+
+          <details>
+            <summary>Can I download only new chapters without re-downloading the whole novel?</summary>
+            <div class="details-body">
+              <p>Yes. Click <strong>Save to Library</strong> on any loaded series. Later, go to the <strong>Library</strong> tab and click <strong>Check All</strong> or <strong>Download Updates</strong> to fetch and package only the chapters published since your last download—and interrupted downloads resume automatically from your local 7-day cache.</p>
+            </div>
+          </details>
+
+          <details>
+            <summary>What if a story website isn't listed on the Compatibility page?</summary>
+            <div class="details-body">
+              <p>You can still try it right away. <strong>Universal Smart Extractor</strong> (<code>generic-html</code>) automatically detects chapter lists, follows sequential <em>"Next Chapter"</em> links, renders JavaScript sites via background tab, and includes a point-and-click <strong>Pick</strong> button for custom layouts. See <a href="compatibility.html">Compatibility</a>.</p>
             </div>
           </details>
 

@@ -126,7 +126,10 @@ export async function inspectEpubFile(
 
     const bodyText = (body.textContent || '').replace(/\s+/g, ' ').trim();
     const pEls = Array.from(body.getElementsByTagNameNS('*', 'p'));
-    const hTitle = body.getElementsByTagNameNS('*', 'h1')[0]?.textContent?.trim() || '';
+    const hTitle =
+      body.getElementsByTagNameNS('*', 'h1')[0]?.textContent?.trim() ||
+      body.getElementsByTagNameNS('*', 'h2')[0]?.textContent?.trim() ||
+      '';
     const imgs = Array.from(body.getElementsByTagNameNS('*', 'img'));
 
     if (WATERMARK_LEAK_RX.test(xmlStr)) {

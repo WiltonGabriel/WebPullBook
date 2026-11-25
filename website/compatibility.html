@@ -103,18 +103,37 @@
     <section class="page-hero">
       <div class="container">
         <h1>Website &amp; Browser Compatibility</h1>
-        <p>WebPullBook prioritizes structural DOM compatibility over domain-specific rules, combining dedicated layout adapters with a generic heuristic extractor, visual CSS selector picking, and tab rendering.</p>
+        <p>WebPullBook prioritizes structural DOM compatibility over domain-locked rules, combining dedicated layout adapters with our generic heuristic extractor, visual CSS selector picker, and tab rendering.</p>
       </div>
     </section>
 
     <section class="section">
       <div class="container">
-        <div class="section-header">
-          <h2>1. Verified &amp; Tested (Verificados e Testados)</h2>
-          <p>Sites and adapters tested end-to-end in live usage and covered by automated HTML regression fixtures in CI:</p>
+        <div class="callout success" style="margin-block-start: 0; margin-block-end: 2rem;">
+          <strong>Universal Smart Extractor (<code>generic-html</code>) Is a Core Focus</strong>
+          <p>If your website does not appear in <em>Verified &amp; Tested</em> below, that does <strong>not</strong> mean it is unsupported. A core focus of WebPullBook is working directly on unlisted sites using <strong>Universal Smart Extractor</strong> (<code>generic-html</code>), sequential <em>"Next Chapter"</em> crawling, <strong>SPA / JavaScript tab rendering</strong>, the visual <strong>Pick</strong> CSS selector, and <strong>Merge Tabs</strong>. Always try loading a page directly before assuming an adapter is needed.</p>
         </div>
 
-        <div class="table-wrap">
+        <div class="section-header">
+          <h2 id="tier1-heading">1. Verified &amp; Tested (Verificados e Testados)</h2>
+          <p>Sites and structural adapters verified end-to-end in live usage and covered by automated HTML regression fixtures in CI (synchronized from <a href="https://github.com/WiltonGabriel/WebPullBook/blob/main/docs/COMPATIBILITY.md">docs/COMPATIBILITY.md</a>):</p>
+        </div>
+
+        <div class="compat-filter-bar" role="search" aria-label="Filter verified compatibility entries">
+          <input id="compat-search" type="search" placeholder="Search verified site, adapter, or feature (e.g., EPUB, SPA, AJAX)..." aria-label="Search verified entries">
+          <select id="compat-adapter-filter" aria-label="Filter by adapter ID">
+            <option value="all">All adapters</option>
+          </select>
+        </div>
+        <div class="compat-filter-meta">
+          <span id="compat-count" aria-live="polite"></span>
+          <button id="compat-toggle-all" class="btn secondary sm compat-toggle-btn" type="button" data-collapsed-limit="8" aria-expanded="false" hidden>
+            <span class="expand">Show Full Verified List</span>
+            <span class="collapse">Show Compact View</span>
+          </button>
+        </div>
+
+        <div class="table-wrap table-wrap--compat" tabindex="0" role="region" aria-labelledby="tier1-heading">
           <table>
             <thead>
               <tr>
@@ -170,11 +189,11 @@
     <section class="section alt">
       <div class="container">
         <div class="section-header">
-          <h2>2. Added / Not Officially Tested (Adicionados, mas Não Testados Oficialmente)</h2>
+          <h2 id="tier2-heading">2. Added / Not Officially Tested (Adicionados, mas Não Testados Oficialmente)</h2>
           <p>Adapters or structural layouts implemented with unit fixtures, awaiting formal live verification across complete books:</p>
         </div>
 
-        <div class="table-wrap">
+        <div class="table-wrap" tabindex="0" role="region" aria-labelledby="tier2-heading">
           <table>
             <thead>
               <tr>
@@ -200,11 +219,11 @@
     <section class="section">
       <div class="container">
         <div class="section-header">
-          <h2>3. Potentially Compatible (Potencialmente Compatíveis)</h2>
+          <h2 id="tier3-heading">3. Potentially Compatible (Potencialmente Compatíveis)</h2>
           <p>Websites without a dedicated adapter that can be extracted using the generic parser and fallback tools:</p>
         </div>
 
-        <div class="table-wrap">
+        <div class="table-wrap" tabindex="0" role="region" aria-labelledby="tier3-heading">
           <table>
             <thead>
               <tr>
@@ -243,11 +262,11 @@
     <section class="section alt">
       <div class="container">
         <div class="section-header">
-          <h2>4. Not Compatible (Não Compatíveis)</h2>
+          <h2 id="tier4-heading">4. Not Compatible (Não Compatíveis)</h2>
           <p>Categories that cannot be extracted due to technical or access boundaries:</p>
         </div>
 
-        <div class="table-wrap">
+        <div class="table-wrap" tabindex="0" role="region" aria-labelledby="tier4-heading">
           <table>
             <thead>
               <tr>
@@ -281,18 +300,18 @@
     <section class="section">
       <div class="container">
         <div class="section-header">
-          <h2>Browser Compatibility &amp; Test Coverage</h2>
-          <p>Difference between declared compatibility, automated CI verification, and manual validation:</p>
+          <h2 id="browser-compat-heading">Browser Compatibility &amp; Automated Test Coverage</h2>
+          <p>Both Chromium and Firefox Manifest V3 engines run automated end-to-end extension tests on every CI run:</p>
         </div>
 
-        <div class="table-wrap">
+        <div class="table-wrap" tabindex="0" role="region" aria-labelledby="browser-compat-heading">
           <table>
             <thead>
               <tr>
                 <th>Browser Family</th>
                 <th>Minimum Version</th>
                 <th>Declared Compatibility</th>
-                <th>Verification Coverage (CI vs. Manual)</th>
+                <th>Verification Coverage (CI &amp; Store Packaging)</th>
               </tr>
             </thead>
             <tbody>
@@ -300,19 +319,19 @@
                 <td><strong>Google Chrome / Chromium</strong></td>
                 <td>Chrome 114+</td>
                 <td><span class="badge success">Supported (MV3)</span></td>
-                <td><strong>Automated in CI:</strong> Playwright Chromium E2E test suite (loading unpacked extension, extracting series, previewing/editing, Library, exporting EPUB, and W3C EPUBCheck validation) + the native Node.js unit and snapshot test suite.</td>
+                <td><strong>Automated in CI:</strong> Playwright Chromium E2E suite (loading unpacked extension, extracting series, preview/edit, Library updates, DNR header rules, exporting EPUB, and W3C EPUBCheck validation) + Node.js unit and snapshot test suite.</td>
               </tr>
               <tr>
                 <td><strong>Microsoft Edge / Brave / Vivaldi</strong></td>
                 <td>Chromium 114+</td>
                 <td><span class="badge success">Supported (MV3)</span></td>
-                <td><strong>Automated Engine + Manual UI:</strong> Uses the same Chromium Manifest V3 extension runtime tested in CI; verified manually via unpacked loading.</td>
+                <td><strong>Same MV3 Engine:</strong> Runs on the same Chromium Manifest V3 extension runtime tested in CI via unpacked loading or store packaging.</td>
               </tr>
               <tr>
                 <td><strong>Mozilla Firefox</strong></td>
-                <td>Firefox 128.0+</td>
+                <td>Firefox 128+</td>
                 <td><span class="badge success">Supported (MV3 Gecko)</span></td>
-                <td><strong>Signed on AMO + Static CI Checks:</strong> Published as a signed add-on on <a href="https://addons.mozilla.org/firefox/addon/webpullbook/" data-wpb-link="firefoxAddons">Firefox Add-ons (AMO)</a> with <code>data_collection_permissions</code> declared as none. CI statically validates <code>background.scripts</code>, <code>browser_specific_settings.gecko</code> (Firefox 128+), and Firefox <code>Origin</code> header DNR rules, while interactive UI testing in Firefox is performed manually via <code>about:debugging</code>.</td>
+                <td><strong>Signed on AMO + Automated Firefox E2E in CI:</strong> Published on <a href="https://addons.mozilla.org/firefox/addon/webpullbook/" data-wpb-link="firefoxAddons">Firefox Add-ons (AMO)</a> with <code>data_collection_permissions</code> set to none. CI runs <code>addons-linter</code>, static <code>gecko</code>/DNR checks, and a real Firefox 128+ Marionette MV3 E2E suite with W3C EPUBCheck.</td>
               </tr>
             </tbody>
           </table>

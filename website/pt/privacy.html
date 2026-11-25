@@ -142,11 +142,11 @@
     <section class="section alt">
       <div class="container">
         <div class="section-header">
-          <h2>3. Dados Armazenados Localmente no Seu Dispositivo</h2>
-          <p>Todas as configurações e caches da extensão permanecem dentro do perfil local do seu navegador (nunca sincronizados via <code>chrome.storage.sync</code>) e podem ser apagados a qualquer momento:</p>
+          <h2 id="storage-table-heading-pt">3. Dados Armazenados Localmente no Seu Dispositivo</h2>
+          <p>Todas as configurações e caches da extensão permanecem dentro do perfil local do seu navegador (nunca sincronizados via <code>chrome.storage.sync</code>) e podem ser exportados, inspecionados ou apagados a qualquer momento:</p>
         </div>
 
-        <div class="table-wrap">
+        <div class="table-wrap" tabindex="0" role="region" aria-labelledby="storage-table-heading-pt">
           <table>
             <thead>
               <tr>
@@ -202,11 +202,11 @@
     <section class="section">
       <div class="container">
         <div class="section-header">
-          <h2>4. Justificativa Técnica das Permissões no Manifest V3</h2>
-          <p>O WebPullBook declara as seguintes permissões no arquivo <code>manifest.json</code>:</p>
+          <h2 id="perms-table-heading-pt">4. Justificativa Técnica das Permissões no Manifest V3</h2>
+          <p>O WebPullBook declara apenas as permissões estritamente necessárias para leitura de páginas escolhidas e empacotamento local em <code>manifest.json</code>:</p>
         </div>
 
-        <div class="table-wrap">
+        <div class="table-wrap" tabindex="0" role="region" aria-labelledby="perms-table-heading-pt">
           <table>
             <thead>
               <tr>
@@ -251,6 +251,23 @@
         </div>
 
         <p style="margin-block-start: 1rem;">Para o Mozilla Firefox Add-ons (AMO), o arquivo <code>manifest.json</code> também declara <code>data_collection_permissions: { "required": ["none"] }</code> em <code>browser_specific_settings.gecko</code>, refletindo que o WebPullBook não coleta nem transmite dados de usuário.</p>
+
+        <div class="grid-3" style="margin-block-start: 1.75rem;">
+          <article class="card">
+            <h3>Controle de Hosts no Firefox</h3>
+            <p>No Firefox 128+, permissões de acesso a sites no MV3 são concedidas explicitamente por você. Se faltarem, o WebPullBook exibe aviso claro em vez de falhar silenciosamente e ativa as regras de sessão via <code>chrome.permissions.onAdded</code> assim que liberadas.</p>
+          </article>
+
+          <article class="card">
+            <h3>CSP Estrita, Sanitização &amp; Auditoria</h3>
+            <p>A extensão distribui módulos ES legíveis em <code>src/</code> sem bundler, minificação ou dependências externas de runtime, sob CSP <code>script-src 'self'</code> (sem <code>eval</code>), checagem de URL em <code>assertSafeHttpUrl()</code> e whitelist HTML estrita antes de gravar qualquer arquivo.</p>
+          </article>
+
+          <article class="card">
+            <h3>Como Inspecionar ou Apagar Tudo</h3>
+            <p>Use <strong>Limpar Cache</strong> na Biblioteca para remover capítulos armazenados, <strong>Restaurar Todas as Opções Avançadas</strong> para zerar preferências, exporte as configurações em JSON para inspeção ou remova os dados da extensão nas configurações do navegador.</p>
+          </article>
+        </div>
       </div>
     </section>
 

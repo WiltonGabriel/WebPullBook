@@ -102,11 +102,11 @@
   <main id="main-content">
     <section class="page-hero">
       <div class="container">
-        <h1>Installation &amp; Basic Usage</h1>
-        <p>WebPullBook is officially published on <a href="https://addons.mozilla.org/firefox/addon/webpullbook/" data-wpb-link="firefoxAddons">Firefox Add-ons (AMO)</a> for Firefox 128+. Chrome Web Store submission is planned next; during Beta, Chrome, Edge, and Brave users can install the official release package from GitHub Releases with no build step.</p>
+        <h1>Installation &amp; Sending Books to Your E-Reader</h1>
+        <p>Start saving web stories in under two minutes. Firefox users get one-click updates via <a href="https://addons.mozilla.org/firefox/addon/webpullbook/" data-wpb-link="firefoxAddons">Firefox Add-ons (AMO)</a>; Chrome, Edge, and Brave users can load the official Beta ZIP package directly with no extra software.</p>
         <div class="cta-row" style="margin-block-start: 1.25rem; margin-block-end: 0;">
           <a class="btn primary" href="https://addons.mozilla.org/firefox/addon/webpullbook/" data-wpb-link="firefoxAddons">Install on Firefox Add-ons</a>
-          <a class="btn secondary" href="https://github.com/WiltonGabriel/WebPullBook/releases/tag/v1.7.1" data-wpb-link="releasesLatest">GitHub Releases (Chrome / Chromium)</a>
+          <a class="btn secondary" href="https://github.com/WiltonGabriel/WebPullBook/releases/tag/v1.7.1" data-wpb-link="releasesLatest">Download ZIP (Chrome / Edge / Brave)</a>
           <a class="btn secondary" href="https://github.com/WiltonGabriel/WebPullBook/releases" data-wpb-link="releases">All Releases &amp; Checksums</a>
         </div>
       </div>
@@ -114,27 +114,98 @@
 
     <section class="section">
       <div class="container">
+        <div class="section-header">
+          <h2>1. Install in Your Browser</h2>
+          <p>Pick your browser below. Updates keep all your saved settings, Reader Profiles, domain rules, and Library history intact.</p>
+        </div>
+
         <div class="grid-2">
           <article class="card">
             <span class="badge accent">Mozilla Firefox 128+ (Manifest V3)</span>
-            <h2>1. Mozilla Firefox (128 or Newer)</h2>
+            <h3>Mozilla Firefox (128 or Newer)</h3>
             <ol>
               <li>Open the <a href="https://addons.mozilla.org/firefox/addon/webpullbook/" data-wpb-link="firefoxAddons">WebPullBook page on Firefox Add-ons</a>.</li>
-              <li>Click <strong>Add to Firefox</strong> and confirm the requested permissions.</li>
-              <li>Signed updates are delivered automatically by Firefox Add-ons.</li>
-              <li><em>For Developers:</em> Local development builds can still be loaded temporarily in <code>about:debugging#/runtime/this-firefox</code>.</li>
+              <li>Click <strong>Add to Firefox</strong> and accept the permission prompt so WebPullBook can read pages you ask it to extract.</li>
+              <li>Pin the WebPullBook icon in the toolbar puzzle menu so it stays one click away.</li>
+              <li><strong>Updates:</strong> Signed updates arrive automatically from Mozilla AMO.</li>
             </ol>
           </article>
 
           <article class="card">
             <span class="badge accent">Chrome • Edge • Brave • Vivaldi • Chromium</span>
-            <h2>2. Chrome &amp; Chromium Browsers</h2>
+            <h3>Chrome, Edge, Brave &amp; Vivaldi (Beta Package)</h3>
             <ol>
-              <li>Download the release archive from <a href="https://github.com/WiltonGabriel/WebPullBook/releases/tag/v1.7.1" data-wpb-link="releasesLatest">GitHub Releases</a> and extract it to a permanent folder on your computer.</li>
-              <li>Open <code>chrome://extensions/</code> (or <code>edge://extensions/</code> / <code>brave://extensions/</code>).</li>
-              <li>Enable <strong>Developer mode</strong> in the top-right corner.</li>
-              <li>Click <strong>Load unpacked</strong> and select the extracted folder containing <code>manifest.json</code>.</li>
+              <li>Download the latest release <code>.zip</code> from <a href="https://github.com/WiltonGabriel/WebPullBook/releases/tag/v1.7.1" data-wpb-link="releasesLatest">GitHub Releases</a> and unzip it into a permanent folder (do not delete that folder later).</li>
+              <li>In your address bar, open <code>chrome://extensions/</code> (or <code>edge://extensions/</code> / <code>brave://extensions/</code>).</li>
+              <li>Turn on <strong>Developer mode</strong> in the top-right corner.</li>
+              <li>Click <strong>Load unpacked</strong> and choose the unzipped folder containing <code>manifest.json</code>.</li>
             </ol>
+          </article>
+        </div>
+
+        <div class="callout" style="margin-block-start: 1.5rem;">
+          <strong>Updating a Manual Chromium Install Without Losing Data</strong>
+          <p>When a new release comes out, download and unzip the new package over the same folder (or run <code>git pull</code>) and click the circular reload arrow on WebPullBook inside <code>chrome://extensions/</code>. Your Reader Profiles, Library series, and Domain Rules remain preserved inside <code>chrome.storage.local</code>.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section alt">
+      <div class="container">
+        <div class="section-header">
+          <h2>2. Make Your First Ebook</h2>
+          <p>A normal reader workflow from web page to saved file:</p>
+        </div>
+
+        <div class="grid-3">
+          <article class="card">
+            <h3>Step 1: Open the Story</h3>
+            <p>Open a story's table of contents (or any single chapter) in a normal tab. If the site uses a login or anti-bot screen, sign in or verify in that tab first.</p>
+          </article>
+
+          <article class="card">
+            <h3>Step 2: Pick Chapters &amp; Profile</h3>
+            <p>Click the <strong>WebPullBook</strong> toolbar icon. Check metadata and chapters, choose a partial range or volumes if needed, and pick your device in <strong>Reader Profile</strong> (for example <em>Kindle Legacy</em>, <em>Kindle Modern</em>, or <em>Kobo</em>).</p>
+          </article>
+
+          <article class="card">
+            <h3>Step 3: Export &amp; Save</h3>
+            <p>Enable <strong>Safe Mode</strong> for large stories, then click <strong>Pack EPUB</strong>. Finished books save straight into your Downloads folder (or custom PC folder in Chromium).</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <div class="section-header">
+          <h2>3. Transfer to Your E-Reader or App</h2>
+          <p>Quick tips so covers, footnotes, and series shelves display properly on your reading device:</p>
+        </div>
+
+        <div class="grid-3">
+          <article class="card">
+            <h3>Amazon Kindle</h3>
+            <ul>
+              <li><strong>Send to Kindle (Email / Web / App):</strong> Use <strong>Kindle (Legacy)</strong> so WebPullBook exports EPUB 2 with 1200px JPEG images accepted by Amazon's converter.</li>
+              <li><strong>USB via Calibre:</strong> Use <strong>Kindle (Modern)</strong> (EPUB 3), then let Calibre convert to <code>KFX</code> or <code>AZW3</code> before transferring over USB.</li>
+            </ul>
+          </article>
+
+          <article class="card">
+            <h3>Kobo, Tolino &amp; PocketBook</h3>
+            <ul>
+              <li>Export using <strong>Kobo &amp; E-Readers</strong> (EPUB 3 with 1080px JPEG images and pop-up footnotes).</li>
+              <li>Copy the <code>.epub</code> via USB directly into your reader (or use Calibre with KoboTouch / KePub conversion if you prefer KePub pagination).</li>
+            </ul>
+          </article>
+
+          <article class="card">
+            <h3>Phones, Tablets &amp; Desktop</h3>
+            <ul>
+              <li>Use <strong>Modern Default</strong> for Apple Books, Thorium Reader, Calibre Viewer, Moon+ Reader, KOReader, or ReadEra.</li>
+              <li>Prefer reading without an app? Switch <strong>Output Format</strong> to <strong>Single-File HTML</strong> and open it directly in any mobile browser.</li>
+            </ul>
           </article>
         </div>
       </div>
@@ -143,46 +214,28 @@
     <section class="section alt">
       <div class="container">
         <div class="section-header">
-          <h2>How to Use</h2>
-          <p>Basic workflow after loading the extension in your browser:</p>
-        </div>
-
-        <div class="grid-3">
-          <article class="card">
-            <h3>1. Open the Target Page</h3>
-            <p>Navigate to a book's table-of-contents page (or a chapter page) in your browser. If the site requires login or anti-bot verification, complete it in that tab first.</p>
-          </article>
-
-          <article class="card">
-            <h3>2. Launch the Workspace</h3>
-            <p>Click the <strong>WebPullBook</strong> toolbar icon. The workspace tab opens and reads the active tab's DOM to fill in metadata, volumes, and chapters (applying the default cover if the page has no cover image).</p>
-          </article>
-
-          <article class="card">
-            <h3>3. Select Profile &amp; Export</h3>
-            <p>Choose a <strong>Reader Profile</strong> (such as <em>Kindle Legacy</em> for Send to Kindle, <em>Kindle Modern</em> for Calibre USB, or <em>Kobo</em>), select your chapters or volumes, and click <strong>Pack EPUB</strong>.</p>
-          </article>
-        </div>
-      </div>
-    </section>
-
-    <section class="section">
-      <div class="container">
-        <div class="section-header">
-          <h2>For Developers: Git Clone &amp; Updating</h2>
-          <p>For developers and contributors running from source or testing changes, the repository root can be loaded directly as an unpacked extension:</p>
+          <h2>4. Running From Source &amp; Developer Workflow</h2>
+          <p>WebPullBook uses native ES modules with zero build step and zero runtime dependencies—the repository root loads directly as an unpacked extension in both Chromium and Firefox, while optional Node.js tooling validates every change locally.</p>
         </div>
 
         <figure>
-          <figcaption id="clone-cmd-caption">Clone the repository and optionally run local checks:</figcaption>
+          <figcaption id="clone-cmd-caption">Clone the repository, run checks, and execute cross-browser E2E tests:</figcaption>
           <pre role="region" aria-labelledby="clone-cmd-caption" tabindex="0"><code>git clone https://github.com/WiltonGabriel/WebPullBook.git
 cd WebPullBook
-# Optional: run static lint (Node.js 22+) or full checks (requires npm install)
+
+# Load temporarily in Firefox via about:debugging -> Load Temporary Add-on -> manifest.json
+# Or run static checks (requires only Node.js 22+ stdlib)
 npm run lint
-npm install && npm run check</code></pre>
+
+# Install dev tooling (jsdom, fake-indexeddb, Biome, addons-linter, Playwright) and run all suites
+npm ci
+npm run lint:biome
+REQUIRE_EPUBCHECK=1 npm test
+REQUIRE_EPUBCHECK=1 npm run test:e2e
+REQUIRE_EPUBCHECK=1 npm run test:e2e:firefox</code></pre>
         </figure>
 
-        <p style="color: var(--muted);">End users do not need Git—use Firefox Add-ons or download the clean release <code>.zip</code> above. For manual Chromium updates, extract the new <code>.zip</code> over the same folder (or run <code>git pull</code>) and reload on <code>chrome://extensions/</code>; saved settings and Library entries in <code>chrome.storage.local</code> are preserved.</p>
+        <p style="color: var(--muted);">Need private real-site E2E scripts while developing new parser adapters? Place them inside the gitignored <code>.local-e2e/</code> directory—see <a href="contributing.html">Contributing</a> for the full adapter and testing guide.</p>
       </div>
     </section>
   </main>

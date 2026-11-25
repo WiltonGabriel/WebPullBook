@@ -103,18 +103,37 @@
     <section class="page-hero">
       <div class="container">
         <h1>Compatibilidade de Sites e Navegadores</h1>
-        <p>O WebPullBook prioriza compatibilidade estrutural de DOM em vez de regras presas a domínios, combinando adaptadores de layout com um extrator heurístico genérico, seletor visual CSS e renderização de abas.</p>
+        <p>O WebPullBook prioriza compatibilidade estrutural de DOM em vez de regras presas a domínios, combinando adaptadores dedicados com o extrator heurístico genérico, seletor visual CSS e renderização de abas.</p>
       </div>
     </section>
 
     <section class="section">
       <div class="container">
-        <div class="section-header">
-          <h2>1. Verificados e Testados (Verified &amp; Tested)</h2>
-          <p>Sites e adaptadores verificados de ponta a ponta em uso real e cobertos por fixtures automatizadas de regressão no CI:</p>
+        <div class="callout success" style="margin-block-start: 0; margin-block-end: 2rem;">
+          <strong>Foco no Extrator Universal Inteligente (<code>generic-html</code>)</strong>
+          <p>Um site não aparecer em <em>Verificados e Testados</em> abaixo <strong>não significa que ele não funciona</strong>. Um foco central do WebPullBook é extrair automaticamente sites fora da lista usando o <strong>Universal Smart Extractor</strong> (<code>generic-html</code>), rastreamento sequencial de <em>"Próximo Capítulo"</em>, <strong>renderização via aba SPA / JavaScript</strong>, o seletor visual <strong>Apontar</strong> e <strong>Juntar Abas</strong>. Sempre vale testar carregando a página diretamente.</p>
         </div>
 
-        <div class="table-wrap">
+        <div class="section-header">
+          <h2 id="tier1-heading-pt">1. Verificados e Testados (Verified &amp; Tested)</h2>
+          <p>Sites e adaptadores verificados de ponta a ponta em uso real e cobertos por fixtures automatizadas de regressão no CI (sincronizados a partir de <a href="https://github.com/WiltonGabriel/WebPullBook/blob/main/docs/COMPATIBILITY.md">docs/COMPATIBILITY.md</a>):</p>
+        </div>
+
+        <div class="compat-filter-bar" role="search" aria-label="Filtrar entradas de compatibilidade">
+          <input id="compat-search" type="search" placeholder="Filtrar por site, adaptador ou recurso (ex.: EPUB, SPA, AJAX)..." aria-label="Buscar sites ou recursos">
+          <select id="compat-adapter-filter" aria-label="Filtrar por ID do adaptador">
+            <option value="all">Todos os adaptadores</option>
+          </select>
+        </div>
+        <div class="compat-filter-meta">
+          <span id="compat-count" aria-live="polite"></span>
+          <button id="compat-toggle-all" class="btn secondary sm compat-toggle-btn" type="button" data-collapsed-limit="8" aria-expanded="false" hidden>
+            <span class="expand">Mostrar Lista Completa</span>
+            <span class="collapse">Recolher Lista</span>
+          </button>
+        </div>
+
+        <div class="table-wrap table-wrap--compat" tabindex="0" role="region" aria-labelledby="tier1-heading-pt">
           <table>
             <thead>
               <tr>
@@ -170,11 +189,11 @@
     <section class="section alt">
       <div class="container">
         <div class="section-header">
-          <h2>2. Adicionados, mas Não Testados Oficialmente (Added / Not Officially Tested)</h2>
+          <h2 id="tier2-heading-pt">2. Adicionados, mas Não Testados Oficialmente (Added / Not Officially Tested)</h2>
           <p>Adaptadores ou layouts estruturais implementados com fixtures unitárias, aguardando validação ao vivo em obras completas:</p>
         </div>
 
-        <div class="table-wrap">
+        <div class="table-wrap" tabindex="0" role="region" aria-labelledby="tier2-heading-pt">
           <table>
             <thead>
               <tr>
@@ -200,11 +219,11 @@
     <section class="section">
       <div class="container">
         <div class="section-header">
-          <h2>3. Potencialmente Compatíveis (Potentially Compatible)</h2>
+          <h2 id="tier3-heading-pt">3. Potencialmente Compatíveis (Potentially Compatible)</h2>
           <p>Sites sem adaptador dedicado que podem ser extraídos usando o parser genérico e as ferramentas de ajuste:</p>
         </div>
 
-        <div class="table-wrap">
+        <div class="table-wrap" tabindex="0" role="region" aria-labelledby="tier3-heading-pt">
           <table>
             <thead>
               <tr>
@@ -243,11 +262,11 @@
     <section class="section alt">
       <div class="container">
         <div class="section-header">
-          <h2>4. Não Compatíveis (Not Compatible)</h2>
+          <h2 id="tier4-heading-pt">4. Não Compatíveis (Not Compatible)</h2>
           <p>Categorias que não podem ser extraídas por limites técnicos ou de acesso:</p>
         </div>
 
-        <div class="table-wrap">
+        <div class="table-wrap" tabindex="0" role="region" aria-labelledby="tier4-heading-pt">
           <table>
             <thead>
               <tr>
@@ -281,18 +300,18 @@
     <section class="section">
       <div class="container">
         <div class="section-header">
-          <h2>Compatibilidade entre Navegadores &amp; Cobertura de Testes</h2>
-          <p>Diferença entre compatibilidade declarada, verificação automatizada em CI e validação manual:</p>
+          <h2 id="browser-compat-heading-pt">Compatibilidade entre Navegadores &amp; Cobertura Automatizada</h2>
+          <p>Os dois motores (Chromium e Firefox Manifest V3) executam suítes E2E automatizadas em toda execução do CI:</p>
         </div>
 
-        <div class="table-wrap">
+        <div class="table-wrap" tabindex="0" role="region" aria-labelledby="browser-compat-heading-pt">
           <table>
             <thead>
               <tr>
                 <th>Família de Navegador</th>
                 <th>Versão Mínima</th>
                 <th>Compatibilidade Declarada</th>
-                <th>Cobertura de Verificação (CI vs. Manual)</th>
+                <th>Cobertura de Verificação (CI e Empacotamento)</th>
               </tr>
             </thead>
             <tbody>
@@ -300,19 +319,19 @@
                 <td><strong>Google Chrome / Chromium</strong></td>
                 <td>Chrome 114+</td>
                 <td><span class="badge success">Suportado (MV3)</span></td>
-                <td><strong>Automatizado no CI:</strong> Suíte E2E com Playwright Chromium (carregando a extensão descompactada, extraindo obras, pré-visualizando/editando, Biblioteca, exportando EPUB e validando com W3C EPUBCheck) + a suíte nativa de testes unitários e snapshots em Node.js.</td>
+                <td><strong>Automatizado no CI:</strong> Suíte E2E com Playwright Chromium (carregando a extensão descompactada, extraindo obras, pré-visualizando/editando, Biblioteca, regras DNR, exportando EPUB e validando com W3C EPUBCheck) + testes unitários e snapshots em Node.js.</td>
               </tr>
               <tr>
                 <td><strong>Microsoft Edge / Brave / Vivaldi</strong></td>
                 <td>Chromium 114+</td>
                 <td><span class="badge success">Suportado (MV3)</span></td>
-                <td><strong>Motor Automatizado + UI Manual:</strong> Utiliza o mesmo motor Chromium Manifest V3 testado no CI; validado manualmente via carregamento sem compactação.</td>
+                <td><strong>Mesmo Motor MV3:</strong> Utiliza o mesmo runtime Chromium Manifest V3 testado no CI em carregamento sem compactação.</td>
               </tr>
               <tr>
                 <td><strong>Mozilla Firefox</strong></td>
-                <td>Firefox 128.0+</td>
+                <td>Firefox 128+</td>
                 <td><span class="badge success">Suportado (MV3 Gecko)</span></td>
-                <td><strong>Assinado no AMO + Validação Estática no CI:</strong> Publicado como extensão assinada no <a href="https://addons.mozilla.org/firefox/addon/webpullbook/" data-wpb-link="firefoxAddons">Firefox Add-ons (AMO)</a> com <code>data_collection_permissions</code> declarado como nenhuma coleta. O CI valida estaticamente <code>background.scripts</code>, <code>browser_specific_settings.gecko</code> (Firefox 128+) e a regra DNR do cabeçalho <code>Origin</code>, enquanto o teste interativo de interface no Firefox é feito manualmente via <code>about:debugging</code>.</td>
+                <td><strong>Assinado no AMO + E2E do Firefox no CI:</strong> Publicado no <a href="https://addons.mozilla.org/firefox/addon/webpullbook/" data-wpb-link="firefoxAddons">Firefox Add-ons (AMO)</a> com <code>data_collection_permissions</code> declarado como nenhuma coleta. O CI valida com <code>addons-linter</code>, checagens estáticas de <code>gecko</code>/DNR e suíte E2E real do Firefox 128+ via Marionette com W3C EPUBCheck.</td>
               </tr>
             </tbody>
           </table>
