@@ -1,4 +1,5 @@
 import { buildEpubStylesheet } from '../core/parser-engine.js';
+import { genericHtmlParser } from '../parsers/generic-html.js';
 import { $, DEFAULT_OPTIONS, state, t } from './state.js';
 import { showBanner } from './logger.js';
 import {
@@ -138,9 +139,9 @@ export function wireSettingsIoEvents({ applyLanguageChoice }) {
         'crawlNextLinks'
       ],
       () => {
-        state.activeParser = null;
+        state.activeParser = genericHtmlParser;
         state.appliedRuleDomain = '';
-        state.autoFilledSelectors = false;
+        state.autoFilledSelectors = null;
       }
     )
   );
@@ -192,14 +193,20 @@ export function wireSettingsIoEvents({ applyLanguageChoice }) {
 
   $('btn-save-domain-rule').addEventListener('click', () => handleSaveDomainRule());
 
-  $('btn-export-opts').addEventListener('click', () => {
+  $('btn-export-opts').addEventListener('click', async () => {
     readOptionsFromUi();
     const bundle = {
       options: stripSiteScopedOptions(state.options),
       domainRules: state.domainRules
     };
     const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: 'application/json' });
-    downloadBlobToChrome(blob, 'webpullbook-options.json');
+    try {
+      await downloadBlobToChrome(blob, 'webpullbook-options.json');
+    } catch (err) {
+      if (!/cancel/i.test(err?.message || '')) {
+        showBanner(err?.message || 'Export error', 'error');
+      }
+    }
   });
 
   $('input-import-opts').addEventListener('change', async (e) => {
@@ -246,9 +253,9 @@ export function wireSettingsIoEvents({ applyLanguageChoice }) {
       onConfirm: () => {
         state.customDirHandle = null;
         state.customDirPermission = 'none';
-        state.activeParser = null;
+        state.activeParser = genericHtmlParser;
         state.appliedRuleDomain = '';
-        state.autoFilledSelectors = false;
+        state.autoFilledSelectors = null;
         state.seriesRequiresTab = false;
         state.options = {
           ...DEFAULT_OPTIONS,

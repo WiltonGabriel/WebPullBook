@@ -555,6 +555,12 @@ export function registerPickerMessageListener() {
       });
       appendLog(`Seletor visual (${req.field}): ${msg.selector}`);
       showBanner(t('msgPickerCaptured', { target: req.targetLabel, selector: msg.selector }), 'success');
+    } else if (msg.type === 'wpb-selector-cancelled') {
+      chrome.tabs?.getCurrent?.((selfTab) => {
+        if (selfTab?.id) {
+          Promise.resolve(chrome.tabs.update(selfTab.id, { active: true })).catch(() => {});
+        }
+      });
     }
   });
 }

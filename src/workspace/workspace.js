@@ -186,10 +186,28 @@ function wireEvents() {
   $('load-series-form').addEventListener('submit', (e) => {
     e.preventDefault();
     const url = $('starting-url').value.trim();
-    if (url) handleLoadSeries(url);
+    if (!url) return;
+    if (state.firefoxPermMissing) {
+      pendingInitialLoad = { url, sourceTabId: null };
+      renderFirefoxPermissionBanner();
+      $('firefox-perm-banner')?.scrollIntoView?.({ behavior: 'smooth', block: 'nearest' });
+      $('firefox-perm-banner')?.querySelector('button')?.focus?.();
+      showBanner(t('firefoxPermBannerMsg'), 'warn');
+      return;
+    }
+    handleLoadSeries(url);
   });
 
-  $('btn-merge-tabs').addEventListener('click', handleMergeOpenTabs);
+  $('btn-merge-tabs').addEventListener('click', () => {
+    if (state.firefoxPermMissing) {
+      renderFirefoxPermissionBanner();
+      $('firefox-perm-banner')?.scrollIntoView?.({ behavior: 'smooth', block: 'nearest' });
+      $('firefox-perm-banner')?.querySelector('button')?.focus?.();
+      showBanner(t('firefoxPermBannerMsg'), 'warn');
+      return;
+    }
+    handleMergeOpenTabs();
+  });
   $('merge-select-all').addEventListener('change', () => {
     const checked = $('merge-select-all').checked;
     for (const item of getMergeCandidates()) item.included = checked;
@@ -249,7 +267,7 @@ function wireEvents() {
   $('opt-safe-mode').addEventListener('change', async () => {
     const val = $('opt-safe-mode').checked;
     $('opt-safe-mode-quick').checked = val;
-    readOptionsFromUi({ markCustom: true });
+    readOptionsFromUi();
     if (state.running || state.batchRunning) {
       appendLog(
         val
@@ -473,8 +491,12 @@ function wireEvents() {
       .map((c) => c.url)
       .join('\n');
     if (!urls) return;
-    await navigator.clipboard.writeText(urls);
-    showBanner(t('msgCopiedUrls', { count: urls.split('\n').length }), 'success');
+    try {
+      await navigator.clipboard.writeText(urls);
+      showBanner(t('msgCopiedUrls', { count: urls.split('\n').length }), 'success');
+    } catch (err) {
+      showBanner(err?.message || 'Clipboard error', 'error');
+    }
   });
 
   $('btn-pack-epub').addEventListener('click', handlePackEpub);
@@ -524,18 +546,49 @@ function wireEvents() {
   }
   $('btn-copy-logs').addEventListener('click', async () => {
     if (state.logs.length === 0) return;
-    await navigator.clipboard.writeText(formatLogsPlainText());
-    showBanner(t('msgLogsCopied'), 'success');
+    try {
+      await navigator.clipboard.writeText(formatLogsPlainText());
+      showBanner(t('msgLogsCopied'), 'success');
+    } catch (err) {
+      showBanner(err?.message || 'Clipboard error', 'error');
+    }
   });
   $('btn-clear-logs').addEventListener('click', () => {
     state.logs = [];
     $('log-output').textContent = t('logsCleared');
     updateLogBadges();
   });
-  $('btn-download-logs').addEventListener('click', () => {
+  $('btn-download-logs').addEventListener('click', async () => {
     const blob = new Blob([formatLogsPlainText()], { type: 'text/plain;charset=utf-8' });
-    downloadBlobToChrome(blob, 'webpullbook-log.txt');
+    try {
+      await downloadBlobToChrome(blob, 'webpullbook-log.txt');
+    } catch (err) {
+      if (!/cancel/i.test(err?.message || '')) {
+        showBanner(err?.message || 'Download error', 'error');
+      }
+    }
   });
+
+  // Backdrop click-outside dismiss fallback for browsers without native dialog closedby="any" (e.g. Firefox < 141)
+  for (const dialog of document.querySelectorAll('dialog[closedby="any"]')) {
+    dialog.addEventListener('click', (e) => {
+      if (e.target !== dialog || !dialog.open) return;
+      const rect = dialog.getBoundingClientRect();
+      if (e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom) {
+        dialog.close();
+      }
+    });
+  }
+
+  const extUrl = typeof chrome !== 'undefined' ? chrome.runtime?.getURL?.('') || '' : '';
+  if (extUrl.startsWith('moz-extension://') && chrome?.permissions) {
+    chrome.permissions.onAdded?.addListener(() => {
+      checkFirefoxHostPermissions();
+    });
+    chrome.permissions.onRemoved?.addListener(() => {
+      checkFirefoxHostPermissions();
+    });
+  }
 
   if (chrome?.storage?.onChanged) {
     chrome.storage.onChanged.addListener((changes, areaName) => {

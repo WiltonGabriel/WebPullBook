@@ -4,7 +4,7 @@
  * from the repository's authoritative documentation and manifest files:
  *  - docs/COMPATIBILITY.md            -> website/compatibility.html, website/pt/compatibility.html, website/{,pt/}index.html
  *  - docs/READER_PRESETS.md           -> website/features.html
- *  - docs/READER_PRESETS.pt.md        -> website/pt/features.html
+ *  - docs/pt/READER_PRESETS.pt.md     -> website/pt/features.html
  *  - manifest.json, package.json & site.config.json -> version labels, official links, JSON-LD, sitemap.xml & robots.txt
  */
 
@@ -93,27 +93,26 @@ export function parseMarkdownSections(markdown) {
 }
 
 const PT_TRANSLATIONS = {
-  // Tier 1 notes
-  'End-to-end tested (static SSR, zero SPA tabs): multi-volume detection, cover, synopsis, genres, and chapter fidelity.':
-    'Testado de ponta a ponta (SSR estático, zero abas SPA): detecção de múltiplos volumes, capa, sinopse, gêneros e fidelidade de capítulos.',
-  'End-to-end tested (20 chapters): volume & chapter metadata, full synopsis, tags, cover, inline images, and hidden `<style>` watermark filtering.':
-    'Testado de ponta a ponta (20 capítulos): metadados de volumes e capítulos, sinopse completa, tags, capa, imagens internas e filtragem de marcas d\'água ocultas em `<style>`.',
-  'End-to-end tested (20 chapters): paginated chapter API & multi-volume detection, full synopsis, genres, status, original cover, inline images, `.sr-only` heading cleanup, and footnote anchors.':
-    'Testado de ponta a ponta (20 capítulos): API paginada de capítulos e múltiplos volumes, sinopse completa, gêneros, status, capa original, imagens internas, limpeza de `.sr-only` e âncoras de notas de rodapé.',
-  'End-to-end tested (index & direct chapter URL): AJAX full TOC, open-tab reuse, chronological ordering, metadata, inline images, and author note cleanup.':
-    'Testado de ponta a ponta (índice e URL direta de capítulo): sumário completo via AJAX, reaproveitamento de aba aberta, ordenação cronológica, metadados, imagens internas e limpeza de notas de autor.',
-  'End-to-end tested (index & direct chapter URL, 2 novels): automatic SPA tab hydration, reusable tab pool, JSON-LD author & full metadata, cover, sr-only/duplicate-heading cleanup, and ad-free chapter XHTML.':
-    'Testado de ponta a ponta (índice e URL direta de capítulo, 2 obras): hidratação automática de SPA via aba, pool reutilizável de abas, autor via JSON-LD e metadados completos, capa, limpeza de sr-only/título duplicado e XHTML de capítulos sem anúncios.',
+  // Tier 1 sources & notes
+  'Madara-based platforms':
+    'Plataformas baseadas em Madara',
+  'End-to-end verified (static SSR, zero SPA tabs): multi-volume detection, cover, synopsis, genres, inline images, and chapter fidelity.':
+    'Verificado de ponta a ponta (SSR estático, zero abas SPA): detecção de múltiplos volumes, capa, sinopse, gêneros, imagens internas e fidelidade de capítulos.',
+  'End-to-end verified (SSR and POST AJAX chapter lists): series metadata, cover, synopsis, genres, status, volume grouping, and chapter fidelity.':
+    'Verificado de ponta a ponta (SSR e listas AJAX via POST): metadados da obra, capa, sinopse, gêneros, status, agrupamento por volumes e fidelidade de capítulos.',
+  'End-to-end verified: volume & chapter metadata, full synopsis, tags, cover, inline images, and hidden `<style>` watermark filtering.':
+    'Verificado de ponta a ponta: metadados de volumes e capítulos, sinopse completa, tags, capa, imagens internas e filtragem de marcas d\'água ocultas em `<style>`.',
+  'End-to-end verified: paginated chapter API & multi-volume detection, full synopsis, genres, status, original cover, inline images, `.sr-only` heading cleanup, and footnote anchors.':
+    'Verificado de ponta a ponta: API paginada de capítulos e múltiplos volumes, sinopse completa, gêneros, status, capa original, imagens internas, limpeza de `.sr-only` e âncoras de notas de rodapé.',
+  'End-to-end verified (index & direct chapter URL): AJAX full TOC, open-tab reuse, chronological ordering, metadata, inline images, and author note cleanup.':
+    'Verificado de ponta a ponta (índice e URL direta de capítulo): sumário completo via AJAX, reaproveitamento de aba aberta, ordenação cronológica, metadados, imagens internas e limpeza de notas de autor.',
+  'End-to-end verified (index & direct chapter URL): automatic SPA tab hydration, reusable tab pool, JSON-LD author & full metadata, cover, sr-only/duplicate-heading cleanup, and ad-free chapter XHTML.':
+    'Verificado de ponta a ponta (índice e URL direta de capítulo): hidratação automática de SPA via aba, pool reutilizável de abas, autor via JSON-LD e metadados completos, capa, limpeza de sr-only/título duplicado e XHTML de capítulos sem anúncios.',
 
   // Tier 2
-  'Madara-based platforms (`.wp-manga-chapter`, `.reading-content`)':
-    'Plataformas baseadas em Madara (`.wp-manga-chapter`, `.reading-content`)',
   'Other WordPress novel theme clones (`.eplister`, `.ts-chl-collapsible`, `.epcontent`)':
     'Outros clones de temas WordPress de novels (`.eplister`, `.ts-chl-collapsible`, `.epcontent`)',
-  'Fixture-tested only': 'Testado via fixture',
   'Structural match': 'Compatibilidade estrutural',
-  'Implemented with volume grouping and chapter extraction; pending official live-site testing checklist.':
-    'Implementado com agrupamento por volumes e extração de capítulos; aguardando checklist oficial de teste em site ao vivo.',
   'Shares the same WordPress novel DOM layout as Central Novel; awaiting individual live reports.':
     'Compartilha a mesma estrutura DOM de temas WordPress do Central Novel; aguardando relatos individuais em uso real.',
 
@@ -531,7 +530,7 @@ export function syncWebsite({ checkOnly = false } = {}) {
   const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'));
   const compatMd = fs.readFileSync(path.join(ROOT, 'docs', 'COMPATIBILITY.md'), 'utf8');
   const presetsEnMd = fs.readFileSync(path.join(ROOT, 'docs', 'READER_PRESETS.md'), 'utf8');
-  const presetsPtMd = fs.readFileSync(path.join(ROOT, 'docs', 'READER_PRESETS.pt.md'), 'utf8');
+  const presetsPtMd = fs.readFileSync(path.join(ROOT, 'docs', 'pt', 'READER_PRESETS.pt.md'), 'utf8');
 
   const drifted = [];
   const updated = [];

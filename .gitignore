@@ -27,3 +27,4 @@ test-results/
 coverage/
 .env
 .env.*
+.local-e2e/

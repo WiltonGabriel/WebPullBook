@@ -290,7 +290,7 @@ export async function loadSeriesWithParser(inputUrl, options = {}, signal) {
     (series.chapters || []).length === 0 &&
     !effectiveOptions.renderWithTab &&
     !effectiveOptions._usedTabFallback &&
-    !series.requiresTabRender &&
+    !series._usedTabFallback &&
     !series._attemptedTabFallback &&
     effectiveOptions.autoFallbackTab !== false &&
     canUseTabScripting()

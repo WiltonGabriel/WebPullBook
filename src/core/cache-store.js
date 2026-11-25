@@ -259,7 +259,10 @@ class CacheStore {
       volume: ch.volume || 'Volume 01',
       included: ch.included !== false,
       status: ch.status === 'downloading' ? 'pending' : (ch.status || 'pending'),
-      errorMsg: ch.errorMsg || ''
+      errorMsg: ch.errorMsg || '',
+      ...(ch.pinnedCacheKey ? { pinnedCacheKey: ch.pinnedCacheKey } : {}),
+      ...(ch.edited ? { edited: true } : {}),
+      ...(ch.readOnlyPreview ? { readOnlyPreview: true } : {})
     }));
 
     const session = {

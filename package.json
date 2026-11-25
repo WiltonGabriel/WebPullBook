@@ -43,6 +43,7 @@
     "test": "node --test tests/*.test.js",
     "test:epubcheck": "node --test tests/epub-validation.test.js",
     "test:e2e": "node tests/e2e/extension.e2e.mjs",
+    "test:e2e:firefox": "node tests/e2e/firefox.e2e.mjs",
     "check": "npm run lint && npm test"
   },
   "devDependencies": {

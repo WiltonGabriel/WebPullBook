@@ -556,7 +556,10 @@ export async function persistSessionSnapshot() {
   if (state.options.cacheTtlDays <= 0 || state.chapters.length === 0) return;
   await cacheStore.putSession({
     seriesKey: getCurrentSeriesKey(),
-    metadata: state.metadata,
+    metadata: {
+      ...state.metadata,
+      requiresTabRender: Boolean(state.seriesRequiresTab || state.metadata?.requiresTabRender)
+    },
     parserId: state.activeParser?.id || 'auto',
     chapters: state.chapters,
     ttlDays: state.options.cacheTtlDays

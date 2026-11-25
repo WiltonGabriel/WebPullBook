@@ -697,6 +697,39 @@ test('HtmlExporter embeds chapter images as data URIs and all exporters localize
     ).text();
     assert.match(txtText, /^English Novel\n\nAuthor: Jane Doe/m);
     assert.match(txtText, /Synopsis:\nAn adventure\./);
+
+    // Verify HtmlExporter falls back to imgInfo.fallbackUrl when primary chapter image fails
+    globalThis.fetch = async (url) => {
+      const s = String(url);
+      if (s.includes('primary-fail.png')) {
+        return new Response('Not Found', { status: 404 });
+      }
+      return new Response(PNG_1X1, { status: 200, headers: { 'content-type': 'image/png' } });
+    };
+    const chFallback = buildParsedChapter(
+      1,
+      '',
+      '<p>Scene <img src="https://cdn.example.org/primary-fail.png" alt="Fallback"/></p>',
+      'https://example.org'
+    );
+    chFallback.images = [
+      {
+        originalUrl: 'https://cdn.example.org/primary-fail.png',
+        fallbackUrl: 'https://cdn.example.org/recovered-ok.png'
+      }
+    ];
+    chFallback.chapter.displayTitle = 'Fallback Chapter';
+    chFallback.chapterTitle = 'Fallback Chapter';
+    const fbHtml = await (
+      await exporterRegistry.get('html').exportBook({
+        metadata: enMeta,
+        bookTitle: 'Fallback Test',
+        parsedChapters: [chFallback],
+        options: {}
+      })
+    ).text();
+    assert.match(fbHtml, /data:image\/png;base64,/);
+    assert.doesNotMatch(fbHtml, /primary-fail\.png/);
   } finally {
     globalThis.fetch = origFetch;
   }

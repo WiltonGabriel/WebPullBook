@@ -427,6 +427,9 @@ export async function handlePackEpub(arg = {}) {
         }
       }
 
+      await waitWhilePaused(signal);
+      if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
+
       if (parsedChapters.length === 0) {
         appendLog(`Pulando ${job.bookTitle}: nenhum capítulo disponível.`, 'warn');
         continue;

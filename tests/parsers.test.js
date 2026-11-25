@@ -1153,3 +1153,176 @@ test('MadaraThemeParser fetches POST /ajax/chapters/ when SSR listing wrapper is
   }
 });
 
+test('MadaraThemeParser treats internal AJAX AbortError timeout as non-fatal when caller signal is not aborted', async () => {
+  const { madaraThemeParser } = await import('../src/parsers/madara-theme.js');
+  const origFetch = globalThis.fetch;
+  const callerCtrl = new AbortController();
+  globalThis.fetch = async () => {
+    const abortErr = new Error('Timed out');
+    abortErr.name = 'AbortError';
+    throw abortErr;
+  };
+  try {
+    const doc = new DOMParser().parseFromString(
+      '<html><body><div class="post-title"><h1>Timed Story</h1></div><div class="listing-chapters_wrap"></div></body></html>',
+      'text/html'
+    );
+    const ajaxOk = await madaraThemeParser._tryPopulateAjaxChapters(
+      doc,
+      'https://madara.example.org/novel/timed-story/',
+      callerCtrl.signal
+    );
+    assert.equal(ajaxOk, false);
+
+    callerCtrl.abort();
+    await assert.rejects(
+      () => madaraThemeParser._tryPopulateAjaxChapters(doc, 'https://madara.example.org/novel/timed-story/', callerCtrl.signal),
+      { name: 'AbortError' }
+    );
+  } finally {
+    globalThis.fetch = origFetch;
+  }
+});
+
+test('MadaraThemeParser beats generic-html on SSR AJAX Madara markup and extracts status', async () => {
+  const ssrMadaraHtml = `<!DOCTYPE html>
+  <html><head><title>Attributes — Wuxia</title></head>
+  <body class="single single-wp-manga wp-theme-madara">
+    <div id="nav-tabContent">
+      <ul>
+        <li><a href="https://madara.example.org/novel/other-book/chapter-1/">Other 1</a></li>
+        <li><a href="https://madara.example.org/novel/other-book/chapter-2/">Other 2</a></li>
+        <li><a href="https://madara.example.org/novel/other-book/chapter-3/">Other 3</a></li>
+        <li><a href="https://madara.example.org/novel/other-book/chapter-4/">Other 4</a></li>
+        <li><a href="https://madara.example.org/novel/other-book/chapter-5/">Other 5</a></li>
+      </ul>
+    </div>
+    <div class="profile-manga">
+      <div class="post-title"><h1>Complete Attributes</h1></div>
+      <div class="summary_image"><img src="/covers/attr.jpg" alt="cover"></div>
+      <div class="author-content"><a href="/author/jianghu">Don't Enter The Jianghu</a></div>
+      <div class="genres-content"><a href="/genre/action">Action</a></div>
+      <div class="post-status">
+        <div class="post-content_item"><div class="summary-heading"><h5>Release</h5></div><div class="summary-content">2020</div></div>
+        <div class="post-content_item"><div class="summary-heading"><h5>Status</h5></div><div class="summary-content">OnGoing</div></div>
+      </div>
+      <div class="summary__content"><p>A martial story synopsis.</p></div>
+    </div>
+    <div class="c-page-content"><div id="manga-chapters-holder" data-id="639013"></div></div>
+  </body></html>`;
+
+  const ssrDoc = new DOMParser().parseFromString(ssrMadaraHtml, 'text/html');
+  const { parser, scores } = parserRegistry.detectWithScores(
+    ssrDoc,
+    'https://madara.example.org/novel/complete-attributes/'
+  );
+  assert.equal(parser.id, 'madara-theme');
+  assert.ok(scores[0].score >= 65);
+
+  mockFetchRoutes({
+    'https://madara.example.org/novel/complete-attributes/': ssrMadaraHtml,
+    'https://madara.example.org/novel/complete-attributes/ajax/chapters/':
+      '<ul class="main version-chap"><li class="wp-manga-chapter"><a href="https://madara.example.org/novel/complete-attributes/chapter-1/">Chapter 1</a></li></ul>'
+  });
+
+  const { series } = await loadSeriesWithParser('https://madara.example.org/novel/complete-attributes/');
+  assert.equal(series.title, 'Complete Attributes');
+  assert.equal(series.author, "Don't Enter The Jianghu");
+  assert.equal(series.status, 'OnGoing');
+  assert.equal(series.chapters.length, 1);
+  assert.equal(series.chapters[0].titleText, 'Chapter 1');
+});
+
+test('loadSeriesWithParser triggers automatic SPA tab hydration for NovelBin even when requiresTabForChapters() is true', async () => {
+  const url = 'https://novelbin.xyz/novel/genshin-eerie-teyvat';
+  const staticSkeletonHtml = `<!DOCTYPE html>
+  <html><head>
+    <title>Eerie Teyvat | NovelBin</title>
+    <meta property="og:site_name" content="Novelbin">
+  </head><body>
+    <div id="root"></div>
+    <div id="ssr-novel-card"><h1>Eerie Teyvat</h1><p>Static SSR stub before React hydration.</p></div>
+  </body></html>`;
+  const hydratedHtml = `<!DOCTYPE html>
+  <html><head>
+    <title>Eerie Teyvat | NovelBin</title>
+    <meta property="og:site_name" content="Novelbin">
+    <meta property="og:title" content="Eerie Teyvat">
+  </head><body>
+    <div id="root"><div class="novel-page-wrapper">
+      <div class="novel-detail-hero">
+        <h1 class="detail-title">Eerie Teyvat</h1>
+        <div class="synopsis-content"><p>Hydrated novel synopsis.</p></div>
+      </div>
+      <div class="chapter-box"><div class="chapter-list">
+        <a class="chapter-item" href="https://novelbin.xyz/read/genshin-eerie-teyvat/chapter-1"><span>Chapter 1: Wake</span></a>
+        <a class="chapter-item" href="https://novelbin.xyz/read/genshin-eerie-teyvat/chapter-2"><span>Chapter 2: Dawn</span></a>
+      </div></div>
+    </div></div>
+  </body></html>`;
+
+  mockFetchRoutes({ [url]: staticSkeletonHtml });
+
+  let tabCreated = 0;
+  globalThis.chrome = {
+    tabs: {
+      query: async () => [],
+      create: async () => {
+        tabCreated += 1;
+        return { id: 77, status: 'complete', url };
+      },
+      get: async () => ({ id: 77, status: 'complete', url }),
+      remove: async () => {}
+    },
+    scripting: {
+      executeScript: async () => [{ result: hydratedHtml }]
+    }
+  };
+
+  const { parser, series } = await loadSeriesWithParser(url, { renderWaitMs: 0 });
+  assert.equal(parser.id, 'novelbin');
+  assert.ok(tabCreated >= 1);
+  assert.equal(series.requiresTabRender, true);
+  assert.equal(series.chapters.length, 2);
+  assert.equal(series.chapters[0].titleText, 'Chapter 1: Wake');
+  assert.equal(series.chapters[1].titleText, 'Chapter 2: Dawn');
+});
+
+test('BaseParser prefers h1.entry-title over site-header h1 and ignores TOC-heavy .entry-content as synopsis', () => {
+  const tocLinks = Array.from({ length: 10 }, (_, i) => `<p><a href="/ch/${i + 1}">Chapter ${i + 1}</a></p>`).join('');
+  const wpTocDoc = new DOMParser().parseFromString(
+    `<!DOCTYPE html><html><head>
+      <title>Worm — Table of Contents</title>
+      <meta property="og:description" content="Clean OG synopsis for Worm.">
+    </head><body>
+      <header><h1>Worm</h1></header>
+      <article>
+        <h1 class="entry-title">Plague 12.2</h1>
+        <div class="entry-content">${tocLinks}</div>
+      </article>
+    </body></html>`,
+    'text/html'
+  );
+
+  const meta = genericHtmlParser.extractCommonMetadata(wpTocDoc, 'https://parahumans.wordpress.com/table-of-contents/');
+  assert.equal(meta.synopsis, 'Clean OG synopsis for Worm.');
+
+  const heading = genericHtmlParser.extractChapterHeading(wpTocDoc, {
+    url: 'https://parahumans.wordpress.com/2012/06/26/plague-12-2/',
+    displayTitle: 'Plague 12.2',
+    titleText: ''
+  });
+  assert.equal(heading.chapterTitle, 'Plague 12.2');
+
+  const articleH1Doc = new DOMParser().parseFromString(
+    `<!DOCTYPE html><html><body><header><h1>Site Banner</h1></header><main><h1>Arc 3.4</h1></main></body></html>`,
+    'text/html'
+  );
+  const articleHeading = genericHtmlParser.extractChapterHeading(articleH1Doc, {
+    url: 'https://blog.example.org/3-4/',
+    displayTitle: 'Fallback Title',
+    titleText: ''
+  });
+  assert.equal(articleHeading.chapterTitle, 'Arc 3.4');
+});
+

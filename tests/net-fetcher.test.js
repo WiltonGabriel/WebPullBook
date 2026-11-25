@@ -11,6 +11,7 @@ import {
   fetchRenderedTabDocument,
   fetchWithRetry,
   isAntiBotChallengeDocument,
+  isRateLimitDocument,
   isSpaDomainCircuitOpen,
   resolveSafeHttpUrl
 } from '../src/core/parser-engine.js';
@@ -309,6 +310,15 @@ test('PageDomCache keeps query parameters distinct, long prose does not trip ant
   const longProse = '<article><p>' + 'Story text mentioning Cloudflare and human verification. '.repeat(90) + '</p></article>';
   const longDoc = new DOMParser().parseFromString(longProse, 'text/html');
   assert.equal(isAntiBotChallengeDocument(longDoc), false);
+
+  for (const selectorClass of ['reader-content', 'rich-text-content']) {
+    const shortChapter = new DOMParser().parseFromString(
+      `<title>Just a moment</title><div class="${selectorClass}"><p>You are being rate limited in dialogue. Enable javascript and cookies to continue.</p></div>`,
+      'text/html'
+    );
+    assert.equal(isAntiBotChallengeDocument(shortChapter), false);
+    assert.equal(isRateLimitDocument(shortChapter), false);
+  }
 
   let sessionRules = [{ id: 1, priority: 1, action: { type: 'modifyHeaders' }, condition: {} }];
   globalThis.chrome = {

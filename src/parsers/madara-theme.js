@@ -33,15 +33,22 @@ export class MadaraThemeParser extends BaseParser {
   matchScore(doc) {
     let score = 0;
     const hasWpManga = Boolean(doc.querySelector('.wp-manga-chapter'));
-    const hasListingWrap = Boolean(doc.querySelector('.listing-chapters_wrap'));
+    const hasListingWrap = Boolean(doc.querySelector('.listing-chapters_wrap, #manga-chapters-holder'));
     const hasSummaryImg = Boolean(doc.querySelector('.summary_image'));
     const hasBreadcrumb = Boolean(doc.querySelector('.c-breadcrumb'));
+    const hasMadaraMarkers = Boolean(
+      doc.querySelector(
+        'body.single-wp-manga, body.wp-theme-madara, .profile-manga, .c-page-content .post-content_item'
+      )
+    );
     if (hasWpManga) score += 55;
     if (hasListingWrap) score += 30;
+    if (hasMadaraMarkers) score += 25;
     if (doc.querySelector('.reading-content .text-left')) {
       score += 45;
     } else if (doc.querySelector('.reading-content')) {
-      score += hasWpManga || hasListingWrap || hasSummaryImg || hasBreadcrumb ? 45 : 15;
+      score +=
+        hasWpManga || hasListingWrap || hasSummaryImg || hasBreadcrumb || hasMadaraMarkers ? 45 : 15;
     }
     if (hasSummaryImg) score += 10;
     return Math.min(100, score);
@@ -137,7 +144,7 @@ export class MadaraThemeParser extends BaseParser {
       }
       return Boolean(activeDoc.querySelector('.wp-manga-chapter'));
     } catch (err) {
-      if (err?.name === 'AbortError') throw err;
+      if (err?.name === 'AbortError' && signal?.aborted) throw err;
       return false;
     }
   }
@@ -155,6 +162,17 @@ export class MadaraThemeParser extends BaseParser {
 
     const author = normalizeSpaces(doc.querySelector('.author-content')?.textContent);
     if (author) out.author = author;
+
+    for (const item of doc.querySelectorAll('.post-status .post-content_item, .post-content_item')) {
+      const heading = normalizeSpaces(item.querySelector('.summary-heading')?.textContent);
+      if (/status/i.test(heading)) {
+        const statusVal = normalizeSpaces(item.querySelector('.summary-content')?.textContent);
+        if (statusVal) {
+          out.status = statusVal;
+          break;
+        }
+      }
+    }
 
     const genres = extractUniqueTexts(doc, '.genres-content a');
     if (genres.length > 0) out.genres = genres;

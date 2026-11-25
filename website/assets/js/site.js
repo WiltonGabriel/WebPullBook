@@ -154,6 +154,41 @@
       });
     }
 
+    const prefsToggle = document.getElementById('prefs-toggle');
+    const prefsPanel = document.getElementById('prefs-panel');
+    if (prefsToggle && prefsPanel) {
+      if (Object.hasOwn(HTMLElement.prototype, 'popover')) {
+        prefsPanel.addEventListener('toggle', (e) => {
+          prefsToggle.setAttribute('aria-expanded', String(e.newState === 'open'));
+        });
+      } else {
+        const setFallbackOpen = (open) => {
+          prefsPanel.classList.toggle(':popover-open', open);
+          prefsToggle.setAttribute('aria-expanded', String(open));
+        };
+        setFallbackOpen(false);
+        prefsToggle.addEventListener('click', (e) => {
+          e.stopPropagation();
+          setFallbackOpen(!prefsPanel.classList.contains(':popover-open'));
+        });
+        document.addEventListener('click', (e) => {
+          if (
+            prefsPanel.classList.contains(':popover-open') &&
+            !prefsPanel.contains(e.target) &&
+            !prefsToggle.contains(e.target)
+          ) {
+            setFallbackOpen(false);
+          }
+        });
+        document.addEventListener('keydown', (e) => {
+          if (e.key === 'Escape' && prefsPanel.classList.contains(':popover-open')) {
+            setFallbackOpen(false);
+            prefsToggle.focus();
+          }
+        });
+      }
+    }
+
     const themeSelect = document.getElementById('theme-select');
     if (themeSelect) {
       themeSelect.addEventListener('change', () => {

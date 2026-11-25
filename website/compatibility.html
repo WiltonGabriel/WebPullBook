@@ -26,8 +26,11 @@
   <meta name="twitter:description" content="Four-tier compatibility classification and browser support matrix for WebPullBook.">
   <meta name="twitter:image" content="https://wiltongabriel.github.io/WebPullBook/assets/images/social-preview.png">
   <meta name="twitter:image:alt" content="WebPullBook compatibility matrix">
+  <link rel="icon" href="favicon.ico" sizes="any">
   <link rel="icon" type="image/svg+xml" href="assets/images/icon.svg">
-  <link rel="icon" type="image/png" sizes="128x128" href="assets/images/icon-128.png">
+  <link rel="icon" type="image/png" sizes="48x48" href="assets/images/icon-48.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/images/icon-32.png">
+  <link rel="apple-touch-icon" href="assets/images/icon-128.png">
   <link rel="stylesheet" href="assets/css/styles.css">
   <script src="assets/js/site.js" defer></script>
   <script data-goatcounter="https://wiltongabriel.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
@@ -65,17 +68,33 @@
       </nav>
 
       <div class="header-actions">
-        <select id="lang-select" class="header-select" aria-label="Language">
-          <option value="en" selected>English</option>
-          <option value="pt-BR">Português (BR)</option>
-        </select>
-        <select id="theme-select" class="header-select" aria-label="Theme">
-          <option value="system">Auto</option>
-          <option value="light">Light</option>
-          <option value="dark">Dark</option>
-          <option value="sepia">Sepia</option>
-          <option value="midnight">Midnight</option>
-        </select>
+        <button id="prefs-toggle" class="header-prefs-btn" type="button" popovertarget="prefs-panel" aria-label="Language and theme">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="10"></circle>
+            <path d="M2 12h20"></path>
+            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+          </svg>
+          <span id="prefs-toggle-label">EN</span>
+        </button>
+        <div id="prefs-panel" popover="auto" class="header-prefs-panel">
+          <div class="prefs-row">
+            <label for="lang-select">Language</label>
+            <select id="lang-select" class="header-select">
+              <option value="en" selected>English</option>
+              <option value="pt-BR">Português (BR)</option>
+            </select>
+          </div>
+          <div class="prefs-row">
+            <label for="theme-select">Theme</label>
+            <select id="theme-select" class="header-select">
+              <option value="system">Auto</option>
+              <option value="light">Light</option>
+              <option value="dark">Dark</option>
+              <option value="sepia">Sepia</option>
+              <option value="midnight">Midnight</option>
+            </select>
+          </div>
+        </div>
       </div>
     </div>
   </header>
@@ -109,32 +128,38 @@
               <tr>
                 <td><strong>Central Novel</strong></td>
                 <td><code>wp-lightnovel</code></td>
-                <td>2026-11-19</td>
-                <td>End-to-end tested (static SSR, zero SPA tabs): multi-volume detection, cover, synopsis, genres, and chapter fidelity.</td>
+                <td>2026-11-24</td>
+                <td>End-to-end verified (static SSR, zero SPA tabs): multi-volume detection, cover, synopsis, genres, inline images, and chapter fidelity.</td>
+              </tr>
+              <tr>
+                <td><strong>Madara-based platforms</strong></td>
+                <td><code>madara-theme</code></td>
+                <td>2026-11-24</td>
+                <td>End-to-end verified (SSR and POST AJAX chapter lists): series metadata, cover, synopsis, genres, status, volume grouping, and chapter fidelity.</td>
               </tr>
               <tr>
                 <td><strong>Royal Road</strong></td>
                 <td><code>royalroad</code></td>
-                <td>2026-11-15</td>
-                <td>End-to-end tested (20 chapters): volume &amp; chapter metadata, full synopsis, tags, cover, inline images, and hidden <code>&lt;style&gt;</code> watermark filtering.</td>
+                <td>2026-11-24</td>
+                <td>End-to-end verified: volume &amp; chapter metadata, full synopsis, tags, cover, inline images, and hidden <code>&lt;style&gt;</code> watermark filtering.</td>
               </tr>
               <tr>
                 <td><strong>Novel Mania</strong></td>
                 <td><code>novelmania</code></td>
-                <td>2026-11-15</td>
-                <td>End-to-end tested (20 chapters): paginated chapter API &amp; multi-volume detection, full synopsis, genres, status, original cover, inline images, <code>.sr-only</code> heading cleanup, and footnote anchors.</td>
+                <td>2026-11-24</td>
+                <td>End-to-end verified: paginated chapter API &amp; multi-volume detection, full synopsis, genres, status, original cover, inline images, <code>.sr-only</code> heading cleanup, and footnote anchors.</td>
               </tr>
               <tr>
                 <td><strong>Scribble Hub</strong></td>
                 <td><code>scribblehub</code></td>
                 <td>2026-11-19</td>
-                <td>End-to-end tested (index &amp; direct chapter URL): AJAX full TOC, open-tab reuse, chronological ordering, metadata, inline images, and author note cleanup.</td>
+                <td>End-to-end verified (index &amp; direct chapter URL): AJAX full TOC, open-tab reuse, chronological ordering, metadata, inline images, and author note cleanup.</td>
               </tr>
               <tr>
                 <td><strong>NovelBin</strong></td>
                 <td><code>novelbin</code></td>
-                <td>2026-11-20</td>
-                <td>End-to-end tested (index &amp; direct chapter URL, 2 novels): automatic SPA tab hydration, reusable tab pool, JSON-LD author &amp; full metadata, cover, sr-only/duplicate-heading cleanup, and ad-free chapter XHTML.</td>
+                <td>2026-11-24</td>
+                <td>End-to-end verified (index &amp; direct chapter URL): automatic SPA tab hydration, reusable tab pool, JSON-LD author &amp; full metadata, cover, sr-only/duplicate-heading cleanup, and ad-free chapter XHTML.</td>
               </tr>
             </tbody>
           </table>
@@ -160,12 +185,6 @@
               </tr>
             </thead>
             <tbody data-sync-table="compat-tier-2">
-              <tr>
-                <td><strong>Madara-based platforms</strong> (<code>.wp-manga-chapter</code>, <code>.reading-content</code>)</td>
-                <td><code>madara-theme</code></td>
-                <td><span class="badge warn">Fixture-tested only</span></td>
-                <td>Implemented with volume grouping and chapter extraction; pending official live-site testing checklist.</td>
-              </tr>
               <tr>
                 <td><strong>Other WordPress novel theme clones</strong> (<code>.eplister</code>, <code>.ts-chl-collapsible</code>, <code>.epcontent</code>)</td>
                 <td><code>wp-lightnovel</code></td>

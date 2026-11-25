@@ -60,13 +60,13 @@ Principais arquivos:
 - [src/exporters/](../../src/exporters/index.js) — `BaseExporter` e `ExporterRegistry` (`epub`, `html`, `md`, `txt`).
 - [src/parsers/](../../src/parsers/index.js) — `ParserRegistry`, resolução multi-domínio de capítulos, `GenericHtmlParser` e os adaptadores estruturais inventariados em [docs/COMPATIBILITY.md](../COMPATIBILITY.md#parser-regression-fixtures).
 - [src/workspace/](../../src/workspace/workspace.html) — Workspace modular (`theme-init.js`, `state.js`, `i18n.js` + `locales/`, `logger.js`, `options-storage.js`, `directory-handle.js`, `domain-rules-ui.js`, `chapters-ui.js`, `cover-ui.js`, `chapter-modals.js`, `volume-modals.js`, `series-loader.js`, `export-runner.js`, `download-storage.js`, `library-ui.js`, `library-view.js`, `cache-sessions-ui.js`, `settings-io.js`, `tab-picker.js` e `workspace.js`).
-- [docs/READER_PRESETS.pt.md](../READER_PRESETS.pt.md) — Guia dos perfis de leitor definidos em `READER_PRESETS` ([state.js](../../src/workspace/state.js)).
+- [docs/pt/READER_PRESETS.pt.md](READER_PRESETS.pt.md) — Guia dos perfis de leitor definidos em `READER_PRESETS` ([state.js](../../src/workspace/state.js)).
 - `website/` — Site estático bilíngue publicado no GitHub Pages (sincronizado via `npm run sync:website` e validado pelo `npm run lint`).
 
 ## Padrões de Idioma, Estilo e Segurança
 
 - **Inglês como Padrão:** Issues, Pull Requests, mensagens de commit, comentários no código e documentação principal (`README.md`, `CHANGELOG.md`, `CONTRIBUTING.md`, `docs/*.md`) devem ser escritos em **inglês**.
-- **Espelhos em Português:** Traduções de referência ficam em `README.pt.md`, `docs/READER_PRESETS.pt.md`, `docs/pt/` e `website/pt/`. Strings da UI (`locales/pt.js` / `en.js`) e páginas de `website/pt/` exigem paridade estrita entre PT e EN (verificada pelo `npm run lint`).
+- **Espelhos em Português:** Traduções de referência ficam em `README.pt.md`, `docs/pt/` (incluindo `READER_PRESETS.pt.md`) e `website/pt/`. Strings da UI (`locales/pt.js` / `en.js`) e páginas de `website/pt/` exigem paridade estrita entre PT e EN (verificada pelo `npm run lint`).
 - **CSP do Manifest V3 & Higiene:** Nunca use `<script>` inline nem atributos `on*` em `src/**/*.html`, nunca deixe `console.log()` ou `debugger` em `src/`, e mantenha quebras de linha LF sem espaços sobrando no fim das linhas.
 - **HTML Não Confiável:** Todo capítulo extraído deve passar por `HtmlSanitizer` e `serializeChapterXhtml`. Nunca contorne validação de protocolos (`assertSafeHttpUrl`), DRM ou desafios anti-bot.
 
@@ -131,9 +131,10 @@ O código da extensão não tem dependências de runtime nem etapa de compilaç�
 | `npm test` | `npm install` (`jsdom`, `fake-indexeddb`) | Suíte nativa de testes unitários e snapshots (`node:test`) cobrindo `HtmlSanitizer`, `createZipBlob`, `ParserRegistry`, `ExporterRegistry`, `CacheStore`, `ImageProcessor`, `AdaptiveRateLimiter`, `TabRenderPool`, além de `EPUBCheck` quando disponível. |
 | `npm run sync:website` | Apenas Node.js | Sincroniza tabelas e versões de `website/` a partir de `docs/` e `manifest.json` (`--check` verifica se está atualizado). |
 | `REQUIRE_EPUBCHECK=1 npm run test:epubcheck` | Java 21+ e EPUBCheck | Valida EPUB 2 e EPUB 3 gerados (0 erros, 0 avisos). |
-| `npm run test:e2e` | `npm install` + `npx playwright install chromium` | Abre o Chromium com a extensão carregada e testa extração, seleção, perfis, biblioteca, regras por domínio, download real e mesclagem de abas. |
+| `npm run test:e2e` | `npm install` + `npx playwright install chromium` | Abre o Chromium com a extensão carregada (`WPB_E2E_HEADED=1` em modo visível) e testa extração, seleção, perfis, exportadores, fallback DNR de imagens, retry/pausa/cancelamento, biblioteca, regras por domínio, download real, SPA e mesclagem de abas. |
+| `npm run test:e2e:firefox` | Firefox instalado (ou Playwright Firefox) | Abre o Firefox real via Marionette com a extensão carregada temporariamente e valida MV3 (`firefoxPermMissing`, regra DNR `1` + hotlink `120..129`, `downloads`, perfis, exportadores + EPUBCheck, retry/pausa/cancelamento, cache/biblioteca e SPA). |
 
-> **Cobertura por Navegador:** O E2E automatizado roda no Chromium via Playwright (`--load-extension`). A compatibilidade MV3 do Firefox (`background.scripts` + `browser_specific_settings.gecko`) é validada estaticamente pelo `npm run lint` e testada manualmente em `about:debugging#/runtime/this-firefox`.
+> **Suíte Local em Sites Reais (`.local-e2e/`, Ignorada pelo Git):** URLs reais de terceiros, obras usadas em testes manuais e EPUBs baixados ficam fora do repositório em `.local-e2e/` (ignorado via `.gitignore`). Crie um `.local-e2e/targets.json` local e reutilize [epub-inspector.mjs](../../tests/e2e/helpers/epub-inspector.mjs) e [firefox-driver.mjs](../../tests/e2e/helpers/firefox-driver.mjs) ao validar novos parsers antes de atualizar [docs/COMPATIBILITY.md](../COMPATIBILITY.md).
 
 ## Checklist de Pull Request & Release
 

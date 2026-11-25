@@ -8,7 +8,7 @@ on:
       - "website/**"
       - "docs/COMPATIBILITY.md"
       - "docs/READER_PRESETS.md"
-      - "docs/READER_PRESETS.pt.md"
+      - "docs/pt/READER_PRESETS.pt.md"
       - "manifest.json"
       - "package.json"
       - "src/workspace/state.js"

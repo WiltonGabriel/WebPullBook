@@ -64,7 +64,7 @@ Todas as mudanças notáveis do **WebPullBook** estão documentadas neste arquiv
 ## [1.4.0] - 2026-11-20 (Beta)
 
 ### Novidades
-- **Perfis de Leitor reformulados:** novos perfis **Kindle (Antigo)** (EPUB 2 para *Send to Kindle*) e **Kindle (Moderno)** (EPUB 3 para Calibre/KFX), além de Padrão Moderno, Kobo, Somente Texto e Padrão Antigo. Todos preservam cores originais. Guia completo em [READER_PRESETS.pt.md](../READER_PRESETS.pt.md).
+- **Perfis de Leitor reformulados:** novos perfis **Kindle (Antigo)** (EPUB 2 para *Send to Kindle*) e **Kindle (Moderno)** (EPUB 3 para Calibre/KFX), além de Padrão Moderno, Kobo, Somente Texto e Padrão Antigo. Todos preservam cores originais. Guia completo em [READER_PRESETS.pt.md](READER_PRESETS.pt.md).
 - **Seletor de perfil em Opções Avançadas:** perfis funcionam como predefinições fixas e alteram imediatamente todos os campos avançados correspondentes; editar qualquer campo muda para **Personalizado** automaticamente.
 - **Sumário no início do livro & Página de Informações customizável:** Sumário no início por padrão (com opção de desativar, mover para o fim ou editar o título) e controles individuais na Página de Informações.
 - **Tela de Loading & Captura Direta da Aba Ativa:** overlay de carregamento instantâneo e captura do DOM vivo da aba ativa (`sourceTabId`) via `service-worker.js` + `PageDomCache`.

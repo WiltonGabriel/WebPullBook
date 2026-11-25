@@ -1,204 +1,12 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
 import { chromium } from 'playwright';
 import { readZipArchive } from '../helpers/zip-reader.js';
 import { resolveEpubCheckRunner, runEpubCheck } from '../helpers/epubcheck.js';
-
-const PNG_1X1 = Buffer.from(
-  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
-  'base64'
-);
-
-function createMockNovelServer() {
-  const server = http.createServer((req, res) => {
-    const reqUrl = new URL(req.url, 'http://127.0.0.1');
-    const origin = `http://127.0.0.1:${server.address().port}`;
-
-    if (reqUrl.pathname === '/series/e2e-book/') {
-      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
-      res.end(`<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-  <meta charset="utf-8">
-  <title>E2E Novel — Teste</title>
-</head>
-<body>
-  <div class="thumbook"><div class="thumb"><img src="${origin}/cover.png" alt="Capa"></div></div>
-  <div class="infox">
-    <h1 class="entry-title">Crônica E2E</h1>
-    <div class="spe"><span>Autor: Autora E2E</span><span>Status: Completo</span></div>
-    <div class="genxed"><a href="#">Fantasia</a></div>
-  </div>
-  <div class="synp"><div class="entry-content" itemprop="description"><p>Sinopse E2E automatizada.</p></div></div>
-  <div class="ts-chl-collapsible">Volume 1</div>
-  <div class="ts-chl-collapsible-content">
-    <div class="eplister"><ul>
-      <li><a href="${origin}/series/e2e-book/cap-02/"><div class="epl-num">Cap. 2</div><div class="epl-title">Segundo Ato</div></a></li>
-      <li><a href="${origin}/series/e2e-book/cap-01/"><div class="epl-num">Cap. 1</div><div class="epl-title">Primeiro Ato</div></a></li>
-    </ul></div>
-  </div>
-</body>
-</html>`);
-      return;
-    }
-
-    if (reqUrl.pathname === '/generic-novel/') {
-      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
-      res.end(`<!DOCTYPE html>
-<html lang="pt-BR">
-<head><meta charset="utf-8"><title>Generic Auto Detect Novel</title></head>
-<body>
-  <main>
-    <h1>Obra Genérica Auto-Detectada</h1>
-    <ul class="novel-toc">
-      <li><a href="${origin}/generic-novel/c1">Capítulo 1 — Início</a></li>
-      <li><a href="${origin}/generic-novel/c2">Capítulo 2 — Meio</a></li>
-    </ul>
-  </main>
-</body>
-</html>`);
-      return;
-    }
-
-    if (reqUrl.pathname === '/generic-novel/c1') {
-      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
-      res.end(`<!DOCTYPE html>
-<html lang="pt-BR">
-<head><meta charset="utf-8"><title>Capítulo 1</title></head>
-<body>
-  <article class="prose-story">
-    <h2>Capítulo 1 — Início</h2>
-    <p>Este é um parágrafo suficientemente longo de ficção para acionar a heurística automática de conteúdo principal sem configuração manual.</p>
-    <p>Outro parágrafo narrativo completo para confirmar o extrator universal inteligente no navegador.</p>
-  </article>
-</body>
-</html>`);
-      return;
-    }
-
-    if (reqUrl.pathname === '/generic-novel/c2') {
-      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
-      res.end(`<!DOCTYPE html>
-<html lang="pt-BR">
-<head><meta charset="utf-8"><title>Capítulo 2</title></head>
-<body>
-  <article class="prose-story">
-    <h2>Capítulo 2 — Meio</h2>
-    <p>Segundo capítulo da obra genérica carregada automaticamente pelo detector inteligente de seletores.</p>
-  </article>
-</body>
-</html>`);
-      return;
-    }
-
-    if (reqUrl.pathname === '/spa-novel/') {
-      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
-      res.end(`<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-  <meta charset="utf-8">
-  <title>SPA Shell</title>
-  <script type="module" src="/spa-app.js"></script>
-</head>
-<body>
-  <div id="root">
-    <div class="skeleton"></div>
-    <div class="skeleton"></div>
-  </div>
-  <script>
-    setTimeout(() => {
-      const root = document.getElementById('root');
-      root.innerHTML = '<h1>Livro SPA E2E</h1><ul class="spa-toc"><li><a href="${origin}/spa-novel/ch-1">Capítulo 1 SPA</a></li></ul>';
-    }, 150);
-  </script>
-</body>
-</html>`);
-      return;
-    }
-
-    if (reqUrl.pathname === '/spa-novel/ch-1') {
-      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
-      res.end(`<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-  <meta charset="utf-8">
-  <title>SPA Chapter</title>
-  <script type="module" src="/spa-app.js"></script>
-</head>
-<body>
-  <div id="root">
-    <div class="skeleton"></div>
-  </div>
-  <script>
-    setTimeout(() => {
-      const root = document.getElementById('root');
-      root.innerHTML = '<article class="spa-chapter"><h2>Capítulo 1 SPA</h2><p>Prosa hidratada via JavaScript para validar o TabRenderPool e executeScript em E2E real no Chromium.</p><p>Segundo parágrafo narrativo hidratado dinamicamente no navegador.</p></article>';
-    }, 120);
-  </script>
-</body>
-</html>`);
-      return;
-    }
-
-    if (reqUrl.pathname === '/spa-app.js') {
-      res.writeHead(200, { 'content-type': 'application/javascript; charset=utf-8' });
-      res.end('/* mock spa entry */');
-      return;
-    }
-
-    if (reqUrl.pathname === '/series/e2e-book/cap-01/') {
-      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
-      res.end(`<!DOCTYPE html>
-<html lang="pt-BR">
-<head><meta charset="utf-8"><title>Cap. 1</title></head>
-<body>
-  <h1 class="entry-title">Capítulo 1 — Primeiro Ato</h1>
-  <div class="epcontent">
-    <p>Conteúdo principal do primeiro capítulo com <b>negrito</b>.</p>
-    <img src="${origin}/art-ok.png" alt="Ilustração">
-  </div>
-</body>
-</html>`);
-      return;
-    }
-
-    if (reqUrl.pathname === '/series/e2e-book/cap-02/') {
-      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
-      res.end(`<!DOCTYPE html>
-<html lang="pt-BR">
-<head><meta charset="utf-8"><title>Cap. 2</title></head>
-<body>
-  <h1 class="entry-title">Capítulo 2 — Segundo Ato</h1>
-  <div class="epcontent">
-    <p>Conteúdo do segundo capítulo com imagem bloqueada.</p>
-    <img src="${origin}/blocked-403.png" alt="Imagem 403">
-  </div>
-</body>
-</html>`);
-      return;
-    }
-
-    if (reqUrl.pathname === '/cover.png' || reqUrl.pathname === '/art-ok.png') {
-      res.writeHead(200, { 'content-type': 'image/png' });
-      res.end(PNG_1X1);
-      return;
-    }
-
-    if (reqUrl.pathname === '/blocked-403.png') {
-      res.writeHead(403, { 'content-type': 'text/plain' });
-      res.end('Forbidden');
-      return;
-    }
-
-    res.writeHead(404);
-    res.end('Not found');
-  });
-
-  return server;
-}
+import { inspectEpubFile } from './helpers/epub-inspector.mjs';
+import { createMockNovelServer } from './helpers/mock-novel-server.mjs';
 
 function resolveChromiumExecutablePath() {
   if (process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH) {
@@ -227,18 +35,20 @@ function resolveChromiumExecutablePath() {
 async function runE2E() {
   const repoRoot = path.resolve('.');
   const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'wpb-e2e-profile-'));
-  const server = createMockNovelServer();
+  const headless = process.env.WPB_E2E_HEADED !== '1';
+  const { server, serverState } = createMockNovelServer();
 
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   const port = server.address().port;
-  const seriesUrl = `http://127.0.0.1:${port}/series/e2e-book/`;
+  const origin = `http://127.0.0.1:${port}`;
+  const seriesUrl = `${origin}/series/e2e-book/`;
 
   let context;
   try {
     const executablePath = resolveChromiumExecutablePath();
     context = await chromium.launchPersistentContext(userDataDir, {
       ...(executablePath ? { executablePath } : { channel: 'chromium' }),
-      headless: true,
+      headless,
       acceptDownloads: true,
       args: [
         `--disable-extensions-except=${repoRoot}`,
@@ -786,7 +596,103 @@ async function runE2E() {
     await spaPage.waitForSelector('#preview-modal[open]', { state: 'detached' });
     await spaPage.close();
 
-    console.log('[OK] E2E extension flow passed end-to-end (load -> parse -> pack EPUB -> report -> merge tabs -> sourceTabId -> SPA)');
+    // 8. Additional cross-browser functional matrix checks in Chromium
+    await page.click('[data-tab="advanced"]');
+    await page.selectOption('#adv-reader-preset', 'kobo');
+    await page.uncheck('#opt-safe-mode');
+    assert.equal(await page.inputValue('#reader-preset'), 'kobo', 'Toggling Safe Mode must preserve active preset');
+    await page.check('#opt-safe-mode');
+
+    await page.selectOption('#ui-lang-top', 'en');
+    assert.equal(
+      await page.textContent('#opt-parser option[value="auto"]'),
+      'Automatic (DOM Scoring)',
+      'Switching to English should translate #opt-parser auto option'
+    );
+    await page.selectOption('#ui-lang-top', 'pt');
+
+    // Verify HTML/MD/TXT exporters on current chapters
+    await page.click('[data-tab="main"]');
+    for (const fmt of ['html', 'md', 'txt']) {
+      await page.selectOption('#output-format', fmt);
+      const [dl] = await Promise.all([
+        page.waitForEvent('download', { timeout: 20000 }),
+        page.click('#btn-pack-epub')
+      ]);
+      const p = path.join(userDataDir, `export-${fmt}.${fmt}`);
+      await dl.saveAs(p);
+      assert.ok(fs.statSync(p).size > 40, `Expected non-empty ${fmt} export`);
+    }
+    await page.selectOption('#output-format', 'epub');
+    await page.selectOption('#reader-preset', 'modern');
+
+    // Verify Check New Chapters -> Batch Download Updates (preserving SVG icon & Referer DNR hotlink image)
+    serverState.newChapterAdded = true;
+    await page.click('[data-tab="library"]');
+    await page.click('#btn-check-all-library');
+    await page.waitForFunction(
+      () => /1 novo/i.test(document.querySelector('#library-grid .lib-status-pill')?.textContent || ''),
+      null,
+      { timeout: 15000 }
+    );
+    const [batchDl] = await Promise.all([
+      page.waitForEvent('download', { timeout: 25000 }),
+      page.click('#btn-download-library-updates')
+    ]);
+    await page.waitForFunction(
+      () => {
+        const b = document.querySelector('#btn-download-library-updates');
+        return b && !b.disabled && /Baixar Novidades/i.test(b.textContent || '');
+      },
+      null,
+      { timeout: 25000 }
+    );
+    assert.equal(
+      await page.locator('#btn-download-library-updates svg.wpb-icon').count(),
+      1,
+      'Batch update button must retain its SVG icon'
+    );
+    const batchOutPath = path.join(userDataDir, 'batch-update.epub');
+    await batchDl.saveAs(batchOutPath);
+    const batchAudit = await inspectEpubFile(batchOutPath, { expectedVersion: 3, minChapters: 1, requireImages: true });
+    assert.equal(batchAudit.ok, true, `Chromium batch EPUB failed inspection:\n${batchAudit.issues.join('\n')}`);
+    assert.ok(batchAudit.summary.chapterImageFiles.length >= 1, 'Chromium DNR Referer rule should bundle hotlink-pic.png');
+
+    // Verify Retry Failed workflow & Pause/Cancel workflow
+    await page.click('[data-tab="main"]');
+    await page.fill('#starting-url', `${origin}/series/flaky-book/`);
+    await page.click('#btn-load-series');
+    await page.waitForFunction(() => document.querySelector('#meta-title')?.value === 'Livro Instável E2E', null, { timeout: 15000 });
+    await page.click('[data-tab="advanced"]');
+    await page.check('#opt-continue-on-error');
+    await page.fill('#opt-retries', '0');
+    await page.fill('#opt-delay', '0');
+    await page.click('[data-tab="main"]');
+    await page.click('#btn-pack-epub');
+    await page.waitForSelector('#btn-retry-failed:not(.hidden)', { timeout: 25000 });
+    const [retryDl] = await Promise.all([
+      page.waitForEvent('download', { timeout: 25000 }),
+      page.click('#btn-retry-failed')
+    ]);
+    await page.waitForSelector('#btn-retry-failed.hidden', { state: 'attached', timeout: 15000 });
+    const retryPath = path.join(userDataDir, 'retry.epub');
+    await retryDl.saveAs(retryPath);
+    const retryAudit = await inspectEpubFile(retryPath, { minChapters: 2 });
+    assert.equal(retryAudit.ok, true, `Chromium retry EPUB failed:\n${retryAudit.issues.join('\n')}`);
+
+    await page.fill('#starting-url', `${origin}/series/slow-book/`);
+    await page.click('#btn-load-series');
+    await page.waitForFunction(() => document.querySelector('#meta-title')?.value === 'Livro Lento E2E', null, { timeout: 15000 });
+    await page.click('#btn-pack-epub');
+    await page.waitForFunction(() => !document.querySelector('#btn-pause').disabled, null, { timeout: 10000 });
+    await page.click('#btn-pause');
+    assert.match(await page.textContent('#progress-label'), /Pausado|Paused/i);
+    await page.click('#btn-cancel');
+    await page.waitForSelector('#confirm-cancel-modal[open]', { timeout: 5000 });
+    await page.click('#btn-confirm-cancel-run');
+    await page.waitForFunction(() => document.querySelector('#btn-cancel').disabled, null, { timeout: 10000 });
+
+    console.log('[OK] E2E extension flow passed end-to-end (load -> parse -> pack EPUB -> report -> merge tabs -> sourceTabId -> SPA -> DNR/retry/pause)');
   } finally {
     if (context) await context.close();
     server.close();

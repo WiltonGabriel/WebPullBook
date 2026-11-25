@@ -229,12 +229,12 @@ export function canUseTabScripting() {
   );
 }
 
+const CHAPTER_CONTENT_MARKER_SELECTOR =
+  '#chp_raw, .epcontent, .reading-content, .reader-content, .rich-text-content, ol.toc_ol, .chapter-inner, #chr-content, #chapter-content';
+
 export function isAntiBotChallengeDocument(doc) {
   if (!doc) return false;
-  const hasContent = Boolean(
-    doc.querySelector('#chp_raw, .epcontent, .reading-content, ol.toc_ol, .chapter-inner, #chr-content, #chapter-content')
-  );
-  if (hasContent) return false;
+  if (doc.querySelector(CHAPTER_CONTENT_MARKER_SELECTOR)) return false;
 
   const title = normalizeSpaces(doc.title || '');
   const hasChallengeEl = Boolean(
@@ -261,10 +261,7 @@ export function isAntiBotChallengeDocument(doc) {
 
 export function isRateLimitDocument(doc) {
   if (!doc) return false;
-  const hasContent = Boolean(
-    doc.querySelector('#chp_raw, .epcontent, .reading-content, ol.toc_ol, .chapter-inner, #chr-content, #chapter-content')
-  );
-  if (hasContent) return false;
+  if (doc.querySelector(CHAPTER_CONTENT_MARKER_SELECTOR)) return false;
   const fullTextLen = (doc.body?.textContent || '').trim().length;
   if (fullTextLen > 4000) return false;
   const text = normalizeSpaces(`${doc.title || ''} ${(doc.body?.textContent || '').slice(0, 2000)}`);

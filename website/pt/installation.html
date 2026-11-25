@@ -26,8 +26,11 @@
   <meta name="twitter:description" content="Instale o WebPullBook no Firefox 128+ (Firefox Add-ons) e no Chrome, Edge ou Brave (GitHub Releases).">
   <meta name="twitter:image" content="https://wiltongabriel.github.io/WebPullBook/assets/images/social-preview.png">
   <meta name="twitter:image:alt" content="Guia de instalação do WebPullBook">
+  <link rel="icon" href="../favicon.ico" sizes="any">
   <link rel="icon" type="image/svg+xml" href="../assets/images/icon.svg">
-  <link rel="icon" type="image/png" sizes="128x128" href="../assets/images/icon-128.png">
+  <link rel="icon" type="image/png" sizes="48x48" href="../assets/images/icon-48.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/images/icon-32.png">
+  <link rel="apple-touch-icon" href="../assets/images/icon-128.png">
   <link rel="stylesheet" href="../assets/css/styles.css">
   <script src="../assets/js/site.js" defer></script>
   <script data-goatcounter="https://wiltongabriel.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
@@ -65,17 +68,33 @@
       </nav>
 
       <div class="header-actions">
-        <select id="lang-select" class="header-select" aria-label="Idioma">
-          <option value="pt-BR" selected>Português (BR)</option>
-          <option value="en">English</option>
-        </select>
-        <select id="theme-select" class="header-select" aria-label="Tema">
-          <option value="system">Auto</option>
-          <option value="light">Claro</option>
-          <option value="dark">Escuro</option>
-          <option value="sepia">Sépia</option>
-          <option value="midnight">Meia-noite</option>
-        </select>
+        <button id="prefs-toggle" class="header-prefs-btn" type="button" popovertarget="prefs-panel" aria-label="Idioma e tema">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="10"></circle>
+            <path d="M2 12h20"></path>
+            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+          </svg>
+          <span id="prefs-toggle-label">PT</span>
+        </button>
+        <div id="prefs-panel" popover="auto" class="header-prefs-panel">
+          <div class="prefs-row">
+            <label for="lang-select">Idioma</label>
+            <select id="lang-select" class="header-select">
+              <option value="pt-BR" selected>Português (BR)</option>
+              <option value="en">English</option>
+            </select>
+          </div>
+          <div class="prefs-row">
+            <label for="theme-select">Tema</label>
+            <select id="theme-select" class="header-select">
+              <option value="system">Auto</option>
+              <option value="light">Claro</option>
+              <option value="dark">Escuro</option>
+              <option value="sepia">Sépia</option>
+              <option value="midnight">Meia-noite</option>
+            </select>
+          </div>
+        </div>
       </div>
     </div>
   </header>

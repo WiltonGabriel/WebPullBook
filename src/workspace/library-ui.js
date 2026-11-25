@@ -396,7 +396,7 @@ export async function handleDownloadLibraryUpdates() {
       await waitWhilePaused(signal);
       if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
       const { entry } = queue[q];
-      batchBtn.textContent = t('btnDownloadingUpdates', { done: q + 1, total: queue.length });
+      setButtonLabel(batchBtn, t('btnDownloadingUpdates', { done: q + 1, total: queue.length }));
       await handleCheckLibrarySeries(entry, true, { fallbackSelectAll: false, allowDuringBatch: true });
       const selectedNew = state.chapters.filter((c) => c.included);
       if (selectedNew.length === 0) continue;

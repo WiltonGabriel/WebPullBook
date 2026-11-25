@@ -270,9 +270,15 @@ export class BaseParser {
       '';
     const coverUrl = rawCover ? resolveSafeHttpUrl(rawCover, targetUrl) || '' : '';
 
-    const synContainer = doc.querySelector(
-      '.synopsis, .description, .summary, [itemprop="description"], [data-testid*="synopsis"], [data-testid*="description"], .entry-content'
+    let synContainer = doc.querySelector(
+      '.synopsis, .description, .summary, [itemprop="description"], [data-testid*="synopsis"], [data-testid*="description"]'
     );
+    if (!synContainer) {
+      const entryContent = doc.querySelector('.entry-content');
+      if (entryContent && entryContent.querySelectorAll('a[href]').length < 8) {
+        synContainer = entryContent;
+      }
+    }
     const ogDesc = doc.querySelector('meta[property="og:description"]')?.getAttribute('content');
     const synopsis = extractCleanSynopsis(synContainer) || jsonLd.synopsis || normalizeSpaces(ogDesc);
 
@@ -520,6 +526,7 @@ export class BaseParser {
     return {
       ...metadata,
       requiresTabRender: usedTabFallback || Boolean(this.requiresTabForChapters()),
+      _usedTabFallback: usedTabFallback,
       _attemptedTabFallback: attemptedTabFallback,
       chapters
     };
@@ -530,7 +537,10 @@ export class BaseParser {
   }
 
   extractChapterHeading(doc, chapter) {
-    const h1El = doc.querySelector('h1.entry-title, h1');
+    const h1El =
+      doc.querySelector('h1.entry-title') ||
+      doc.querySelector('article h1, main h1') ||
+      doc.querySelector('h1');
     let h1 = '';
     if (h1El) {
       const clone = h1El.cloneNode(true);

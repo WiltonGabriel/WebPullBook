@@ -2,6 +2,7 @@ import { BaseExporter } from './base-exporter.js';
 import { escapeXml } from '../core/sanitizer.js';
 import { fetchImageBytes } from '../core/image-processor.js';
 import { getBookLocaleLabels, normalizeBcp47Language } from '../core/epub-templates.js';
+import { toHighResCoverUrl } from '../core/parser-engine.js';
 
 function bytesToBase64(bytes) {
   let binary = '';
@@ -52,6 +53,12 @@ export class HtmlExporter extends BaseExporter {
 
       const renderNodes = (p.nodes || []).map((n) => (n?.cloneNode ? n.cloneNode(true) : n));
       if (inlineChapterImages) {
+        const fallbackByUrl = new Map();
+        for (const info of p.images || []) {
+          if (info?.originalUrl && info?.fallbackUrl && !fallbackByUrl.has(info.originalUrl)) {
+            fallbackByUrl.set(info.originalUrl, info.fallbackUrl);
+          }
+        }
         const imgEls = [];
         for (const root of renderNodes) {
           if (!root || root.nodeType !== 1) continue;
@@ -65,16 +72,28 @@ export class HtmlExporter extends BaseExporter {
           if (!/^https?:\/\//i.test(src)) continue;
           let cached = chapterImgCache.get(src);
           if (!cached) {
-            try {
-              const { bytes, mime } = await fetchImageBytes(src, signal, {
-                refererUrl: p.chapter?.url || metadata.startingUrl || '',
-                imageFallbacks: p.imageFallbacks
-              });
-              cached = { dataUri: `data:${mime};base64,${bytesToBase64(bytes)}` };
-            } catch (err) {
-              if (err?.name === 'AbortError') throw err;
+            const imgCandidates = [src];
+            const unproxied = toHighResCoverUrl(src);
+            if (unproxied && unproxied !== src) imgCandidates.push(unproxied);
+            const fallbackUrl = fallbackByUrl.get(src);
+            if (fallbackUrl && !imgCandidates.includes(fallbackUrl)) imgCandidates.push(fallbackUrl);
+
+            let lastErr = null;
+            for (const candidateUrl of imgCandidates) {
+              try {
+                const { bytes, mime } = await fetchImageBytes(candidateUrl, signal, {
+                  refererUrl: p.chapter?.url || metadata.startingUrl || ''
+                });
+                cached = { dataUri: `data:${mime};base64,${bytesToBase64(bytes)}` };
+                break;
+              } catch (err) {
+                if (err?.name === 'AbortError') throw err;
+                lastErr = err;
+              }
+            }
+            if (!cached) {
               cached = { failed: true };
-              onLog(`[IMG] Aviso: falha ao embutir imagem no HTML (${src}): ${err.message}`, 'warn');
+              onLog(`[IMG] Aviso: falha ao embutir imagem no HTML (${src}): ${lastErr?.message || 'Failed to fetch'}`, 'warn');
             }
             chapterImgCache.set(src, cached);
           }

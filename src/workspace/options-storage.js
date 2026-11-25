@@ -259,6 +259,7 @@ export function populateRegistries() {
   const currentVal = parserSel.value || state.options.parserId || 'auto';
   const autoOpt = document.createElement('option');
   autoOpt.value = 'auto';
+  autoOpt.setAttribute('data-i18n', 'parserAutoOption');
   autoOpt.textContent = t('parserAutoOption');
   const parserOpts = [autoOpt];
   for (const p of parserRegistry.list()) {
@@ -503,7 +504,7 @@ export function syncMetadataToUi() {
   $('meta-cover-url').value = m.coverUrl || '';
   $('meta-genres').value = (m.genres || []).join(', ');
   $('meta-synopsis').value = m.synopsis || '';
-  $('parser-badge').textContent = t('parserBadge', { name: state.activeParser.name });
+  $('parser-badge').textContent = t('parserBadge', { name: state.activeParser?.name || 'Universal Smart Extractor' });
   $('series-status-pill').textContent =
     m.status || (state.chapters.length ? t('statusCapsCount', { count: state.chapters.length }) : t('statusWaitingUrl'));
   updateCoverPreview();

@@ -214,3 +214,47 @@ test('hydrateCachedChapter rejects XML parsererror and preserves imageFallbacks 
   const hydrated = hydrateCachedChapter({ url: 'https://example.com/ch1', displayTitle: 'Ch 1' }, stored);
   assert.equal(hydrated.images[0].fallbackUrl, 'https://cdn.example.com/thumb.jpg');
 });
+
+test('CacheStore.putSession preserves pinnedCacheKey, edited, readOnlyPreview, and requiresTabRender', async () => {
+  await cacheStore.putChapter({
+    key: 'custom-pinned-key|',
+    seriesKey: 'series-meta',
+    chapterUrl: 'urn:webpullbook:merged:1',
+    chapterTitle: 'Merged Chapter',
+    subtitle: '',
+    nodes: createChapterNodes('<p>Merged content</p>'),
+    ttlDays: 7
+  });
+  await cacheStore.putSession({
+    seriesKey: 'series-meta',
+    metadata: {
+      startingUrl: 'https://example.org/book',
+      title: 'Edited Book',
+      requiresTabRender: true
+    },
+    parserId: 'novelbin',
+    chapters: [
+      {
+        id: 'c1',
+        index: 0,
+        url: 'urn:webpullbook:merged:1',
+        displayTitle: 'Merged Chapter',
+        volume: 'Volume 01',
+        included: true,
+        status: 'ok',
+        pinnedCacheKey: 'custom-pinned-key|',
+        edited: true,
+        readOnlyPreview: true
+      }
+    ],
+    ttlDays: 7
+  });
+
+  const { sessions } = await cacheStore.listSessionsWithStats();
+  const sess = sessions.find((s) => s.seriesKey === 'series-meta');
+  assert.ok(sess);
+  assert.equal(sess.metadata.requiresTabRender, true);
+  assert.equal(sess.chapters[0].pinnedCacheKey, 'custom-pinned-key|');
+  assert.equal(sess.chapters[0].edited, true);
+  assert.equal(sess.chapters[0].readOnlyPreview, true);
+});

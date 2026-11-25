@@ -4,9 +4,11 @@ import { installDomGlobals } from './helpers/dom-env.js';
 import { DEFAULT_OPTIONS, getCacheKey, state } from '../src/workspace/state.js';
 import {
   applyThemeChoice,
+  populateRegistries,
   sanitizeCoverPreviewUrl,
   sanitizeImportedOptions
 } from '../src/workspace/options-storage.js';
+import { applyI18nToDom } from '../src/workspace/i18n.js';
 import { sanitizeDomainRules } from '../src/workspace/domain-rules-ui.js';
 import { writeBlobToDirectoryHandle } from '../src/workspace/download-storage.js';
 import {
@@ -211,4 +213,20 @@ test('icons helpers build minimalist SVG icons via createElementNS and preserve 
   createIconButtonContent(dyn, 'trash', 'Remove');
   assert.ok(dyn.querySelector('svg.wpb-icon'));
   assert.equal(dyn.querySelector('.wpb-btn-label').textContent, 'Remove');
+});
+
+test('populateRegistries tags parser auto option with data-i18n so language switches translate it', () => {
+  const doc = new DOMParser().parseFromString(
+    '<select id="opt-parser"></select><select id="output-format"></select>',
+    'text/html'
+  );
+  globalThis.document = doc;
+  state.options.uiLang = 'pt';
+  populateRegistries();
+  const autoOpt = doc.querySelector('#opt-parser option[value="auto"]');
+  assert.equal(autoOpt.getAttribute('data-i18n'), 'parserAutoOption');
+  assert.equal(autoOpt.textContent, 'Automático (Pontuação DOM)');
+
+  applyI18nToDom('en');
+  assert.equal(autoOpt.textContent, 'Automatic (DOM Scoring)');
 });

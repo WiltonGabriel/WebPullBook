@@ -184,6 +184,12 @@ if (!fs.existsSync(robotsPath)) {
     fail(`robots.txt must reference Sitemap: ${BASE_URL}/sitemap.xml`);
   }
 }
+if (!fs.existsSync(path.join(SITE_DIR, 'favicon.ico'))) fail('Missing website/favicon.ico');
+for (const iconAsset of ['icon.svg', 'icon-32.png', 'icon-48.png', 'icon-128.png']) {
+  if (!fs.existsSync(path.join(SITE_DIR, 'assets', 'images', iconAsset))) {
+    fail(`Missing website/assets/images/${iconAsset}`);
+  }
+}
 
 // 2. Validate sitemap.xml (<loc>, <lastmod>, and <xhtml:link> parity)
 const sitemapPath = path.join(SITE_DIR, 'sitemap.xml');
@@ -242,7 +248,7 @@ if (!fs.existsSync(sitemapPath)) {
 
 // 2b. Validate Reader Presets Markdown vs src/workspace/state.js READERS_PRESETS
 const expectedPresetIds = new Set([...Object.keys(READER_PRESETS), 'custom']);
-for (const presetFile of ['docs/READER_PRESETS.md', 'docs/READER_PRESETS.pt.md']) {
+for (const presetFile of ['docs/READER_PRESETS.md', 'docs/pt/READER_PRESETS.pt.md']) {
   const absPreset = path.resolve(presetFile);
   if (!fs.existsSync(absPreset)) {
     fail(`Missing ${presetFile}`);
@@ -396,6 +402,18 @@ for (const page of siteConfig.pages || []) {
     if (!/<footer\b/i.test(html)) fail(`${v.relFile}: missing <footer>`);
     if (!/aria-current="page"/i.test(html)) fail(`${v.relFile}: missing aria-current="page" in navigation`);
     if (/class="beta-bar"/i.test(html)) fail(`${v.relFile}: must not include top .beta-bar banner`);
+    if (!/<button\b[^>]*\bid="prefs-toggle"[^>]*\bpopovertarget="prefs-panel"/i.test(html)) {
+      fail(`${v.relFile}: missing #prefs-toggle popover button`);
+    }
+    if (/\baria-haspopup=/i.test(html) || /\brole="menu"/i.test(html)) {
+      fail(`${v.relFile}: prefs popover must not declare role="menu" or aria-haspopup`);
+    }
+    if (!/<div\b[^>]*\bid="prefs-panel"[^>]*\bpopover="auto"/i.test(html)) {
+      fail(`${v.relFile}: missing #prefs-panel popover container`);
+    }
+    if (!/favicon\.ico"/i.test(html) || !/apple-touch-icon"/i.test(html)) {
+      fail(`${v.relFile}: missing favicon.ico or apple-touch-icon link tag`);
+    }
     if (!/<select\b[^>]*\bid="lang-select"/i.test(html)) fail(`${v.relFile}: missing #lang-select dropdown`);
     if (/\bdata-href="/i.test(html)) fail(`${v.relFile}: must not contain unused data-href attributes`);
     if (!/<select\b[^>]*\bid="theme-select"/i.test(html)) fail(`${v.relFile}: missing #theme-select dropdown`);

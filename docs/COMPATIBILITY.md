@@ -13,11 +13,12 @@ Sites and adapters verified end-to-end in live usage and covered by automated re
 
 | Site / Source | Adapter | Last Verified | Reference Fixture | Notes |
 | :--- | :--- | :--- | :--- | :--- |
-| Central Novel | `wp-lightnovel` | 2026-11-19 | [wp-lightnovel-index.html](../tests/fixtures/wp-lightnovel-index.html) | End-to-end tested (static SSR, zero SPA tabs): multi-volume detection, cover, synopsis, genres, and chapter fidelity. |
-| Royal Road | `royalroad` | 2026-11-15 | [royalroad-index.html](../tests/fixtures/royalroad-index.html) | End-to-end tested (20 chapters): volume & chapter metadata, full synopsis, tags, cover, inline images, and hidden `<style>` watermark filtering. |
-| Novel Mania | `novelmania` | 2026-11-15 | [novelmania-index.html](../tests/fixtures/novelmania-index.html) | End-to-end tested (20 chapters): paginated chapter API & multi-volume detection, full synopsis, genres, status, original cover, inline images, `.sr-only` heading cleanup, and footnote anchors. |
-| Scribble Hub | `scribblehub` | 2026-11-19 | [scribblehub-index-p1.html](../tests/fixtures/scribblehub-index-p1.html) | End-to-end tested (index & direct chapter URL): AJAX full TOC, open-tab reuse, chronological ordering, metadata, inline images, and author note cleanup. |
-| NovelBin | `novelbin` | 2026-11-20 | [novelbin-index.html](../tests/fixtures/novelbin-index.html) | End-to-end tested (index & direct chapter URL, 2 novels): automatic SPA tab hydration, reusable tab pool, JSON-LD author & full metadata, cover, sr-only/duplicate-heading cleanup, and ad-free chapter XHTML. |
+| Central Novel | `wp-lightnovel` | 2026-11-24 | [wp-lightnovel-index.html](../tests/fixtures/wp-lightnovel-index.html) | End-to-end verified (static SSR, zero SPA tabs): multi-volume detection, cover, synopsis, genres, inline images, and chapter fidelity. |
+| Madara-based platforms | `madara-theme` | 2026-11-24 | [madara-index.html](../tests/fixtures/madara-index.html) | End-to-end verified (SSR and POST AJAX chapter lists): series metadata, cover, synopsis, genres, status, volume grouping, and chapter fidelity. |
+| Royal Road | `royalroad` | 2026-11-24 | [royalroad-index.html](../tests/fixtures/royalroad-index.html) | End-to-end verified: volume & chapter metadata, full synopsis, tags, cover, inline images, and hidden `<style>` watermark filtering. |
+| Novel Mania | `novelmania` | 2026-11-24 | [novelmania-index.html](../tests/fixtures/novelmania-index.html) | End-to-end verified: paginated chapter API & multi-volume detection, full synopsis, genres, status, original cover, inline images, `.sr-only` heading cleanup, and footnote anchors. |
+| Scribble Hub | `scribblehub` | 2026-11-19 | [scribblehub-index-p1.html](../tests/fixtures/scribblehub-index-p1.html) | End-to-end verified (index & direct chapter URL): AJAX full TOC, open-tab reuse, chronological ordering, metadata, inline images, and author note cleanup. |
+| NovelBin | `novelbin` | 2026-11-24 | [novelbin-index.html](../tests/fixtures/novelbin-index.html) | End-to-end verified (index & direct chapter URL): automatic SPA tab hydration, reusable tab pool, JSON-LD author & full metadata, cover, sr-only/duplicate-heading cleanup, and ad-free chapter XHTML. |
 
 ## Added / Not Officially Tested (Adicionados / Não Testados Oficialmente)
 
@@ -25,7 +26,6 @@ Adapters or structural layouts already implemented (with unit fixtures), awaitin
 
 | Site / Layout | Adapter | Status | Reference Fixture | Notes |
 | :--- | :--- | :--- | :--- | :--- |
-| Madara-based platforms (`.wp-manga-chapter`, `.reading-content`) | `madara-theme` | Fixture-tested only | [madara-index.html](../tests/fixtures/madara-index.html) | Implemented with volume grouping and chapter extraction; pending official live-site testing checklist. |
 | Other WordPress novel theme clones (`.eplister`, `.ts-chl-collapsible`, `.epcontent`) | `wp-lightnovel` | Structural match | [wp-lightnovel-index.html](../tests/fixtures/wp-lightnovel-index.html) | Shares the same WordPress novel DOM layout as Central Novel; awaiting individual live reports. |
 
 ## Potentially Compatible (Potencialmente Compatíveis)
@@ -54,10 +54,10 @@ Authoritative inventory of every parser module registered in [src/parsers/index.
 
 | Adapter | Last Verified | Index Fixture | Chapter Fixture | Snapshot Expectations |
 | :--- | :--- | :--- | :--- | :--- |
-| `wp-lightnovel` | 2026-11-19 | [wp-lightnovel-index.html](../tests/fixtures/wp-lightnovel-index.html) | [wp-lightnovel-chapter.html](../tests/fixtures/wp-lightnovel-chapter.html) | [snapshots.json](../tests/fixtures/snapshots.json) |
-| `madara-theme` | 2026-11-11 | [madara-index.html](../tests/fixtures/madara-index.html) | [madara-chapter.html](../tests/fixtures/madara-chapter.html) | [snapshots.json](../tests/fixtures/snapshots.json) |
-| `royalroad` | 2026-11-15 | [royalroad-index.html](../tests/fixtures/royalroad-index.html) | [royalroad-chapter.html](../tests/fixtures/royalroad-chapter.html) | [snapshots.json](../tests/fixtures/snapshots.json) |
-| `novelmania` | 2026-11-15 | [novelmania-index.html](../tests/fixtures/novelmania-index.html) | [novelmania-chapter.html](../tests/fixtures/novelmania-chapter.html) | [snapshots.json](../tests/fixtures/snapshots.json) |
+| `wp-lightnovel` | 2026-11-24 | [wp-lightnovel-index.html](../tests/fixtures/wp-lightnovel-index.html) | [wp-lightnovel-chapter.html](../tests/fixtures/wp-lightnovel-chapter.html) | [snapshots.json](../tests/fixtures/snapshots.json) |
+| `madara-theme` | 2026-11-24 | [madara-index.html](../tests/fixtures/madara-index.html) | [madara-chapter.html](../tests/fixtures/madara-chapter.html) | [snapshots.json](../tests/fixtures/snapshots.json) |
+| `royalroad` | 2026-11-24 | [royalroad-index.html](../tests/fixtures/royalroad-index.html) | [royalroad-chapter.html](../tests/fixtures/royalroad-chapter.html) | [snapshots.json](../tests/fixtures/snapshots.json) |
+| `novelmania` | 2026-11-24 | [novelmania-index.html](../tests/fixtures/novelmania-index.html) | [novelmania-chapter.html](../tests/fixtures/novelmania-chapter.html) | [snapshots.json](../tests/fixtures/snapshots.json) |
 | `scribblehub` | 2026-11-19 | [scribblehub-index-p1.html](../tests/fixtures/scribblehub-index-p1.html) | [scribblehub-chapter.html](../tests/fixtures/scribblehub-chapter.html) | [snapshots.json](../tests/fixtures/snapshots.json) |
-| `novelbin` | 2026-11-20 | [novelbin-index.html](../tests/fixtures/novelbin-index.html) | [novelbin-chapter.html](../tests/fixtures/novelbin-chapter.html) | [snapshots.json](../tests/fixtures/snapshots.json) |
-| `generic-html` | 2026-11-11 | [generic-index-p1.html](../tests/fixtures/generic-index-p1.html) | [generic-chapter.html](../tests/fixtures/generic-chapter.html) | [snapshots.json](../tests/fixtures/snapshots.json) |
+| `novelbin` | 2026-11-24 | [novelbin-index.html](../tests/fixtures/novelbin-index.html) | [novelbin-chapter.html](../tests/fixtures/novelbin-chapter.html) | [snapshots.json](../tests/fixtures/snapshots.json) |
+| `generic-html` | 2026-11-24 | [generic-index-p1.html](../tests/fixtures/generic-index-p1.html) | [generic-chapter.html](../tests/fixtures/generic-chapter.html) | [snapshots.json](../tests/fixtures/snapshots.json) |

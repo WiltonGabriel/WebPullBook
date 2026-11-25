@@ -366,15 +366,92 @@ a:hover {
   flex-shrink: 0;
 }
 
+.header-prefs-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.38rem 0.65rem;
+  border-radius: 0.55rem;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+  line-height: 1.25;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.header-prefs-btn:hover {
+  border-color: var(--accent-2);
+  background: var(--surface);
+}
+
+.header-prefs-panel {
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background: var(--surface);
+  color: var(--text);
+  padding: 0.85rem;
+  min-inline-size: 13.5rem;
+  max-inline-size: calc(100vw - 1.5rem);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.28);
+  z-index: 150;
+}
+
+.header-prefs-panel:is(:popover-open, .\:popover-open) {
+  display: grid;
+  gap: 0.7rem;
+}
+
+@supports not selector(:popover-open) {
+  .header-prefs-panel:not(.\:popover-open) {
+    display: none;
+  }
+}
+
+@supports (position-area: block-end) {
+  .header-prefs-panel {
+    inset: auto;
+    margin: 0.35rem 0 0 0;
+    position-area: block-end span-inline-start;
+    position-try-fallbacks: flip-block, flip-inline, flip-block flip-inline;
+  }
+}
+
+@supports not (position-area: block-end) {
+  .header-prefs-panel {
+    position: fixed;
+    inset-block-start: 4.1rem;
+    inset-inline-end: 1rem;
+    inset-block-end: auto;
+    inset-inline-start: auto;
+    margin: 0;
+  }
+}
+
+.prefs-row {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.prefs-row label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
 .header-select {
+  inline-size: 100%;
   appearance: auto;
-  padding: 0.36rem 0.55rem;
+  padding: 0.4rem 0.55rem;
   border-radius: 0.5rem;
   border: 1px solid var(--border);
   background: var(--surface-2);
   color: var(--text);
   font-family: inherit;
-  font-size: 0.83rem;
+  font-size: 0.84rem;
   font-weight: 600;
   cursor: pointer;
   line-height: 1.3;
@@ -459,10 +536,9 @@ a:hover {
     gap: 0.25rem;
   }
 
-  .header-select {
-    padding: 0.28rem 0.3rem;
-    font-size: 0.74rem;
-    max-inline-size: 6.1rem;
+  .header-prefs-btn {
+    padding: 0.3rem 0.52rem;
+    font-size: 0.78rem;
   }
 
   .nav-toggle {
@@ -476,10 +552,9 @@ a:hover {
     font-size: 0.88rem;
   }
 
-  .header-select {
-    padding: 0.25rem 0.25rem;
-    font-size: 0.72rem;
-    max-inline-size: 5.2rem;
+  .header-prefs-btn {
+    padding: 0.26rem 0.45rem;
+    font-size: 0.75rem;
   }
 
   .nav-toggle {

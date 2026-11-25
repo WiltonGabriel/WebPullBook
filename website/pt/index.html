@@ -27,8 +27,11 @@
   <meta name="twitter:description" content="Extraia web novels, light novels, artigos e abas abertas em ebooks EPUB 2, EPUB 3, HTML, Markdown e TXT para Kindle, Kobo e leitura offline.">
   <meta name="twitter:image" content="https://wiltongabriel.github.io/WebPullBook/assets/images/social-preview.png">
   <meta name="twitter:image:alt" content="Interface do WebPullBook exibindo volumes extraídos, capa da obra, perfis de leitor e lista de capítulos">
+  <link rel="icon" href="../favicon.ico" sizes="any">
   <link rel="icon" type="image/svg+xml" href="../assets/images/icon.svg">
-  <link rel="icon" type="image/png" sizes="128x128" href="../assets/images/icon-128.png">
+  <link rel="icon" type="image/png" sizes="48x48" href="../assets/images/icon-48.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/images/icon-32.png">
+  <link rel="apple-touch-icon" href="../assets/images/icon-128.png">
   <link rel="stylesheet" href="../assets/css/styles.css">
   <script src="../assets/js/site.js" defer></script>
   <script data-goatcounter="https://wiltongabriel.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
@@ -102,17 +105,33 @@
       </nav>
 
       <div class="header-actions">
-        <select id="lang-select" class="header-select" aria-label="Idioma">
-          <option value="pt-BR" selected>Português (BR)</option>
-          <option value="en">English</option>
-        </select>
-        <select id="theme-select" class="header-select" aria-label="Tema">
-          <option value="system">Auto</option>
-          <option value="light">Claro</option>
-          <option value="dark">Escuro</option>
-          <option value="sepia">Sépia</option>
-          <option value="midnight">Meia-noite</option>
-        </select>
+        <button id="prefs-toggle" class="header-prefs-btn" type="button" popovertarget="prefs-panel" aria-label="Idioma e tema">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="10"></circle>
+            <path d="M2 12h20"></path>
+            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+          </svg>
+          <span id="prefs-toggle-label">PT</span>
+        </button>
+        <div id="prefs-panel" popover="auto" class="header-prefs-panel">
+          <div class="prefs-row">
+            <label for="lang-select">Idioma</label>
+            <select id="lang-select" class="header-select">
+              <option value="pt-BR" selected>Português (BR)</option>
+              <option value="en">English</option>
+            </select>
+          </div>
+          <div class="prefs-row">
+            <label for="theme-select">Tema</label>
+            <select id="theme-select" class="header-select">
+              <option value="system">Auto</option>
+              <option value="light">Claro</option>
+              <option value="dark">Escuro</option>
+              <option value="sepia">Sépia</option>
+              <option value="midnight">Meia-noite</option>
+            </select>
+          </div>
+        </div>
       </div>
     </div>
   </header>
@@ -121,9 +140,9 @@
     <section class="hero">
       <div class="container hero-grid">
         <div>
-          <h1>Extraia conteúdos web com múltiplos capítulos para leitura offline</h1>
+          <h1>Salve web novels, artigos e abas abertas como ebooks offline</h1>
           <p class="hero-lead">
-            <strong>WebPullBook</strong> é uma extensão de navegador open source (<strong>Web-to-EPUB</strong>) escrita em JavaScript nativo e sem dependências de execução. Permite extrair web novels, light novels, fanfics, artigos, documentações e abas abertas em arquivos <strong>EPUB 2</strong>, <strong>EPUB 3</strong>, <strong>HTML</strong>, <strong>Markdown</strong> e <strong>TXT</strong> organizados por volume para <strong>Kindle</strong>, <strong>Kobo</strong>, <strong>Calibre</strong> e leitura local.
+            O <strong>WebPullBook</strong> é uma extensão gratuita e open source para navegador que transforma histórias em capítulos, fanfics, blogs e abas abertas em arquivos <strong>EPUB</strong>, <strong>HTML</strong>, <strong>Markdown</strong> e <strong>Texto</strong> limpos—prontos para ler no <strong>Kindle</strong>, <strong>Kobo</strong>, <strong>Calibre</strong>, celular ou tablet, sem criar contas nem enviar nada para fora do seu computador.
           </p>
           <div class="cta-row">
             <a class="btn primary" href="installation.html">Como Instalar</a>
@@ -182,28 +201,28 @@
     <section id="como-comecar" class="section alt">
       <div class="container">
         <div class="section-header">
-          <h2>Como Começar: Baixar, Instalar e Usar</h2>
-          <p>O WebPullBook não exige etapa de compilação nem instalador externo. Siga estes três passos:</p>
+          <h2>Como Funciona em 3 Passos</h2>
+          <p>Tudo acontece direto no seu navegador—sem precisar instalar programas complicados ou usar terminal.</p>
         </div>
 
         <div class="grid-3">
           <article class="card">
-            <h3>1. Obtenha a Extensão</h3>
-            <p><strong>Firefox 128+:</strong> Instale com um clique pelo <a href="https://addons.mozilla.org/firefox/addon/webpullbook/" data-wpb-link="firefoxAddons">Firefox Add-ons (AMO)</a>.<br>
-            <strong>Chrome / Edge / Brave:</strong> Baixe o pacote mais recente em <a href="https://github.com/WiltonGabriel/WebPullBook/releases/tag/v1.7.1" data-wpb-link="releasesLatest">GitHub Releases</a> e extraia a pasta.</p>
+            <h3>1. Instale a Extensão</h3>
+            <p><strong>Firefox:</strong> Instale com um clique pelo <a href="https://addons.mozilla.org/firefox/addon/webpullbook/" data-wpb-link="firefoxAddons">Firefox Add-ons (AMO)</a>.<br>
+            <strong>Chrome, Edge ou Brave:</strong> Baixe o arquivo mais recente em <a href="https://github.com/WiltonGabriel/WebPullBook/releases/tag/v1.7.1" data-wpb-link="releasesLatest">GitHub Releases</a> e descompacte a pasta.</p>
           </article>
 
           <article class="card">
             <h3>2. Ative no Navegador</h3>
             <ul>
-              <li><strong>Mozilla Firefox:</strong> Confirme as permissões no Firefox Add-ons; as atualizações assinadas chegam automaticamente.</li>
-              <li><strong>Chrome / Edge / Brave:</strong> Abra <code>chrome://extensions/</code>, ative o <strong>Modo do desenvolvedor</strong>, clique em <strong>Carregar sem compactação</strong> e selecione a pasta extraída.</li>
+              <li><strong>Firefox:</strong> Confirme a permissão para acessar os sites ao instalar ou ao carregar seu primeiro livro.</li>
+              <li><strong>Chrome / Edge / Brave:</strong> Abra <code>chrome://extensions/</code>, ative o <strong>Modo do desenvolvedor</strong> e clique em <strong>Carregar sem compactação</strong> na pasta extraída.</li>
             </ul>
           </article>
 
           <article class="card">
-            <h3>3. Extraia e Empacote</h3>
-            <p>Abra a página de índice ou capítulo de uma obra, clique no ícone do <strong>WebPullBook</strong> na barra do navegador, escolha o <strong>Perfil de Leitor</strong> (como <em>Kindle</em> ou <em>Kobo</em>) e clique em <strong>Empacotar EPUB</strong>.</p>
+            <h3>3. Escolha Seu Leitor e Salve</h3>
+            <p>Abra a página da história ou um capítulo, clique no ícone do <strong>WebPullBook</strong> na barra do navegador, escolha o perfil do seu aparelho (como <em>Kindle</em> ou <em>Kobo</em>) e clique em <strong>Empacotar EPUB</strong>.</p>
           </article>
         </div>
       </div>
@@ -212,39 +231,39 @@
     <section class="section">
       <div class="container">
         <div class="section-header">
-          <h2>Recursos Principais</h2>
-          <p>Toda a extração, limpeza de HTML, processamento de imagens e compressão ZIP ocorre localmente no navegador.</p>
+          <h2>Recursos para Leitura no Dia a Dia</h2>
+          <p>Livros limpos, sem menus, propagandas ou poluição da página—processados localmente no seu dispositivo.</p>
         </div>
 
         <div class="grid-3">
           <article class="card">
-            <h3>Captura da Aba Ativa &amp; Modo SPA</h3>
-            <p>Captura o DOM vivo direto da aba aberta para reaproveitar o conteúdo já carregado. Em sites que dependem de renderização via JavaScript, utiliza uma única aba auxiliar reutilizável com pausa automática em desafios anti-bot.</p>
+            <h3>Lê Direto da Aba Aberta</h3>
+            <p>Aproveita a página que você já carregou no navegador, inclusive em sites mais modernos onde os capítulos aparecem só depois da página terminar de abrir.</p>
           </article>
 
           <article class="card">
-            <h3>Adaptadores Estruturais &amp; Extrator Genérico</h3>
-            <p>Combina adaptadores de DOM com um extrator heurístico que identifica listas de capítulos, blocos de texto, links de <em>"Próximo Capítulo"</em> e divisões de volume — além da ferramenta visual <strong>Apontar</strong> para layouts personalizados.</p>
+            <h3>Capítulos e Volumes Automáticos</h3>
+            <p>Identifica o índice e separa os volumes sozinho, segue botões de <em>"Próximo Capítulo"</em> quando não existe lista e traz uma ferramenta visual para marcar o texto em sites diferentes.</p>
           </article>
 
           <article class="card">
-            <h3>Perfis de Leitor para Kindle &amp; Kobo</h3>
-            <p>Predefinições ajustam o padrão EPUB (EPUB 2 para o <em>Send to Kindle</em> da Amazon ou EPUB 3 para Calibre USB e Kobo), notas de rodapé pop-up, resolução de imagens (1200px ou 1080px) e tipografia em uma única escolha.</p>
+            <h3>Perfis Prontos para Kindle e Kobo</h3>
+            <p>Escolha um perfil pronto para <em>Send to Kindle</em>, Calibre USB, Kobo ou celular—o formato do arquivo, notas de rodapé e tamanho das imagens se ajustam automaticamente.</p>
           </article>
 
           <article class="card">
-            <h3>Prévia, Edição, Mesclagem &amp; Capa Padrão</h3>
-            <p>Pré-visualize e edite o texto de capítulos antes de exportar, mescle capítulos ou abas abertas (<strong>Juntar Abas</strong>) e utilize a capa padrão gerada automaticamente com a logo do WebPullBook e o título da obra quando a página não possuir capa original.</p>
+            <h3>Revisar, Editar, Juntar Abas e Capa</h3>
+            <p>Leia o texto antes de baixar, corrija títulos ou parágrafos, una várias abas abertas em um livro só (<strong>Juntar Abas</strong>) e crie uma capa limpa se o site não tiver nenhuma.</p>
           </article>
 
           <article class="card">
-            <h3>Pipeline de Imagens &amp; Deduplicação</h3>
-            <p>Identifica formatos de imagem por <em>magic bytes</em>, ignora páginas HTML de erro retornadas como imagem, refaz requisições sem credenciais em falhas de CDN, preserva GIF/APNG/WebP animados e deduplica imagens repetidas por hash de conteúdo.</p>
+            <h3>Capas e Ilustrações Preservadas</h3>
+            <p>Salva a capa e as imagens da história com fidelidade, descarta avisos falsos no lugar de imagens, preserva GIFs animados quando necessário e evita imagens repetidas no arquivo.</p>
           </article>
 
           <article class="card">
-            <h3>Modo Seguro, Cache Local &amp; Biblioteca</h3>
-            <p>O Modo Seguro adapta o intervalo entre requisições à latência do servidor e respeita o cabeçalho <code>Retry-After</code>. Capítulos baixados ficam em cache local no <code>IndexedDB</code> por 7 dias, e a Biblioteca acompanha capítulos novos nas obras salvas.</p>
+            <h3>Ritmo Seguro, Retomada e Biblioteca</h3>
+            <p>O Modo Seguro ajusta a velocidade para evitar bloqueios nos sites. Seu progresso fica guardado localmente por 7 dias e a Biblioteca verifica capítulos novos das obras salvas.</p>
           </article>
         </div>
       </div>
@@ -253,8 +272,8 @@
     <section class="section alt">
       <div class="container">
         <div class="section-header">
-          <h2>Formatos de Saída</h2>
-          <p>O WebPullBook exporta em quatro formatos de acordo com o dispositivo ou fluxo de leitura.</p>
+          <h2>Escolha o Formato Ideal</h2>
+          <p>Exporte seus livros no arquivo certo para o seu e-reader, celular ou aplicativo de notas.</p>
         </div>
 
         <div class="table-wrap">
@@ -263,34 +282,34 @@
               <tr>
                 <th>Formato</th>
                 <th>Extensão</th>
-                <th>Estrutura &amp; Recursos</th>
-                <th>Uso Típico</th>
+                <th>O que Vem no Arquivo</th>
+                <th>Indicado Para</th>
               </tr>
             </thead>
             <tbody>
               <tr>
                 <td><strong>EPUB 3</strong></td>
                 <td><code>.epub</code></td>
-                <td>Container OCF, <code>nav.xhtml</code> + <code>toc.ncx</code>, metadados de série <code>belongs-to-collection</code>, notas de rodapé pop-up (<code>aside epub:type="footnote"</code>), capa, Página de Informações e Página Final.</td>
-                <td>Kobo, Calibre (transferência USB KFX/AZW3), Apple Books, Thorium Reader e leitores EPUB mobile.</td>
+                <td>Livro digital completo com capa, sumário clicável, separação por volumes, notas de rodapé pop-up e página de resumo.</td>
+                <td>Kobo, Calibre (envio USB para Kindle), Apple Books, Thorium Reader e leitores de celular.</td>
               </tr>
               <tr>
                 <td><strong>EPUB 2</strong></td>
                 <td><code>.epub</code></td>
-                <td>Capítulos em XHTML 1.1, <code>toc.ncx</code> clássico + Sumário HTML no início do livro, conversão de WebP/AVIF para JPEG e redimensionamento a 1200px/1080px.</td>
-                <td>Amazon <em>Send to Kindle</em> (conversor na nuvem por e-mail/web/app) e e-readers antigos.</td>
+                <td>Formato clássico com sumário, capítulos limpos e capa e ilustrações ajustadas para máxima compatibilidade.</td>
+                <td>Amazon <em>Send to Kindle</em> (e-mail, site ou app) e leitores digitais antigos.</td>
               </tr>
               <tr>
                 <td><strong>HTML Único Offline</strong></td>
                 <td><code>.html</code></td>
-                <td>Documento HTML autônomo para leitura offline com capa embutida, sumário navegável e CSS responsivo.</td>
-                <td>Leitura direta no navegador do computador ou celular.</td>
+                <td>Um único arquivo de página com capa, índice e imagens embutidas, pronto para leitura clara ou escura.</td>
+                <td>Abrir diretamente no navegador do PC ou celular mesmo sem internet.</td>
               </tr>
               <tr>
                 <td><strong>Markdown &amp; Texto Puro</strong></td>
                 <td><code>.md</code> / <code>.txt</code></td>
-                <td>Títulos formatados, parágrafos, quebras de cena e cabeçalho de metadados sem menus ou elementos da página original.</td>
-                <td>Obsidian, Logseq, editores de texto e arquivos locais em texto simples.</td>
+                <td>Texto limpo com títulos, parágrafos e quebras de cena, sem menus nem propagandas do site original.</td>
+                <td>Obsidian, Logseq, editores de texto e arquivos leves em texto simples.</td>
               </tr>
             </tbody>
           </table>
@@ -307,28 +326,28 @@
       <div class="container">
         <div class="section-header">
           <h2>Dúvidas Comuns</h2>
-          <p>Respostas objetivas sobre compatibilidade com leitores, privacidade e limitações.</p>
+          <p>Respostas diretas sobre leitores digitais, privacidade e sites compatíveis.</p>
         </div>
 
         <div class="accordion" aria-label="Dúvidas Rápidas">
           <details>
-            <summary>Qual Perfil de Leitor devo escolher para Kindle ou Kobo?</summary>
+            <summary>Qual perfil devo escolher para Kindle ou Kobo?</summary>
             <div class="details-body">
-              <p>Para o serviço <strong>Send to Kindle</strong> da Amazon (e-mail, web ou app), selecione <strong>Kindle (Antigo)</strong>, que gera EPUB 2 clássico com imagens JPEG a 1200px para evitar rejeições na conversão da Amazon. Para <strong>Calibre (USB / KFX / AZW3)</strong>, selecione <strong>Kindle (Moderno)</strong> para usar EPUB 3 e notas pop-up. Para <strong>Kobo, Tolino ou PocketBook</strong>, escolha <strong>Kobo e Leitores Digitais</strong> (EPUB 3 com otimização a 1080px preservando cores).</p>
+              <p>Se você envia livros pelo <strong>Send to Kindle</strong> (e-mail, site ou app da Amazon), escolha <strong>Kindle (Antigo)</strong> para evitar rejeições na conversão da Amazon. Se você passa livros pelo cabo usando o <strong>Calibre</strong>, escolha <strong>Kindle (Moderno)</strong>. Para <strong>Kobo, Tolino ou PocketBook</strong>, use <strong>Kobo e Leitores Digitais</strong>.</p>
             </div>
           </details>
 
           <details>
-            <summary>O WebPullBook utiliza servidores externos ou coleta dados?</summary>
+            <summary>O WebPullBook envia meus livros ou dados de leitura para algum lugar?</summary>
             <div class="details-body">
-              <p>A <strong>extensão de navegador WebPullBook</strong> não possui servidor próprio, telemetria ou análise de uso. Todo o processamento de HTML, sanitização XHTML, conversão de imagens e empacotamento ZIP/EPUB ocorre localmente no seu navegador, e as requisições de rede são enviadas diretamente apenas aos sites de origem que você escolher extrair. Separadamente, <strong>este site público de documentação</strong> utiliza o <a href="https://www.goatcounter.com/">GoatCounter</a> para contagem agregada de visitas sem cookies e sem rastreamento pessoal. Veja a <a href="privacy.html">Política de Privacidade</a> para detalhes.</p>
+              <p>Não. Tudo roda diretamente dentro do seu navegador—sem conta, sem servidor externo e sem rastreamento na extensão. O navegador acessa apenas os sites que você escolher baixar. Já este site público usa contadores agregados sem cookies via <a href="https://www.goatcounter.com/">GoatCounter</a>. Consulte a <a href="privacy.html">Política de Privacidade</a>.</p>
             </div>
           </details>
 
           <details>
             <summary>Quais são as limitações conhecidas?</summary>
             <div class="details-body">
-              <p data-sync-compat-summary>O WebPullBook extrai texto em DOM HTML padrão acessível na sessão do navegador (Central Novel, Royal Road, Novel Mania, Scribble Hub, NovelBin verificados de ponta a ponta, além de suporte heurístico genérico e modo SPA). Limitações mapeadas em <a href="compatibility.html">docs/COMPATIBILITY.md</a>: Plataformas com DRM proprietário, Capítulos em <code>&lt;canvas&gt;</code> ou imagens embaralhadas, Paywalls fechados sem acesso na sessão, Barreiras anti-bot / CAPTCHA estritas.</p>
+              <p data-sync-compat-summary>O WebPullBook extrai texto em DOM HTML padrão acessível na sessão do navegador (Central Novel, Plataformas baseadas em Madara, Royal Road, Novel Mania, Scribble Hub, NovelBin verificados de ponta a ponta, além de suporte heurístico genérico e modo SPA). Limitações mapeadas em <a href="compatibility.html">docs/COMPATIBILITY.md</a>: Plataformas com DRM proprietário, Capítulos em <code>&lt;canvas&gt;</code> ou imagens embaralhadas, Paywalls fechados sem acesso na sessão, Barreiras anti-bot / CAPTCHA estritas.</p>
             </div>
           </details>
         </div>
