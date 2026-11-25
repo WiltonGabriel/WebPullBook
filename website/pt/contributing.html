@@ -103,69 +103,176 @@
     <section class="page-hero">
       <div class="container">
         <h1>Como Contribuir com o WebPullBook</h1>
-        <p>O WebPullBook foi criado e é mantido por <a href="https://github.com/WiltonGabriel"><strong>Wilton Gabriel</strong></a>, estando aberto às contribuições da comunidade open source sob a <a href="https://github.com/WiltonGabriel/WebPullBook/blob/main/LICENSE">Licença GNU AGPLv3</a> (<code>AGPL-3.0-or-later</code>). O projeto utiliza módulos ES nativos sem etapa de compilação e sem dependências de runtime, permitindo carregar a pasta do repositório diretamente no navegador e rodar os testes unitários com Node.js padrão.</p>
+        <p>O WebPullBook foi criado e é mantido por <a href="https://github.com/WiltonGabriel"><strong>Wilton Gabriel</strong></a>, estando aberto às contribuições da comunidade sob a <a href="https://github.com/WiltonGabriel/WebPullBook/blob/main/LICENSE">Licença GNU AGPLv3</a> (<code>AGPL-3.0-or-later</code>). Com módulos ES nativos, zero dependências de runtime e sem etapa de build, você pode inspecionar, modificar e rodar toda a extensão direto de uma pasta clonada.</p>
+        <div class="cta-row" style="margin-block-start: 1.25rem; margin-block-end: 0;">
+          <a class="btn primary" href="#como-funciona">Parte 1: Como Tudo Funciona &darr;</a>
+          <a class="btn secondary" href="#como-ajudar">Parte 2: Escolha Como Ajudar &darr;</a>
+          <a class="btn secondary" href="#ambiente-local">Setup Local &amp; Testes &darr;</a>
+        </div>
       </div>
     </section>
 
-    <section class="section">
+    <section id="como-funciona" class="section">
       <div class="container">
         <div class="section-header">
-          <h2>Formas de Contribuir — Foco em Desenvolvimento de Parsers</h2>
-          <p>Ajudar a desenvolver, aprimorar e adicionar parsers (adaptadores de sites e heurísticas de extração) é a contribuição de maior impacto para expandir o suporte do WebPullBook a novas plataformas e layouts.</p>
+          <h2 id="arch-map-heading-pt">Parte 1 — Como o Projeto Funciona por Dentro</h2>
+          <p>Antes de escolher por onde começar, veja a organização do repositório, as cinco etapas do pipeline de extração e as regras de arquitetura que protegem a qualidade do projeto.</p>
+        </div>
+
+        <div class="table-wrap" tabindex="0" role="region" aria-labelledby="arch-map-heading-pt">
+          <table>
+            <thead>
+              <tr>
+                <th>Diretório / Arquivo</th>
+                <th>Responsabilidade</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>src/background/</code></td>
+                <td>Service worker / background script MV3: abre a aba do workspace com <code>sourceTabId</code>, mantém a regra de <code>Origin</code> no Firefox e limpa regras temporárias de sessão (<code>100..129</code>).</td>
+              </tr>
+              <tr>
+                <td><code>src/core/</code></td>
+                <td>Motor compartilhado: <code>BaseParser</code>, <code>parser-helpers.js</code>, <code>net-fetcher.js</code> (captura da aba ativa, <code>TabRenderPool</code>, <code>assertSafeHttpUrl</code>), <code>HtmlSanitizer</code>, <code>xhtml-serializer.js</code>, <code>image-processor.js</code>, <code>epub-builder.js</code>, <code>cache-store.js</code> e <code>zip.js</code> nativo.</td>
+              </tr>
+              <tr>
+                <td><code>src/parsers/</code></td>
+                <td><code>ParserRegistry</code> (competição em passagem única por <code>matchScore</code>), <code>GenericHtmlParser</code> (Universal Smart Extractor) e adaptadores estruturais registrados em <code>src/parsers/index.js</code>.</td>
+              </tr>
+              <tr>
+                <td><code>src/exporters/</code></td>
+                <td>Implementações polimórficas de <code>BaseExporter</code> (<code>epub</code>, <code>html</code>, <code>md</code>, <code>txt</code>) registradas em <code>exporterRegistry</code>.</td>
+              </tr>
+              <tr>
+                <td><code>src/workspace/</code></td>
+                <td>Controladores modulares de UI, <code>READER_PRESETS</code>, 4 temas CSS, pacotes de idioma (<code>locales/en.js</code>, <code>locales/pt.js</code>) e <code>icons.js</code> (SVGs criados com <code>createElementNS</code>).</td>
+              </tr>
+              <tr>
+                <td><code>docs/</code> &amp; <code>scripts/</code></td>
+                <td>Documentação autoritativa (<code>COMPATIBILITY.md</code>, <code>READER_PRESETS*.md</code>, <code>docs/pt/</code>) e scripts Node.js stdlib (<code>check.mjs</code>, <code>sync-website.mjs</code>, <code>verify-website.mjs</code>).</td>
+              </tr>
+              <tr>
+                <td><code>tests/</code> &amp; <code>website/</code></td>
+                <td>Suítes <code>node:test</code> com fixtures HTML anonimizadas, validação W3C EPUBCheck, testes E2E no Chromium/Firefox MV3 e este site bilíngue no GitHub Pages.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="grid-3" style="margin-block-start: 1.5rem;">
+          <article class="card">
+            <h3>Etapas 1–2: Descoberta &amp; Coleta</h3>
+            <p>O <code>ParserRegistry</code> avalia o DOM carregado (da aba ativa ou por HTTP). Se o HTML vier vazio em sites JS, <code>loadSeriesWithParser()</code> aciona o <code>TabRenderPool</code>. <code>BaseParser.collectAllChapters()</code> reúne capítulos e organiza volumes.</p>
+          </article>
+
+          <article class="card">
+            <h3>Etapa 3: Download &amp; Whitelist XHTML</h3>
+            <p>O <code>AdaptiveRateLimiter</code> controla o Modo Seguro e cabeçalhos <code>Retry-After</code>, enquanto <code>HtmlSanitizer</code> + <code>serializeChapterXhtml()</code> removem scripts, anúncios e iscas e emitem XHTML 1.1 ou XHTML5 válido com notas pop-up.</p>
+          </article>
+
+          <article class="card">
+            <h3>Etapas 4–5: Mídia, Cache &amp; ZIP32</h3>
+            <p><code>fetchImageBytes()</code> valida os <em>magic bytes</em> reais e deduplica imagens por hash; <code>WebPullBookCache</code> grava o progresso em <code>IndexedDB</code>; e <code>exporterRegistry</code> + <code>createZipBlob()</code> montam o arquivo final.</p>
+          </article>
+        </div>
+
+        <div class="grid-3" style="margin-block-start: 1.25rem;">
+          <article class="card">
+            <h3>Zero Dependências de Runtime</h3>
+            <p>Mantenha <code>dependencies</code> vazio em <code>package.json</code>, reaproveite utilitários de <code>src/core/parser-helpers.js</code>, construa ícones apenas com <code>document.createElementNS</code> e mantenha paridade exata entre PT e EN em <code>src/workspace/locales/</code>.</p>
+          </article>
+
+          <article class="card">
+            <h3>Fontes Únicas de Verdade</h3>
+            <p>Atualize compatibilidade apenas em <code>docs/COMPATIBILITY.md</code> (apenas o nome do site — nunca URLs) e rode <code>node scripts/sync-website.mjs</code> duas vezes em vez de editar manualmente tabelas sincronizadas do site.</p>
+          </article>
+
+          <article class="card">
+            <h3>Sem Contorno de Acesso</h3>
+            <p>Nunca tente burlar DRM, paywalls ou desafios anti-bot / CAPTCHA. Ao surgir bloqueio Cloudflare ou HTTP 429/503, acione o circuito de pausa para que o usuário conclua manualmente em aba comum.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="como-ajudar" class="section alt">
+      <div class="container">
+        <div class="section-header">
+          <h2>Parte 2 — Escolha Como Você Quer Contribuir</h2>
+          <p>Clique em qualquer cartão abaixo para pular direto ao tutorial completo e aos links oficiais no GitHub:</p>
         </div>
 
         <div class="grid-3">
           <article class="card">
-            <h3>1. Desenvolver e Adicionar Parsers (<code>src/parsers/</code>)</h3>
-            <p>Quando uma plataforma ou tema CMS utiliza APIs JSON paginadas, listas de capítulos via AJAX ou estruturas DOM próprias, implemente uma subclasse de <code>BaseParser</code> em <code>src/parsers/</code>, registre-a em <code>src/parsers/index.js</code> e adicione fixtures HTML anonimizadas.</p>
+            <h3><a class="card-link" href="#guia-parser">1. Desenvolver Parser ou Adaptador</a></h3>
+            <p>Crie adaptadores estruturais baseados em <code>BaseParser</code> em <code>src/parsers/</code> para temas CMS, APIs JSON ou sites próprios, com fixtures de teste.</p>
+            <span class="card-jump-hint">Abrir tutorial de parsers &darr;</span>
           </article>
 
           <article class="card">
-            <h3>2. Evoluir o Parser Heurístico Genérico</h3>
-            <p>Seguindo o princípio <strong>General Compatibility First</strong>, melhorias no <code>BaseParser</code>, <code>GenericHtmlParser</code> ou <code>HtmlSanitizer</code> permitem que famílias inteiras de sites, blogs e domínios espelho funcionem automaticamente sem regras presas a um único domínio.</p>
+            <h3><a class="card-link" href="#guia-generico">2. Evoluir Extrator Universal &amp; Sanitização</a></h3>
+            <p>Aprimore a pontuação genérica de DOM, detecção de <em>"Próximo Capítulo"</em>, modo SPA ou limpeza de ruídos em <code>GenericHtmlParser</code> e <code>HtmlSanitizer</code>.</p>
+            <span class="card-jump-hint">Abrir guia do motor genérico &darr;</span>
           </article>
 
           <article class="card">
-            <h3>3. Mapear Seletores para Novos Parsers</h3>
-            <p>Mesmo sem programar em JavaScript, você pode ajudar na criação de parsers inspecionando o HTML de um site (ou usando a ferramenta <strong>Apontar</strong>) e abrindo uma issue <em>New Site Layout / Adapter Support</em> com os seletores CSS da lista de capítulos, texto e volumes.</p>
+            <h3><a class="card-link" href="#guia-compat">3. Testar Sites &amp; Matriz de Compatibilidade</a></h3>
+            <p>Valide sites reais, envie atualizações de compatibilidade pelos templates de issue ou atualize <code>docs/COMPATIBILITY.md</code> sem vazar domínios.</p>
+            <span class="card-jump-hint">Abrir guia de compatibilidade &darr;</span>
           </article>
 
           <article class="card">
-            <h3>4. Testar Sites &amp; Atualizar a Compatibilidade</h3>
-            <p>Teste o WebPullBook em plataformas de web novels, blogs ou documentações e abra um Pull Request atualizando <a href="https://github.com/WiltonGabriel/WebPullBook/blob/main/docs/COMPATIBILITY.md">docs/COMPATIBILITY.md</a> (o site oficial sincroniza as tabelas automaticamente a partir desse arquivo).</p>
+            <h3><a class="card-link" href="#guia-bugs">4. Reportar Bugs e Falhas de Extração</a></h3>
+            <p>Exporte logs com registro de horário direto da aba <strong>Logs</strong> e abra issues completas com navegador, versão, formato e HTML afetado.</p>
+            <span class="card-jump-hint">Abrir guia de reporte de bugs &darr;</span>
           </article>
 
           <article class="card">
-            <h3>5. Reportar Falhas de Extração com Logs</h3>
-            <p>Se uma extração ou exportação EPUB falhar em determinado capítulo ou índice, abra a aba <strong>Logs</strong> no WebPullBook, clique em <strong>Baixar Log</strong> e anexe o arquivo em uma <a href="https://github.com/WiltonGabriel/WebPullBook/issues" data-wpb-link="issues">Issue no GitHub</a>.</p>
+            <h3><a class="card-link" href="#guia-recursos">5. Sugerir Recursos &amp; Testar E-Readers</a></h3>
+            <p>Proponha melhorias de interface ou Perfis de Leitor e valide arquivos EPUB 2/3 no Kindle, Kobo, PocketBook e leitores mobile.</p>
+            <span class="card-jump-hint">Abrir guia de ideias e testes &darr;</span>
           </article>
 
           <article class="card">
-            <h3>6. Validação em Navegadores &amp; E-Readers</h3>
-            <p>Valide arquivos EPUB 2 e EPUB 3 gerados em aparelhos Kindle, Kobo, PocketBook, Tolino e aplicativos mobile, ou teste a extensão no Firefox 128+, Edge e Brave.</p>
+            <h3><a class="card-link" href="#guia-docs">6. Melhorar Site, Docs &amp; Traduções</a></h3>
+            <p>Aprimore guias em Português e Inglês, traduções da interface, acessibilidade das páginas ou documentação do repositório.</p>
+            <span class="card-jump-hint">Abrir guia de docs e tradução &darr;</span>
           </article>
         </div>
       </div>
     </section>
 
-    <section class="section alt">
+    <section id="tutoriais" class="section">
       <div class="container">
         <div class="section-header">
-          <h2>Pipeline em 5 Etapas &amp; Como Criar um Novo Adaptador</h2>
-          <p>O WebPullBook separa a extração em cinco camadas claras em <code>src/</code>: <strong>Descoberta &amp; Pontuação</strong> (<code>ParserRegistry</code>), <strong>Coleta</strong> (<code>collectAllChapters</code> / SPA <code>TabRenderPool</code>), <strong>Download &amp; Sanitização Whitelist</strong> (<code>AdaptiveRateLimiter</code> / <code>HtmlSanitizer</code> / <code>serializeChapterXhtml</code>), <strong>Mídia &amp; Cache</strong> (<code>fetchImageBytes</code> / regras DNR <code>120..129</code> / <code>WebPullBookCache</code>) e <strong>Empacotamento</strong> (<code>exporterRegistry</code> + <code>createZipBlob</code>).</p>
+          <h2>Parte 3 — Tutoriais Passo a Passo de Cada Área</h2>
+          <p>Cada guia abaixo detalha os arquivos envolvidos, regras de validação e modelos exatos de issue do GitHub:</p>
         </div>
 
-        <figure>
-          <figcaption id="parser-example-caption-pt">Estrutura mínima em 4 passos para adicionar uma subclasse de <code>BaseParser</code> em <code>src/parsers/</code>:</figcaption>
-          <pre role="region" aria-labelledby="parser-example-caption-pt" tabindex="0"><code>// 1. Crie src/parsers/meu-layout-adapter.js estendendo BaseParser
-import { BaseParser } from '../core/parser-engine.js';
+        <div id="guia-parser" class="guide-block">
+          <div class="guide-block-head">
+            <h3>1. Desenvolvendo &amp; Adicionando um Parser (<code>src/parsers/</code>)</h3>
+            <a class="guide-back-link" href="#como-ajudar">Voltar para formas de ajudar &uarr;</a>
+          </div>
+          <p>Crie um novo parser apenas quando um tema compartilhado, API JSON paginada ou chamada AJAX não puder ser atendida bem pelo <strong>Universal Smart Extractor</strong> (<code>generic-html</code>). Dê preferência a adaptadores estruturais reutilizáveis.</p>
+          <ol>
+            <li><strong>Crie a classe do adaptador:</strong> Adicione um módulo em <code>src/parsers/</code> estendendo <code>BaseParser</code> (reaproveite helpers de <code>src/core/parser-helpers.js</code> sem duplicar lógica).</li>
+            <li><strong>Registre na ordem correta:</strong> Importe e registre a instância em <code>src/parsers/index.js</code> <strong>antes</strong> de <code>genericHtmlParser</code> (que funciona como último fallback genérico).</li>
+            <li><strong>Adicione fixtures anonimizadas e testes:</strong> Salve amostras HTML/API anonimizadas em <code>tests/fixtures/</code> (sem dados pessoais ou credenciais), registre expectativas em <code>tests/fixtures/snapshots.json</code> e escreva testes em <code>tests/parsers.test.js</code>.</li>
+            <li><strong>Documente e valide:</strong> Inclua a entrada em <em>Adicionados / Não Testados Oficialmente</em> (ou <em>Verificados e Testados</em> com E2E real) em <a href="https://github.com/WiltonGabriel/WebPullBook/blob/main/docs/COMPATIBILITY.md">docs/COMPATIBILITY.md</a>, rode <code>node scripts/sync-website.mjs</code> duas vezes e execute <code>npm run lint &amp;&amp; npm run lint:biome &amp;&amp; REQUIRE_EPUBCHECK=1 npm test</code>.</li>
+          </ol>
+
+          <figure>
+            <figcaption id="parser-example-caption-pt">Modelo mínimo em <code>src/parsers/meu-layout-adapter.js</code>:</figcaption>
+            <pre role="region" aria-labelledby="parser-example-caption-pt" tabindex="0"><code>import { BaseParser } from '../core/parser-engine.js';
 
 export class MeuLayoutParser extends BaseParser {
   constructor() {
     super({ id: 'meu-layout', name: 'Adaptador Estrutural Meu Layout / CMS' });
   }
 
-  // Pontua sinais estruturais do DOM (0 = não compatível, 70-95 = estrutura identificada)
+  // Retorne 0 se não combinar, ou 70-95 para sinais estruturais claros do DOM
   matchScore(doc, _url) {
     return doc.querySelector('.custom-chapter-index, #novel-toc-list') ? 85 : 0;
   }
@@ -189,48 +296,106 @@ export class MeuLayoutParser extends BaseParser {
   findChapterContentRoot(doc) {
     return doc.querySelector('article.chapter-reader-body');
   }
-}
+}</code></pre>
+          </figure>
 
-// 2. Registre uma instância em src/parsers/index.js antes do genericHtmlParser
-// 3. Adicione fixtures HTML anonimizadas em tests/fixtures/ e expectativas em snapshots.json
-// 4. Execute `npm run check` e documente o layout em docs/COMPATIBILITY.md</code></pre>
-        </figure>
+          <div class="cta-row" style="margin-block-start: 1rem;">
+            <a class="btn secondary sm" href="https://github.com/WiltonGabriel/WebPullBook/issues/new?template=03_adapter_support.yml">Pedir Suporte a Tema / Adaptador</a>
+            <a class="btn secondary sm" href="https://github.com/WiltonGabriel/WebPullBook/issues/new?template=04_parser_support.yml">Pedir Parser Dedicado de Site</a>
+          </div>
+        </div>
 
-        <div class="grid-3" style="margin-block-start: 1.75rem;">
-          <article class="card">
-            <h3>Zero Dependências de Runtime &amp; Minimalismo</h3>
-            <p>Mantenha <code>dependencies</code> vazio em <code>package.json</code>, reaproveite utilitários de <code>src/core/parser-helpers.js</code>, construa ícones via <code>document.createElementNS</code> (zero emojis, zero <code>innerHTML</code>) e garanta paridade exata entre <code>src/workspace/locales/</code> e <code>_locales/</code>.</p>
-          </article>
+        <div id="guia-generico" class="guide-block">
+          <div class="guide-block-head">
+            <h3>2. Evoluindo o Extrator Universal, Sanitização &amp; Core</h3>
+            <a class="guide-back-link" href="#como-ajudar">Voltar para formas de ajudar &uarr;</a>
+          </div>
+          <p>Melhorias nas heurísticas compartilhadas beneficiam dezenas de sites ao mesmo tempo sem exigir adaptadores individuais:</p>
+          <ul>
+            <li><strong>Descoberta &amp; Pontuação Genérica:</strong> Atue em <code>src/parsers/generic-html.js</code> (detecção de agrupamentos de links, pontuação de densidade de texto <em>Innermost Node Wins</em> e links de <em>"Próximo Capítulo"</em>) ou em ganchos compartilhados de <code>src/core/base-parser.js</code>.</li>
+            <li><strong>Sanitização HTML &amp; Serialização XHTML:</strong> Atualize <code>src/core/sanitizer.js</code> e <code>src/core/xhtml-serializer.js</code> contra novos padrões de classes CSS ocultas, imagens lazy ou casos raros de XML em EPUB 2/3.</li>
+            <li><strong>Escreva o Teste Antes:</strong> Sempre crie um teste de regressão em <code>tests/parsers.test.js</code>, <code>tests/sanitizer.test.js</code> ou <code>tests/epub-validation.test.js</code> validando com <code>REQUIRE_EPUBCHECK=1 node --test tests/*.test.js</code>. Precisa de scripts E2E privados em sites externos durante o desenvolvimento? Mantenha-os dentro da pasta ignorada <code>.local-e2e/</code>.</li>
+          </ul>
+        </div>
 
-          <article class="card">
-            <h3>Fontes Únicas de Verdade</h3>
-            <p>Edite apenas <a href="https://github.com/WiltonGabriel/WebPullBook/blob/main/docs/COMPATIBILITY.md">docs/COMPATIBILITY.md</a> e <code>docs/READER_PRESETS*.md</code> — nunca adicione URLs ou domínios reais em documentação — e execute <code>node scripts/sync-website.mjs</code> duas vezes para atualizar o site estático.</p>
-          </article>
+        <div id="guia-compat" class="guide-block">
+          <div class="guide-block-head">
+            <h3>3. Testando Sites &amp; Atualizando a Matriz de Compatibilidade</h3>
+            <a class="guide-back-link" href="#como-ajudar">Voltar para formas de ajudar &uarr;</a>
+          </div>
+          <ol>
+            <li><strong>Teste primeiro sem regras personalizadas:</strong> Tente carregar o índice da obra e alguns capítulos no WebPullBook observando metadados, volumes, capa, imagens e texto sanitizado.</li>
+            <li><strong>Respeite os 4 níveis:</strong> Promover um site para <em>Verificados e Testados</em> exige teste E2E real e fixtures de regressão em <code>tests/fixtures/</code>; resultados de testes manuais podem entrar em <em>Adicionados</em> ou via template de issue.</li>
+            <li><strong>Regra de zero URLs:</strong> Em PRs alterando <a href="https://github.com/WiltonGabriel/WebPullBook/blob/main/docs/COMPATIBILITY.md">docs/COMPATIBILITY.md</a>, informe <strong>somente o nome do site/layout</strong> — nunca domínios ou links — e rode <code>node scripts/sync-website.mjs</code> duas vezes para atualizar este site automaticamente.</li>
+          </ol>
+          <div class="cta-row" style="margin-block-start: 0.75rem;">
+            <a class="btn secondary sm" href="https://github.com/WiltonGabriel/WebPullBook/issues/new?template=05_compatibility_matrix.yml">Enviar Atualização de Compatibilidade</a>
+          </div>
+        </div>
 
-          <article class="card">
-            <h3>Sem Contorno de Controle de Acesso</h3>
-            <p>Nunca tente burlar DRM, paywalls ou desafios CAPTCHA anti-bot. Ao surgir bloqueio Cloudflare ou HTTP 429/503, acione o circuito de pausa e deixe a pessoa concluir a verificação manualmente em aba normal.</p>
-          </article>
+        <div id="guia-bugs" class="guide-block">
+          <div class="guide-block-head">
+            <h3>4. Reportando Bugs &amp; Falhas de Extração com Logs</h3>
+            <a class="guide-back-link" href="#como-ajudar">Voltar para formas de ajudar &uarr;</a>
+          </div>
+          <ol>
+            <li><strong>Exporte o log logo após o erro:</strong> Acesse a aba <strong>Logs</strong> dentro do WebPullBook e clique em <strong>Baixar Log</strong> (ou <strong>Copiar Log</strong>).</li>
+            <li><strong>Descreva o ambiente:</strong> Informe navegador, versão da extensão, formato/perfil utilizado, o que aconteceu e (se souber) classes CSS ou seletores da lista/conteúdo, sem expor cookies ou tokens pessoais.</li>
+            <li><strong>Falhas de segurança em privado:</strong> Vulnerabilidades (como bypass de sanitização XSS, path traversal ou CSP) devem ser comunicadas em privado pelos <a href="https://github.com/WiltonGabriel/WebPullBook/security/advisories/new">Relatórios Privados de Segurança do GitHub</a>.</li>
+          </ol>
+          <div class="cta-row" style="margin-block-start: 0.75rem;">
+            <a class="btn secondary sm" href="https://github.com/WiltonGabriel/WebPullBook/issues/new?template=01_bug_report.yml">Abrir Relatório de Bug</a>
+          </div>
+        </div>
+
+        <div id="guia-recursos" class="guide-block">
+          <div class="guide-block-head">
+            <h3>5. Sugerindo Melhorias &amp; Validando em Leitores Digitais</h3>
+            <a class="guide-back-link" href="#como-ajudar">Voltar para formas de ajudar &uarr;</a>
+          </div>
+          <p>Testes em aparelhos reais ajudam muito porque cada fabricante e serviço trata o formato EPUB de um jeito:</p>
+          <ul>
+            <li><strong>QA em E-Readers e Apps:</strong> Valide arquivos <code>.epub</code> no Kindle (tanto <em>Send to Kindle</em> EPUB 2 quanto <code>KFX</code>/<code>AZW3</code> via Calibre USB), Kobo/KePub, PocketBook, Tolino, Apple Books e Thorium Reader. Observe capas, sumário por volumes, notas pop-up e espaçamento.</li>
+            <li><strong>Novas Funcionalidades:</strong> Envie propostas detalhando o problema real e o comportamento esperado pelo formulário de sugestões, respeitando a filosofia minimalista e zero dependências do projeto.</li>
+          </ul>
+          <div class="cta-row" style="margin-block-start: 0.75rem;">
+            <a class="btn secondary sm" href="https://github.com/WiltonGabriel/WebPullBook/issues/new?template=02_feature_request.yml">Sugerir Nova Funcionalidade</a>
+          </div>
+        </div>
+
+        <div id="guia-docs" class="guide-block">
+          <div class="guide-block-head">
+            <h3>6. Aprimorando o Site, Documentação &amp; Traduções</h3>
+            <a class="guide-back-link" href="#como-ajudar">Voltar para formas de ajudar &uarr;</a>
+          </div>
+          <ul>
+            <li><strong>Localização da Extensão:</strong> Mantenha paridade exata de chaves entre <code>src/workspace/locales/en.js</code> e <code>src/workspace/locales/pt.js</code> (e em <code>_locales/en/</code> e <code>_locales/pt_BR/</code>), zero emojis nas strings e rode <code>node scripts/check.mjs</code>.</li>
+            <li><strong>Docs &amp; Sincronização do Site:</strong> Atualize os documentos em inglês junto aos espelhos de <code>docs/pt/</code> e mantenha <code>website/*.html</code> e <code>website/pt/*.html</code> alinhados. Nunca edite tabelas sincronizadas à mão — execute <code>node scripts/sync-website.mjs</code> duas vezes e valide com <code>node scripts/verify-website.mjs</code>.</li>
+          </ul>
+          <div class="cta-row" style="margin-block-start: 0.75rem;">
+            <a class="btn secondary sm" href="https://github.com/WiltonGabriel/WebPullBook/issues/new?template=06_website.yml">Reportar Ajuste no Site</a>
+            <a class="btn secondary sm" href="https://github.com/WiltonGabriel/WebPullBook/issues/new?template=07_documentation.yml">Reportar Melhoria na Documentação</a>
+          </div>
         </div>
       </div>
     </section>
 
-    <section class="section">
+    <section id="ambiente-local" class="section alt">
       <div class="container">
         <div class="section-header">
-          <h2>Desenvolvimento Local &amp; Testes Cross-Browser</h2>
+          <h2>Ambiente Local &amp; Suíte Completa de Validação</h2>
           <p>O lint estático roda apenas com a biblioteca padrão do Node.js 22+. Testes unitários e snapshots usam <code>jsdom</code> e <code>fake-indexeddb</code>, a análise estática usa <code>@biomejs/biome</code> e <code>addons-linter</code>, e os testes E2E validam tanto Playwright Chromium quanto Firefox 128+ MV3.</p>
         </div>
 
         <figure>
-          <figcaption id="dev-commands-caption-pt">Fluxo completo de verificação:</figcaption>
+          <figcaption id="dev-commands-caption-pt">Fluxo completo de validação antes de fazer commit ou abrir Pull Request:</figcaption>
           <pre role="region" aria-labelledby="dev-commands-caption-pt" tabindex="0"><code># 1. Lint estático, sintaxe JS, CSP MV3, links Markdown, paridade i18n e validação do site (zero dependências)
 npm run lint
 
 # 2. Instalar devDependencies de teste e análise estática
 npm ci
 
-# 3. Análise JS (Biome) e checagem do pacote ZIP pela ferramenta da Mozilla (addons-linter)
+# 3. Análise estática JS (Biome) e checagem do pacote ZIP pela ferramenta oficial da Mozilla (addons-linter)
 npm run lint:biome
 npm run lint:amo
 
@@ -240,17 +405,15 @@ REQUIRE_EPUBCHECK=1 npm run test:e2e
 REQUIRE_EPUBCHECK=1 npm run test:e2e:firefox</code></pre>
         </figure>
 
-        <p style="color: var(--muted); margin-block-start: 0.75rem;">Quer testar sites externos reais durante o desenvolvimento de parsers sem expor URLs pessoais no Git? Coloque suas listas e scripts locais dentro do diretório ignorado <code>.local-e2e/</code>.</p>
-
         <div class="grid-2" style="margin-block-start: 2rem;">
           <article class="card">
             <h3>Guia do Desenvolvedor (<a href="https://github.com/WiltonGabriel/WebPullBook/blob/main/CONTRIBUTING.md">CONTRIBUTING.md</a>)</h3>
-            <p>Consulte o guia completo no repositório para criar subclasses de <code>BaseParser</code>, adicionar fixtures HTML anonimizadas em <code>tests/fixtures/</code> e preparar Pull Requests.</p>
+            <p>Instruções completas de configuração local, política de versionamento (<code>MAJOR.MINOR.PATCH</code>) e checklist de Pull Request no repositório.</p>
           </article>
 
           <article class="card">
-            <h3>Instruções para Agentes de IA (<a href="https://github.com/WiltonGabriel/WebPullBook/blob/main/AGENTS.md">AGENTS.md</a>)</h3>
-            <p>O repositório mantém um arquivo <code>AGENTS.md</code> documentando arquitetura, limites de responsabilidade entre módulos, regras de CSP MV3 e etapas de sincronização do site.</p>
+            <h3>Instruções e Guardrails (<a href="https://github.com/WiltonGabriel/WebPullBook/blob/main/AGENTS.md">AGENTS.md</a>)</h3>
+            <p>Referência autoritativa de invariantes entre módulos, intervalos de regras DNR, fontes únicas de verdade e comandos de verificação.</p>
           </article>
         </div>
       </div>

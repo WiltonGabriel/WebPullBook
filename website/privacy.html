@@ -109,30 +109,56 @@
 
     <section class="section">
       <div class="container">
-        <div class="callout success">
-          <strong>Summary</strong>
-          <p>The WebPullBook browser extension does not collect, transmit, rent, or sell personal data, browsing history, or usage telemetry. The extension operates no backend servers and includes no tracking or analytics scripts: all content extraction, XHTML sanitization, image processing, and ebook packaging happen locally on your device.</p>
-          <p style="margin-block-start: 0.5rem;">Separately, this public documentation website (<code>wiltongabriel.github.io/WebPullBook</code>) uses <a href="https://www.goatcounter.com/">GoatCounter</a>, an open-source, cookieless web analytics tool, strictly to count aggregated page views without cookies, persistent identifiers, or personal user profiles.</p>
+        <div class="callout success" style="margin-block-start: 0;">
+          <strong>Executive Summary</strong>
+          <p>The <strong>WebPullBook browser extension</strong> does not collect, log, rent, transmit, or sell personal data, browsing history, or usage telemetry. It runs zero backend servers and loads zero analytics scripts: all extraction, HTML sanitization, image validation, and ebook packaging take place locally inside your browser sandbox.</p>
+          <p style="margin-block-start: 0.5rem;">Separately, <strong>this public documentation website</strong> (<code>wiltongabriel.github.io/WebPullBook</code>) uses <a href="https://www.goatcounter.com/">GoatCounter</a>, an open-source, cookieless analytics system, solely for aggregated page-view totals with zero cookies or personal user profiles.</p>
         </div>
 
-        <div class="grid-2" style="margin-block-start: 2rem;">
+        <div class="section-header" style="margin-block-start: 2rem;">
+          <h2>Privacy Commitments &amp; Zero-Collection Scope</h2>
+          <p>Aligned with Mozilla Add-ons zero-collection standards (<code>data_collection_permissions: ["none"]</code>) and Chrome Web Store Limited Use expectations:</p>
+        </div>
+
+        <div class="grid-4">
           <article class="card">
-            <h2>1. Local Processing vs. Origin Network Requests</h2>
-            <p>Within the WebPullBook browser extension, third-party data transmission does not occur; network traffic consists solely of user-initiated downloads from origin websites:</p>
+            <h3>No Accounts or Servers</h3>
+            <p>WebPullBook requires no login or registration and communicates with no developer-controlled backend or cloud API.</p>
+          </article>
+
+          <article class="card">
+            <h3>Zero Telemetry</h3>
+            <p>The extension collects no behavioral analytics, crash dumps, reading history logs, advertising IDs, or keystrokes.</p>
+          </article>
+
+          <article class="card">
+            <h3>Local-Only Storage</h3>
+            <p>Preferences, Library items, and caches stay inside your device profile (never pushed via <code>chrome.storage.sync</code>).</p>
+          </article>
+
+          <article class="card">
+            <h3>Fully Auditable</h3>
+            <p>Unbundled vanilla ES modules with strict <code>script-src 'self'</code> CSP and zero third-party runtime dependencies.</p>
+          </article>
+        </div>
+
+        <div class="grid-2" style="margin-block-start: 1.5rem;">
+          <article class="card">
+            <h3>1. What the Extension Never Collects</h3>
             <ul>
-              <li><strong>Local Processing:</strong> DOM parsing, HTML-to-XHTML sanitization (<code>HtmlSanitizer</code>), Canvas image resizing, and ZIP/EPUB archive compression (<code>CompressionStream</code>) run in your browser's local memory.</li>
-              <li><strong>Direct Requests to User-Chosen Websites:</strong> When you load a series URL, check your saved Library for new chapters, or export an ebook, your browser sends standard HTTP/HTTPS requests directly to the target website (and its image CDNs) to download those chapters and illustrations.</li>
-              <li><strong>No Intermediate Servers:</strong> Requests do not pass through any proxy or server operated by WebPullBook.</li>
+              <li><strong>No Personal Identifiers:</strong> Never accesses names, emails, payment data, IP databases, or device fingerprints.</li>
+              <li><strong>No Background Browsing Monitoring:</strong> Never tracks tabs you visit outside explicit user-triggered workspace runs or saved Library update checks.</li>
+              <li><strong>No Credential Harvesting:</strong> Never reads, extracts, or transmits passwords, authentication tokens, or raw cookies to any third party.</li>
+              <li><strong>No Data Sharing or Monetization:</strong> Zero ads, zero affiliate links, zero third-party SDKs, and zero telemetry uploads.</li>
             </ul>
           </article>
 
           <article class="card">
-            <h2>2. Browser Sessions, Cookies &amp; Image Fallbacks</h2>
-            <p>WebPullBook does not read, store, or export your passwords, cookies, or authentication tokens:</p>
+            <h3>2. Local Processing, Origin Fetches &amp; Sessions</h3>
             <ul>
-              <li><strong>Standard Browser Session Context:</strong> When fetching chapter pages or images from a target site, the browser's <code>fetch()</code> API uses <code>credentials: 'include'</code> by default so pages already accessible in your current browser session load normally.</li>
-              <li><strong>Anonymous Image Retry:</strong> If an image host or CDN bucket rejects credentialed requests or <code>Referer</code> headers (for example, returning HTTP 401/403 or CORS errors), <code>fetchImageBytes</code> retries the image request with <code>credentials: 'omit'</code> and <code>referrerPolicy: 'no-referrer'</code>.</li>
-              <li><strong>Cover URL Normalization:</strong> When a cover image URL points to a resized WordPress Jetpack proxy (<code>i0.wp.com</code>), <code>toHighResCoverUrl</code> resolves the direct origin image URL to fetch the original cover.</li>
+              <li><strong>Direct Requests to Target Sites:</strong> When you load a story, run a Library update check, or pack chapters, your browser sends standard HTTP/HTTPS requests directly to the chosen website and its image CDNs (which remain governed by their own respective privacy policies).</li>
+              <li><strong>Browser Session &amp; Safe Image Retry:</strong> Requests use <code>credentials: 'include'</code> so already signed-in tabs load normally; CDN hotlink errors trigger anonymous fallback retries (<code>credentials: 'omit'</code>, <code>referrerPolicy: 'no-referrer'</code>) and temporary session rules cleaned up when workspace tabs close.</li>
+              <li><strong>Cover Normalization:</strong> WordPress Jetpack resizing proxies (<code>i0.wp.com</code>) are unwrapped cleanly to request the origin cover image directly.</li>
             </ul>
           </article>
         </div>
@@ -142,8 +168,8 @@
     <section class="section alt">
       <div class="container">
         <div class="section-header">
-          <h2 id="storage-table-heading">3. What Data Is Stored Locally on Your Device</h2>
-          <p>All persistent extension settings and caches remain inside your local browser profile (never synced via <code>chrome.storage.sync</code>) and can be exported, inspected, or wiped at any time:</p>
+          <h2 id="storage-table-heading">3. Local Storage Inventory &amp; Retention</h2>
+          <p>All persistent extension settings and caches remain inside your local browser profile (with site-specific selectors automatically stripped from global preferences) and can be inspected, exported, or wiped at any time:</p>
         </div>
 
         <div class="table-wrap" tabindex="0" role="region" aria-labelledby="storage-table-heading">
@@ -239,7 +265,7 @@
               <tr>
                 <td><code>declarativeNetRequestWithHostAccess</code></td>
                 <td><code>permissions</code></td>
-                <td>Used for temporary session-scoped rules: on Firefox, rule ID <code>1</code> removes the <code>Origin: moz-extension://</code> header so cross-origin chapter/image fetches are not rejected by server CORS checks; session rules <code>100..119</code> attach standard navigation headers when required by protected hosts, and ref-counted session rules <code>120..129</code> supply temporary same-origin <code>Referer</code> fallbacks only when hotlink-protected images fail anonymous retries.</td>
+                <td>Used for temporary session-scoped rules: on Firefox, rule ID <code>1</code> removes the <code>Origin: moz-extension://</code> header so cross-origin chapter/image fetches are not rejected by server CORS checks; session rules <code>100..119</code> attach standard navigation headers when required by protected hosts, and ref-counted session rules <code>120..129</code> supply temporary same-origin <code>Referer</code> fallbacks only when hotlink-protected images fail anonymous retries. All temporary session rules <code>100..129</code> are removed when workspace tabs close.</td>
               </tr>
               <tr>
                 <td><code>https://*/*</code> &amp; <code>http://*/*</code></td>
@@ -250,31 +276,40 @@
           </table>
         </div>
 
-        <p style="margin-block-start: 1rem;">For Mozilla Firefox Add-ons (AMO), <code>manifest.json</code> also declares <code>data_collection_permissions: { "required": ["none"] }</code> under <code>browser_specific_settings.gecko</code>, reflecting that WebPullBook collects or transmits no user data.</p>
+        <p style="margin-block-start: 1rem;">For Mozilla Firefox Add-ons (AMO), <code>manifest.json</code> explicitly declares <code>data_collection_permissions: { "required": ["none"] }</code> under <code>browser_specific_settings.gecko</code>, reflecting that WebPullBook collects or transmits zero user data.</p>
+      </div>
+    </section>
 
-        <div class="grid-3" style="margin-block-start: 1.75rem;">
+    <section class="section alt">
+      <div class="container">
+        <div class="section-header">
+          <h2>5. Security Safeguards, User Rights &amp; Governance</h2>
+          <p>Defense-in-depth protections built into the codebase alongside full user ownership of local data:</p>
+        </div>
+
+        <div class="grid-3">
           <article class="card">
-            <h3>Firefox Runtime Host Control</h3>
-            <p>In Firefox 128+, MV3 host access is granted explicitly by the user. WebPullBook detects missing host permissions cleanly, displays a guided status banner instead of failing silently, and refreshes session rules via <code>chrome.permissions.onAdded</code> as soon as access is granted.</p>
+            <h3>Technical Security Controls</h3>
+            <p>Enforces <code>script-src 'self'</code> CSP (no <code>eval</code> or inline script/event handlers), validates URLs via <code>assertSafeHttpUrl()</code>, sanitizes downloaded HTML through whitelist rules (<code>HtmlSanitizer</code>), checks real image magic bytes, and guards ZIP/FileSystem outputs against path traversal.</p>
           </article>
 
           <article class="card">
-            <h3>Strict CSP, Sanitization &amp; Auditability</h3>
-            <p>WebPullBook ships unbundled, unobfuscated vanilla ES modules under <code>src/</code> with zero external runtime packages, strict <code>script-src 'self'</code> CSP (zero <code>eval</code> or inline handlers), URL validation via <code>assertSafeHttpUrl()</code>, and whitelist HTML sanitization before writing any ebook.</p>
+            <h3>Your Rights &amp; Full Data Control</h3>
+            <p>Inspect or export settings/Domain Rules as JSON anytime, clear Library items or cache individually, revoke website/folder permissions in browser settings (including explicit Firefox MV3 host permissions refreshed via <code>onAdded</code>), or uninstall to erase every local record immediately.</p>
           </article>
 
           <article class="card">
-            <h3>How to Inspect or Erase Everything</h3>
-            <p>Click <strong>Clear Cache</strong> in the Library tab to wipe cached chapters, <strong>Reset All Advanced Options</strong> to restore defaults, export settings as local JSON for inspection, or clear extension data / uninstall in browser settings to remove every stored key and folder handle.</p>
+            <h3>Minors &amp; Public Change History</h3>
+            <p>Because WebPullBook collects zero personal information from users of any age, no data regarding minors is ever processed or retained. Every revision to this policy and to extension code is publicly auditable in the Git commit history.</p>
           </article>
         </div>
       </div>
     </section>
 
-    <section class="section alt" id="website-analytics">
+    <section class="section" id="website-analytics">
       <div class="container">
         <div class="section-header">
-          <h2>5. Public Website Analytics (GoatCounter)</h2>
+          <h2>6. Public Website Analytics (GoatCounter)</h2>
           <p>While the WebPullBook browser extension performs zero analytics or telemetry, the public documentation pages hosted on GitHub Pages use <a href="https://www.goatcounter.com/">GoatCounter</a> for lightweight, privacy-preserving visit counting.</p>
         </div>
 
@@ -301,11 +336,11 @@
       </div>
     </section>
 
-    <section class="section">
+    <section class="section alt">
       <div class="container">
         <div class="callout" style="margin-block: 0;">
-          <strong>Contact &amp; Security Reporting</strong>
-          <p>For privacy questions, open an issue on <a href="https://github.com/WiltonGabriel/WebPullBook/issues" data-wpb-link="issues">GitHub Issues</a>. To report a security vulnerability (such as an HTML sanitization bypass or CSP issue), use <a href="https://github.com/WiltonGabriel/WebPullBook/security/advisories/new">GitHub Private Security Advisories</a> as documented in <a href="https://github.com/WiltonGabriel/WebPullBook/blob/main/.github/SECURITY.md">SECURITY.md</a>.</p>
+          <strong>7. Contact &amp; Security Reporting</strong>
+          <p>For privacy inquiries, open an issue on <a href="https://github.com/WiltonGabriel/WebPullBook/issues" data-wpb-link="issues">GitHub Issues</a>. To report a security vulnerability (such as an HTML sanitization bypass or CSP issue), use <a href="https://github.com/WiltonGabriel/WebPullBook/security/advisories/new">GitHub Private Security Advisories</a> as documented in <a href="https://github.com/WiltonGabriel/WebPullBook/blob/main/.github/SECURITY.md">SECURITY.md</a>.</p>
         </div>
       </div>
     </section>

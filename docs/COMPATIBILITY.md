@@ -7,7 +7,7 @@ Contributions are welcome—feel free to open a pull request updating the status
 >
 > **Architecture note:** WebPullBook prioritizes **general structural compatibility** (`BaseParser`, `GenericHtmlParser`, `HtmlSanitizer`) over brittle domain- or URL-specific logic. When testing a new site, prefer improving generic heuristics first so compatibility holds even if a site changes domains or URLs.
 
-> **Universal Smart Extractor (`generic-html`) comes first:** Not appearing in *Verified & Tested* below does **not** mean a website is unsupported. A core focus of WebPullBook is working out of the box across unlisted sites via **Universal Smart Extractor** (`generic-html`), sequential *"Next Chapter"* crawling, **SPA / JavaScript tab rendering** (`renderWithTab`), point-and-click **Pick** custom CSS selectors, and **Merge Tabs**.
+> **Note about unlisted websites:** A site not appearing in *Verified & Tested* below can still work. WebPullBook includes the **Universal Smart Extractor** (`generic-html`), sequential *"Next Chapter"* detection, SPA tab rendering, and the visual **Pick** selector—try loading the page directly first.
 
 ## Verified & Tested (Verificados e Testados)
 

@@ -69,15 +69,15 @@
         "name": "E se o site que eu leio não estiver na página de Compatibilidade?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Você ainda pode extrair sites fora da lista com o Universal Smart Extractor (generic-html), rastreamento sequencial de Próximo Capítulo, Modo SPA por aba, seletor visual Apontar e Juntar Abas."
+          "text": "Você ainda pode testar sites fora da lista imediatamente com o Universal Smart Extractor (generic-html), rastreamento sequencial de Próximo Capítulo, Modo SPA por aba, seletor visual Apontar e Juntar Abas."
         }
       },
       {
         "@type": "Question",
-        "name": "Por que o WebPullBook ainda não está na Chrome Web Store?",
+        "name": "Os ebooks EPUB ou HTML gerados precisam de internet para abrir?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "O WebPullBook já está publicado oficialmente no Firefox Add-ons (AMO) para Mozilla Firefox 128+. A submissão para a Chrome Web Store está prevista em seguida; durante a Beta, quem usa Chrome, Edge ou Brave pode instalar o pacote oficial pelo GitHub Releases."
+          "text": "Não. Capa, textos, folhas de estilo e imagens dos capítulos são baixados e embutidos dentro do próprio arquivo .epub ou HTML Único para funcionar 100% offline."
         }
       }
     ]
@@ -208,6 +208,20 @@
               <p>Escolha <strong>HTML Único (Offline)</strong> quando quiser abrir o livro completo em qualquer navegador do PC ou celular sem precisar de aplicativo leitor. Escolha <strong>Markdown (<code>.md</code>)</strong> para guardar em cofres de notas como Obsidian ou Logseq, ou <strong>Texto Puro (<code>.txt</code>)</strong> para arquivos leves.</p>
             </div>
           </details>
+
+          <details>
+            <summary>Posso editar título, autor, sinopse ou capa do livro antes de exportar?</summary>
+            <div class="details-body">
+              <p>Sim. Todos os campos em <strong>Metadados da Obra</strong> (título, autor, idioma, nome do arquivo, sinopse, gêneros e URL da capa) podem ser editados antes de empacotar. Você também pode enviar uma imagem local do computador, clicar em <strong>Gerar Capa</strong> para montar a capa com seu título e autor atualizados ou clicar em <strong>Recarregar Capa</strong> para restaurar a arte original do site.</p>
+            </div>
+          </details>
+
+          <details>
+            <summary>Consigo personalizar fonte, espaçamento ou recuo de parágrafo dentro do EPUB?</summary>
+            <div class="details-body">
+              <p>Sim. Em <strong>Opções Avançadas &rarr; Tipografia &amp; Stylesheet (CSS do Livro)</strong>, você pode ajustar família de fontes, tamanho base, altura de linha, espaçamento entre parágrafos, alinhamento e recuo de primeira linha estilo livro impresso, além de editar o CSS diretamente.</p>
+            </div>
+          </details>
         </div>
 
         <div class="faq-section-head" style="margin-block-start: 2.5rem;">
@@ -221,7 +235,7 @@
           <details>
             <summary>E se o site que eu acompanho não estiver na página de Compatibilidade?</summary>
             <div class="details-body">
-              <p>Vale testar carregando a URL mesmo assim. O <strong>Universal Smart Extractor</strong> (<code>generic-html</code>) é um foco central do WebPullBook: ele identifica listas de capítulos automaticamente, segue links de <em>"Próximo Capítulo"</em>, renderiza páginas em JavaScript via aba auxiliar quando o HTML estático vem vazio e traz o seletor visual <strong>Apontar</strong>.</p>
+              <p>Vale testar carregando a URL mesmo assim. O <strong>Universal Smart Extractor</strong> (<code>generic-html</code>) identifica listas de capítulos automaticamente, segue links de <em>"Próximo Capítulo"</em>, renderiza páginas em JavaScript via aba auxiliar quando o HTML estático vem vazio e traz o seletor visual <strong>Apontar</strong>.</p>
             </div>
           </details>
 
@@ -249,6 +263,27 @@
           </details>
 
           <details>
+            <summary>Como organizar volumes manualmente ou editar links de capítulos antes de baixar?</summary>
+            <div class="details-body">
+              <p>Clique em <strong>Definir Volumes Manualmente</strong> acima dos volumes para dividir a cada <em>N</em> capítulos, atribuir faixas pelos números da tabela (<code>#</code>), aplicar nos marcados ou colar regras em lote (como <code>1-45: Volume 1</code>). Para editar títulos individuais ou corrigir URLs, use <strong>Editar URLs</strong> acima da lista de capítulos.</p>
+            </div>
+          </details>
+
+          <details>
+            <summary>Por que algumas imagens foram redimensionadas, convertidas ou ignoradas no EPUB?</summary>
+            <div class="details-body">
+              <p>Conforme o Perfil de Leitor escolhido, o WebPullBook redimensiona e comprime ilustrações grandes (1080px no Kobo, 1200px no Kindle), achata JPEG transparente sobre branco e descarta pixels de rastreamento (<code>1x1</code>) ou arquivos inválidos disfarçados de HTML/SVG. Para manter a resolução original sem compressão, selecione <strong>Padrão Moderno</strong>.</p>
+            </div>
+          </details>
+
+          <details>
+            <summary>Por que o WebPullBook abre rapidamente uma aba em segundo plano em alguns sites?</summary>
+            <div class="details-body">
+              <p>Sites modernos feitos em JavaScript (React, Next.js, Vue) muitas vezes retornam apenas um HTML vazio em requisições diretas até os scripts rodarem no navegador. Nesses casos, a extensão usa uma única aba auxiliar reutilizável (<code>TabRenderPool</code>) para esperar o texto aparecer de verdade no DOM antes de extrair.</p>
+            </div>
+          </details>
+
+          <details>
             <summary>Funciona em sites onde preciso fazer login na minha conta primeiro?</summary>
             <div class="details-body">
               <p>Sim, desde que sua sessão logada já consiga ler o texto HTML padrão em uma aba aberta. Entre na conta normalmente em uma aba do navegador primeiro e depois abra o WebPullBook a partir dela. A extensão não contorna assinaturas pagas sem acesso, leitores com DRM criptografado nem capítulos renderizados somente em imagens <code>&lt;canvas&gt;</code>.</p>
@@ -272,6 +307,13 @@
           </details>
 
           <details>
+            <summary>Posso ajustar a velocidade manualmente ou pausar e continuar um download?</summary>
+            <div class="details-body">
+              <p>Sim. Você pode ligar ou desligar o <strong>Modo Seguro</strong> ao vivo durante qualquer exportação, clicar em <strong>Pausar</strong> para interromper com segurança entre capítulos ou definir um intervalo manual em milissegundos (<code>0–30000 ms</code>) em <strong>Opções Avançadas &rarr; Rede, SPA &amp; Resiliência</strong>.</p>
+            </div>
+          </details>
+
+          <details>
             <summary>Por que o download pausou com aviso de Verificação Anti-Bot (Cloudflare) ou Rate Limit?</summary>
             <div class="details-body">
               <p>Quando um servidor responde com desafio Cloudflare ou HTTP 429/503, o WebPullBook pausa a fila imediatamente para evitar bloqueios em sequência. Clique em <strong>Abrir página para verificar</strong> no banner, conclua a verificação humana nessa aba, mantenha o <strong>Modo Seguro</strong> ativo e clique em <strong>Retomar</strong>. Os capítulos já baixados ficam salvos no <code>IndexedDB</code>.</p>
@@ -286,9 +328,9 @@
           </details>
 
           <details>
-            <summary>Posso escolher em qual pasta os ebooks são salvos no meu computador?</summary>
+            <summary>Posso escolher a pasta de saída ou fazer backup das configurações para outro PC?</summary>
             <div class="details-body">
-              <p>Dentro da pasta Downloads, modelos relativos de subpastas (ex.: <code>WebPullBook/%Author%/%Title%</code>) funcionam tanto no <strong>Firefox quanto no Chromium</strong>. No <strong>Chrome, Edge e Brave</strong>, você também pode clicar em <strong>Escolher Pasta no PC...</strong> em Opções Avançadas para gravar direto em qualquer diretório via <code>showDirectoryPicker</code>.</p>
+              <p>Dentro da pasta Downloads, modelos relativos de subpastas (ex.: <code>WebPullBook/%Author%/%Title%</code>) funcionam tanto no <strong>Firefox quanto no Chromium</strong>. No <strong>Chrome, Edge e Brave</strong>, você também pode clicar em <strong>Escolher Pasta no PC...</strong> para gravar direto em qualquer diretório. Para salvar ou levar preferências e Regras por Domínio a outro computador, use o backup JSON em <strong>Opções Avançadas &rarr; Backup &amp; Restauração Global</strong>.</p>
             </div>
           </details>
         </div>
@@ -302,9 +344,23 @@
         </div>
         <div id="acc-privacy-beta-pt" class="accordion" aria-labelledby="faq-privacy-beta-pt">
           <details>
-            <summary>Algum dado sai do meu navegador?</summary>
+            <summary>Os ebooks EPUB ou HTML gerados precisam de internet para abrir ou mostrar imagens?</summary>
+            <div class="details-body">
+              <p>Não. O WebPullBook baixa capas, folhas de estilo e imagens válidas para dentro do próprio pacote <code>.epub</code> (ou incorpora diretamente no <code>.html</code> único) para que todo livro abra 100% offline.</p>
+            </div>
+          </details>
+
+          <details>
+            <summary>Algum dado meu ou histórico de leitura sai do navegador?</summary>
             <div class="details-body">
               <p>Na <strong>extensão de navegador WebPullBook</strong>, toda a análise de HTML, sanitização XHTML, conversão de imagens e criação do arquivo ZIP/EPUB ocorre localmente no seu navegador, sem servidor próprio, sem telemetria e sem analytics — seu navegador realiza apenas requisições HTTP/HTTPS diretas aos sites e CDNs das obras que você escolheu baixar. Separadamente, <strong>este site público de documentação</strong> utiliza o <a href="https://www.goatcounter.com/">GoatCounter</a> para contagem agregada de visualizações sem cookies e sem rastreamento pessoal. Veja a <a href="privacy.html">Política de Privacidade e Permissões</a>.</p>
+            </div>
+          </details>
+
+          <details>
+            <summary>O WebPullBook funciona no Firefox para Android ou celulares?</summary>
+            <div class="details-body">
+              <p>Atualmente o WebPullBook tem suporte completo para <strong>Firefox 128+</strong> e navegadores Chromium no computador (Chrome, Edge, Brave e Vivaldi), enquanto o suporte ao Firefox no Android está mapeado como evolução futura.</p>
             </div>
           </details>
 

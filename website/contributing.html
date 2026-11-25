@@ -103,69 +103,176 @@
     <section class="page-hero">
       <div class="container">
         <h1>Contributing to WebPullBook</h1>
-        <p>WebPullBook was created and is maintained by <a href="https://github.com/WiltonGabriel"><strong>Wilton Gabriel</strong></a>, and is open to contributions from the open-source community under the <a href="https://github.com/WiltonGabriel/WebPullBook/blob/main/LICENSE">GNU AGPLv3</a> (<code>AGPL-3.0-or-later</code>). The project uses native ES modules with no build step and no runtime dependencies, so you can load the repository folder directly in your browser and run unit checks with standard Node.js.</p>
+        <p>WebPullBook was created and is maintained by <a href="https://github.com/WiltonGabriel"><strong>Wilton Gabriel</strong></a>, and is open to community contributions under the <a href="https://github.com/WiltonGabriel/WebPullBook/blob/main/LICENSE">GNU AGPLv3</a> (<code>AGPL-3.0-or-later</code>). With native ES modules, zero runtime dependencies, and zero build step, you can inspect, edit, and run the entire extension straight from a cloned folder.</p>
+        <div class="cta-row" style="margin-block-start: 1.25rem; margin-block-end: 0;">
+          <a class="btn primary" href="#how-it-works">Part 1: How WebPullBook Works &darr;</a>
+          <a class="btn secondary" href="#ways-to-help">Part 2: Choose How to Help &darr;</a>
+          <a class="btn secondary" href="#local-setup">Local Setup &amp; Tests &darr;</a>
+        </div>
       </div>
     </section>
 
-    <section class="section">
+    <section id="how-it-works" class="section">
       <div class="container">
         <div class="section-header">
-          <h2>Ways to Contribute — Focus on Parser Development</h2>
-          <p>Developing, improving, and adding parsers is the highest-impact way to expand WebPullBook across new platforms, CMS themes, and serialized fiction websites.</p>
+          <h2 id="arch-map-heading">Part 1 — How WebPullBook Works Under the Hood</h2>
+          <p>Before diving into a change, here is how the repository is organized, how web pages turn into ebooks in five stages, and which architectural rules protect quality.</p>
+        </div>
+
+        <div class="table-wrap" tabindex="0" role="region" aria-labelledby="arch-map-heading">
+          <table>
+            <thead>
+              <tr>
+                <th>Directory / File</th>
+                <th>Responsibility</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>src/background/</code></td>
+                <td>MV3 service worker / event script: opens the workspace tab with <code>sourceTabId</code>, maintains Firefox <code>declarativeNetRequest</code> Origin rules, and cleans up orphaned session rules (<code>100..129</code>).</td>
+              </tr>
+              <tr>
+                <td><code>src/core/</code></td>
+                <td>Shared engine modules: <code>BaseParser</code>, <code>parser-helpers.js</code>, <code>net-fetcher.js</code> (active-tab capture, <code>TabRenderPool</code>, <code>assertSafeHttpUrl</code>), <code>HtmlSanitizer</code>, <code>xhtml-serializer.js</code>, <code>image-processor.js</code>, <code>epub-builder.js</code>, <code>cache-store.js</code>, and native <code>zip.js</code>.</td>
+              </tr>
+              <tr>
+                <td><code>src/parsers/</code></td>
+                <td><code>ParserRegistry</code> (single-pass <code>matchScore</code> competition), <code>GenericHtmlParser</code> (Universal Smart Extractor), and shared structural adapters registered in <code>src/parsers/index.js</code>.</td>
+              </tr>
+              <tr>
+                <td><code>src/exporters/</code></td>
+                <td>Polymorphic <code>BaseExporter</code> implementations (<code>epub</code>, <code>html</code>, <code>md</code>, <code>txt</code>) exporting clean files through <code>exporterRegistry</code>.</td>
+              </tr>
+              <tr>
+                <td><code>src/workspace/</code></td>
+                <td>Modular UI controllers, <code>READER_PRESETS</code>, 4 CSS themes, PT/EN locale bundles (<code>locales/en.js</code>, <code>locales/pt.js</code>), and <code>icons.js</code> (strict <code>createElementNS</code> SVGs).</td>
+              </tr>
+              <tr>
+                <td><code>docs/</code> &amp; <code>scripts/</code></td>
+                <td>Single-source documentation (<code>COMPATIBILITY.md</code>, <code>READER_PRESETS*.md</code>, <code>docs/pt/</code>) and Node.js stdlib scripts (<code>check.mjs</code>, <code>sync-website.mjs</code>, <code>verify-website.mjs</code>).</td>
+              </tr>
+              <tr>
+                <td><code>tests/</code> &amp; <code>website/</code></td>
+                <td><code>node:test</code> suites with anonymized HTML fixtures, W3C EPUBCheck verification, Chromium/Firefox MV3 E2E suites, and the bilingual GitHub Pages site.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="grid-3" style="margin-block-start: 1.5rem;">
+          <article class="card">
+            <h3>Stage 1–2: Discovery &amp; Collection</h3>
+            <p><code>ParserRegistry</code> scores the loaded DOM (from active tab or fetch). If an empty JS shell arrives, <code>loadSeriesWithParser()</code> falls back to <code>TabRenderPool</code>. <code>BaseParser.collectAllChapters()</code> collects chapters and normalizes volumes.</p>
+          </article>
+
+          <article class="card">
+            <h3>Stage 3: Download &amp; Whitelist Hygiene</h3>
+            <p><code>AdaptiveRateLimiter</code> coordinates Safe Mode pacing and <code>Retry-After</code> delays, while <code>HtmlSanitizer</code> + <code>serializeChapterXhtml()</code> strip scripts/ads/decoys and emit valid XHTML 1.1 or XHTML5 + pop-up footnotes.</p>
+          </article>
+
+          <article class="card">
+            <h3>Stage 4–5: Media, Cache &amp; ZIP32</h3>
+            <p><code>fetchImageBytes()</code> checks binary magic bytes and deduplicates assets by content hash; <code>WebPullBookCache</code> persists completed chapters in <code>IndexedDB</code>; <code>exporterRegistry</code> + <code>createZipBlob()</code> package final files cleanly.</p>
+          </article>
+        </div>
+
+        <div class="grid-3" style="margin-block-start: 1.25rem;">
+          <article class="card">
+            <h3>Zero Runtime Dependencies</h3>
+            <p>Keep <code>dependencies</code> empty in <code>package.json</code>, reuse helpers in <code>src/core/parser-helpers.js</code>, build UI icons only via <code>document.createElementNS</code>, and keep exact PT/EN key parity in <code>src/workspace/locales/</code>.</p>
+          </article>
+
+          <article class="card">
+            <h3>Single Sources of Truth</h3>
+            <p>Update compatibility only in <code>docs/COMPATIBILITY.md</code> (site names only—never domain URLs) and run <code>node scripts/sync-website.mjs</code> twice rather than hand-editing synced website tables.</p>
+          </article>
+
+          <article class="card">
+            <h3>Zero Access Bypass</h3>
+            <p>Never attempt to circumvent DRM, paywalls, or anti-bot CAPTCHAs. When Cloudflare or HTTP 429/503 gates appear, trip the circuit breaker so users verify manually in a normal tab.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="ways-to-help" class="section alt">
+      <div class="container">
+        <div class="section-header">
+          <h2>Part 2 — Choose How You Want to Contribute</h2>
+          <p>Click any contribution card below to jump straight to its complete step-by-step tutorial and GitHub issue links:</p>
         </div>
 
         <div class="grid-3">
           <article class="card">
-            <h3>1. Develop &amp; Add Parser Adapters (<code>src/parsers/</code>)</h3>
-            <p>When a platform or CMS theme uses paginated JSON APIs, AJAX chapter lists, or non-standard DOM structures, implement a new subclass of <code>BaseParser</code> under <code>src/parsers/</code>, register it in <code>src/parsers/index.js</code>, and include anonymized HTML snapshot fixtures.</p>
+            <h3><a class="card-link" href="#guide-parser">1. Develop a Parser or Adapter</a></h3>
+            <p>Add structural <code>BaseParser</code> adapters in <code>src/parsers/</code> for CMS themes, JSON APIs, or custom sites, complete with HTML test fixtures.</p>
+            <span class="card-jump-hint">Open parser tutorial &darr;</span>
           </article>
 
           <article class="card">
-            <h3>2. Improve the Generic Heuristic Parser</h3>
-            <p>Following the <strong>General Compatibility First</strong> principle, improving <code>BaseParser</code>, <code>GenericHtmlParser</code>, or <code>HtmlSanitizer</code> allows entire families of websites and mirror domains to work automatically without domain-specific rules.</p>
+            <h3><a class="card-link" href="#guide-generic">2. Improve Universal Extractor &amp; Sanitizer</a></h3>
+            <p>Upgrade generic DOM scoring, <em>"Next Chapter"</em> discovery, SPA hydration, or noise cleanup in <code>GenericHtmlParser</code> and <code>HtmlSanitizer</code>.</p>
+            <span class="card-jump-hint">Open core extraction guide &darr;</span>
           </article>
 
           <article class="card">
-            <h3>3. Request or Map New Site Layouts</h3>
-            <p>Even if you do not write JavaScript, you can help parser development by inspecting a site's HTML (or using the <strong>Pick</strong> selector tool) and opening a <em>New Site Layout / Adapter Support</em> issue with the chapter list, chapter body, and volume CSS selectors.</p>
+            <h3><a class="card-link" href="#guide-compat">3. Test Websites &amp; Compatibility Matrix</a></h3>
+            <p>Verify sites live, report layout statuses via issue templates, or update <code>docs/COMPATIBILITY.md</code> cleanly without exposing URLs.</p>
+            <span class="card-jump-hint">Open compatibility guide &darr;</span>
           </article>
 
           <article class="card">
-            <h3>4. Test Websites &amp; Update Compatibility</h3>
-            <p>Test WebPullBook on web novel platforms, blogs, or documentation sites and open a Pull Request updating <a href="https://github.com/WiltonGabriel/WebPullBook/blob/main/docs/COMPATIBILITY.md">docs/COMPATIBILITY.md</a> (which automatically synchronizes the tables on this website).</p>
+            <h3><a class="card-link" href="#guide-bugs">4. Report Bugs &amp; Extraction Errors</a></h3>
+            <p>Capture timestamped workspace logs and file actionable bug reports with browser, version, format, and HTML structure details.</p>
+            <span class="card-jump-hint">Open bug reporting guide &darr;</span>
           </article>
 
           <article class="card">
-            <h3>5. Report Extraction Bugs with Logs</h3>
-            <p>If an extraction or EPUB export fails on a specific chapter or index structure, open the <strong>Logs</strong> tab in WebPullBook, click <strong>Download Log</strong>, and attach the log to a <a href="https://github.com/WiltonGabriel/WebPullBook/issues" data-wpb-link="issues">GitHub Issue</a>.</p>
+            <h3><a class="card-link" href="#guide-features">5. Suggest Features &amp; Test E-Readers</a></h3>
+            <p>Propose UI workflows or Reader Profiles and validate EPUB 2/3 formatting across Kindle, Kobo, PocketBook, and mobile apps.</p>
+            <span class="card-jump-hint">Open feature &amp; testing guide &darr;</span>
           </article>
 
           <article class="card">
-            <h3>6. Cross-Browser &amp; E-Reader Validation</h3>
-            <p>Validate generated EPUB 2 and EPUB 3 files on Kindle, Kobo, PocketBook, Tolino, and mobile reading apps, or test the extension on Firefox 128+, Edge, and Brave.</p>
+            <h3><a class="card-link" href="#guide-docs">6. Improve Website, Docs &amp; Translations</a></h3>
+            <p>Refine English/Portuguese documentation, extension localization strings, accessibility, or synced website guides.</p>
+            <span class="card-jump-hint">Open docs &amp; website guide &darr;</span>
           </article>
         </div>
       </div>
     </section>
 
-    <section class="section alt">
+    <section id="tutorials" class="section">
       <div class="container">
         <div class="section-header">
-          <h2>5-Stage Pipeline &amp; Adding a New Parser Adapter</h2>
-          <p>WebPullBook splits extraction into five clean modules under <code>src/</code>: <strong>Discovery &amp; Scoring</strong> (<code>ParserRegistry</code>), <strong>Collection</strong> (<code>collectAllChapters</code> / SPA <code>TabRenderPool</code>), <strong>Download &amp; Whitelist Sanitization</strong> (<code>AdaptiveRateLimiter</code> / <code>HtmlSanitizer</code> / <code>serializeChapterXhtml</code>), <strong>Media &amp; Cache</strong> (<code>fetchImageBytes</code> / DNR slots <code>120..129</code> / <code>WebPullBookCache</code>), and <strong>Packaging</strong> (<code>exporterRegistry</code> + <code>createZipBlob</code>).</p>
+          <h2>Part 3 — Step-by-Step Contribution Guides</h2>
+          <p>Each tutorial below walks through the exact files, validation rules, and issue templates used in WebPullBook:</p>
         </div>
 
-        <figure>
-          <figcaption id="parser-example-caption">Minimal 4-step structure for adding a new <code>BaseParser</code> subclass in <code>src/parsers/</code>:</figcaption>
-          <pre role="region" aria-labelledby="parser-example-caption" tabindex="0"><code>// 1. Create src/parsers/my-layout-adapter.js extending BaseParser
-import { BaseParser } from '../core/parser-engine.js';
+        <div id="guide-parser" class="guide-block">
+          <div class="guide-block-head">
+            <h3>1. Developing &amp; Adding a Parser Adapter (<code>src/parsers/</code>)</h3>
+            <a class="guide-back-link" href="#ways-to-help">Back to ways to help &uarr;</a>
+          </div>
+          <p>Create a new parser only when a shared layout, paginated JSON API, or AJAX endpoint cannot be extracted reliably by <strong>Universal Smart Extractor</strong> (<code>generic-html</code>). Prefer shared structural adapters over site-locked selectors.</p>
+          <ol>
+            <li><strong>Create your adapter class:</strong> Add a module in <code>src/parsers/</code> extending <code>BaseParser</code> (reuse utilities in <code>src/core/parser-helpers.js</code> instead of duplicating JSON or DOM helpers).</li>
+            <li><strong>Register in order:</strong> Import and register an instance inside <code>src/parsers/index.js</code> <strong>before</strong> <code>genericHtmlParser</code> (<code>GenericHtmlParser</code> acts as the catch-all fallback).</li>
+            <li><strong>Add anonymized fixtures &amp; unit tests:</strong> Save anonymized HTML/API samples under <code>tests/fixtures/</code> (never include private user data or real personal credentials), record expectations in <code>tests/fixtures/snapshots.json</code>, and add assertions in <code>tests/parsers.test.js</code>.</li>
+            <li><strong>Document &amp; validate:</strong> Add the layout entry under tier <em>Added / Not Officially Tested</em> (or <em>Verified &amp; Tested</em> with live E2E coverage) in <a href="https://github.com/WiltonGabriel/WebPullBook/blob/main/docs/COMPATIBILITY.md">docs/COMPATIBILITY.md</a>, run <code>node scripts/sync-website.mjs</code> twice, and run <code>npm run lint &amp;&amp; npm run lint:biome &amp;&amp; REQUIRE_EPUBCHECK=1 npm test</code>.</li>
+          </ol>
+
+          <figure>
+            <figcaption id="parser-example-caption">Minimal <code>BaseParser</code> template in <code>src/parsers/my-layout-adapter.js</code>:</figcaption>
+            <pre role="region" aria-labelledby="parser-example-caption" tabindex="0"><code>import { BaseParser } from '../core/parser-engine.js';
 
 export class MyLayoutParser extends BaseParser {
   constructor() {
     super({ id: 'my-layout', name: 'My Layout / CMS Adapter' });
   }
 
-  // Score structural DOM signals (0 = no match, 70-95 = strong structural match)
+  // Return 0 if unmatched, or 70-95 for strong structural DOM signals
   matchScore(doc, _url) {
     return doc.querySelector('.custom-chapter-index, #novel-toc-list') ? 85 : 0;
   }
@@ -189,48 +296,106 @@ export class MyLayoutParser extends BaseParser {
   findChapterContentRoot(doc) {
     return doc.querySelector('article.chapter-reader-body');
   }
-}
+}</code></pre>
+          </figure>
 
-// 2. Register an instance in src/parsers/index.js before genericHtmlParser
-// 3. Add anonymized HTML fixtures in tests/fixtures/ and expectations in snapshots.json
-// 4. Run `npm run check` and document the layout in docs/COMPATIBILITY.md</code></pre>
-        </figure>
+          <div class="cta-row" style="margin-block-start: 1rem;">
+            <a class="btn secondary sm" href="https://github.com/WiltonGabriel/WebPullBook/issues/new?template=03_adapter_support.yml">Request Shared Theme / Adapter Support</a>
+            <a class="btn secondary sm" href="https://github.com/WiltonGabriel/WebPullBook/issues/new?template=04_parser_support.yml">Request Dedicated Site Parser</a>
+          </div>
+        </div>
 
-        <div class="grid-3" style="margin-block-start: 1.75rem;">
-          <article class="card">
-            <h3>Zero Runtime Dependencies &amp; Minimal Design</h3>
-            <p>Keep <code>dependencies</code> in <code>package.json</code> empty, reuse helpers in <code>src/core/parser-helpers.js</code>, build UI icons via <code>document.createElementNS</code> (zero emojis, zero <code>innerHTML</code>), and maintain strict EN/PT-BR key parity across <code>src/workspace/locales/</code> and <code>_locales/</code>.</p>
-          </article>
+        <div id="guide-generic" class="guide-block">
+          <div class="guide-block-head">
+            <h3>2. Improving Universal Smart Extractor, Sanitizer &amp; Core Pipeline</h3>
+            <a class="guide-back-link" href="#ways-to-help">Back to ways to help &uarr;</a>
+          </div>
+          <p>Improvements to shared heuristics often unlock dozens of unlisted websites at once without adding per-site adapters:</p>
+          <ul>
+            <li><strong>Generic Discovery &amp; Scoring:</strong> Edit <code>src/parsers/generic-html.js</code> (link-cluster heuristics, <em>Innermost Node Wins</em> prose density scoring, and sequential <em>"Next Chapter"</em> matching) or shared hooks in <code>src/core/base-parser.js</code>.</li>
+            <li><strong>HTML Sanitization &amp; XHTML Serialization:</strong> Update <code>src/core/sanitizer.js</code> and <code>src/core/xhtml-serializer.js</code> for new hidden CSS decoy tricks, lazy image attributes, or EPUB 2/3 XML edge cases.</li>
+            <li><strong>Test-First Rule:</strong> Always add a failing regression test first in <code>tests/parsers.test.js</code>, <code>tests/sanitizer.test.js</code>, or <code>tests/epub-validation.test.js</code> and verify with <code>REQUIRE_EPUBCHECK=1 node --test tests/*.test.js</code>. Need private live-site E2E scripts while iterating? Keep them strictly inside the gitignored <code>.local-e2e/</code> folder.</li>
+          </ul>
+        </div>
 
-          <article class="card">
-            <h3>Single Sources of Truth</h3>
-            <p>Edit <a href="https://github.com/WiltonGabriel/WebPullBook/blob/main/docs/COMPATIBILITY.md">docs/COMPATIBILITY.md</a> and <code>docs/READER_PRESETS*.md</code> only—never paste site URLs or domains in docs, and run <code>node scripts/sync-website.mjs</code> twice to update the static website cleanly.</p>
-          </article>
+        <div id="guide-compat" class="guide-block">
+          <div class="guide-block-head">
+            <h3>3. Testing Websites &amp; Updating the Compatibility Matrix</h3>
+            <a class="guide-back-link" href="#ways-to-help">Back to ways to help &uarr;</a>
+          </div>
+          <ol>
+            <li><strong>Test with default settings first:</strong> Try loading the index URL and at least a couple of chapters in WebPullBook; check metadata, volumes, cover, inline images, and clean XHTML output.</li>
+            <li><strong>Know the four tiers:</strong> <em>Verified &amp; Tested</em> requires real live E2E verification plus regression fixtures in <code>tests/fixtures/</code>; sites tested manually by layout can use <em>Added / Not Officially Tested</em> or the Compatibility issue form.</li>
+            <li><strong>Follow the no-URL rule:</strong> When opening a PR updating <a href="https://github.com/WiltonGabriel/WebPullBook/blob/main/docs/COMPATIBILITY.md">docs/COMPATIBILITY.md</a>, write <strong>only the site/layout name</strong>—never domain URLs or links—then run <code>node scripts/sync-website.mjs</code> twice to update this website automatically.</li>
+          </ol>
+          <div class="cta-row" style="margin-block-start: 0.75rem;">
+            <a class="btn secondary sm" href="https://github.com/WiltonGabriel/WebPullBook/issues/new?template=05_compatibility_matrix.yml">Submit Compatibility Matrix Update</a>
+          </div>
+        </div>
 
-          <article class="card">
-            <h3>No Access-Control Bypass</h3>
-            <p>Never attempt to circumvent DRM, paywalls, or anti-bot CAPTCHAs. When Cloudflare or HTTP 429/503 gates appear, trip the circuit breaker and let the user intervene manually in a standard browser tab.</p>
-          </article>
+        <div id="guide-bugs" class="guide-block">
+          <div class="guide-block-head">
+            <h3>4. Reporting Bugs &amp; Extraction Errors</h3>
+            <a class="guide-back-link" href="#ways-to-help">Back to ways to help &uarr;</a>
+          </div>
+          <ol>
+            <li><strong>Gather workspace logs first:</strong> Open the <strong>Logs</strong> tab inside WebPullBook right after the error occurs and click <strong>Download Log</strong> (or <strong>Copy Log</strong>).</li>
+            <li><strong>Capture helpful context:</strong> Include your browser name, WebPullBook version, selected export format/profile, the affected layout structure (CSS classes of the chapter list or text container if known), and attach any diagnostic snippet without personal cookies or tokens.</li>
+            <li><strong>Security flaws go private:</strong> If you find an XSS sanitization bypass, path traversal, or CSP issue, report it privately via <a href="https://github.com/WiltonGabriel/WebPullBook/security/advisories/new">GitHub Private Security Advisories</a> instead of public issues.</li>
+          </ol>
+          <div class="cta-row" style="margin-block-start: 0.75rem;">
+            <a class="btn secondary sm" href="https://github.com/WiltonGabriel/WebPullBook/issues/new?template=01_bug_report.yml">Open Bug Report Issue</a>
+          </div>
+        </div>
+
+        <div id="guide-features" class="guide-block">
+          <div class="guide-block-head">
+            <h3>5. Suggesting Features &amp; Validating on Real E-Readers</h3>
+            <a class="guide-back-link" href="#ways-to-help">Back to ways to help &uarr;</a>
+          </div>
+          <p>Real-device feedback is invaluable because firmware converters behave differently across e-reader generations:</p>
+          <ul>
+            <li><strong>E-Reader &amp; App QA:</strong> Test generated <code>.epub</code> files with Kindle (both <em>Send to Kindle</em> EPUB 2 and Calibre USB <code>KFX</code>/<code>AZW3</code>), Kobo/KePub, PocketBook, Tolino, Apple Books, and Thorium Reader. Verify cover display, nested volume TOC, pop-up footnotes, and font styling.</li>
+            <li><strong>Propose Enhancements:</strong> Share concrete use cases and expected behavior via our feature template—keeping WebPullBook's quiet, minimal interface and zero runtime dependency philosophy in mind.</li>
+          </ul>
+          <div class="cta-row" style="margin-block-start: 0.75rem;">
+            <a class="btn secondary sm" href="https://github.com/WiltonGabriel/WebPullBook/issues/new?template=02_feature_request.yml">Open Feature Request Issue</a>
+          </div>
+        </div>
+
+        <div id="guide-docs" class="guide-block">
+          <div class="guide-block-head">
+            <h3>6. Improving the Website, Documentation &amp; Translations</h3>
+            <a class="guide-back-link" href="#ways-to-help">Back to ways to help &uarr;</a>
+          </div>
+          <ul>
+            <li><strong>Extension Localization:</strong> Maintain strict key parity between <code>src/workspace/locales/en.js</code> and <code>src/workspace/locales/pt.js</code> (plus <code>_locales/en/</code> and <code>_locales/pt_BR/</code>), zero emojis in locale strings, and verify with <code>node scripts/check.mjs</code>.</li>
+            <li><strong>Docs &amp; Website Sync:</strong> Update English docs alongside optional mirrors in <code>docs/pt/</code> and keep both <code>website/*.html</code> and <code>website/pt/*.html</code> aligned. Never hand-edit synced tables or footer versions—run <code>node scripts/sync-website.mjs</code> twice and verify with <code>node scripts/verify-website.mjs</code>.</li>
+          </ul>
+          <div class="cta-row" style="margin-block-start: 0.75rem;">
+            <a class="btn secondary sm" href="https://github.com/WiltonGabriel/WebPullBook/issues/new?template=06_website.yml">Report Website Issue</a>
+            <a class="btn secondary sm" href="https://github.com/WiltonGabriel/WebPullBook/issues/new?template=07_documentation.yml">Report Documentation Issue</a>
+          </div>
         </div>
       </div>
     </section>
 
-    <section class="section">
+    <section id="local-setup" class="section alt">
       <div class="container">
         <div class="section-header">
-          <h2>Local Development &amp; Cross-Browser Testing</h2>
-          <p>Static linting runs on the Node.js 22+ standard library without installing packages. Unit and snapshot tests use <code>jsdom</code> and <code>fake-indexeddb</code>, static analysis uses <code>@biomejs/biome</code> and <code>addons-linter</code>, and real E2E tests verify both Playwright Chromium and Firefox 128+ MV3.</p>
+          <h2>Local Development Setup &amp; Full Verification Suite</h2>
+          <p>Static linting runs on the Node.js 22+ standard library with zero packages installed. Unit tests use <code>jsdom</code> and <code>fake-indexeddb</code>, static analysis uses <code>@biomejs/biome</code> and <code>addons-linter</code>, and E2E suites verify real Chromium and Firefox 128+ MV3 builds.</p>
         </div>
 
         <figure>
-          <figcaption id="dev-commands-caption">Full verification workflow:</figcaption>
-          <pre role="region" aria-labelledby="dev-commands-caption" tabindex="0"><code># 1. Static lint, JS syntax, MV3 CSP, Markdown links, i18n parity, and website checks (zero dependencies)
+          <figcaption id="dev-commands-caption">Full verification workflow before committing or opening a Pull Request:</figcaption>
+          <pre role="region" aria-labelledby="dev-commands-caption" tabindex="0"><code># 1. Static lint, JS syntax, MV3 CSP, Markdown links, i18n parity, and website sync (zero dependencies)
 npm run lint
 
-# 2. Install test &amp; linter devDependencies
+# 2. Install test &amp; static analysis devDependencies
 npm ci
 
-# 3. Static JS analysis &amp; Mozilla AMO extension ZIP check
+# 3. Biome static analysis &amp; Mozilla AMO extension ZIP check
 npm run lint:biome
 npm run lint:amo
 
@@ -240,17 +405,15 @@ REQUIRE_EPUBCHECK=1 npm run test:e2e
 REQUIRE_EPUBCHECK=1 npm run test:e2e:firefox</code></pre>
         </figure>
 
-        <p style="color: var(--muted); margin-block-start: 0.75rem;">Want to test real external websites locally while developing parsers without committing third-party URLs to Git? Place your local target list or scripts under the gitignored <code>.local-e2e/</code> directory.</p>
-
         <div class="grid-2" style="margin-block-start: 2rem;">
           <article class="card">
-            <h3>Developer Documentation (<a href="https://github.com/WiltonGabriel/WebPullBook/blob/main/CONTRIBUTING.md">CONTRIBUTING.md</a>)</h3>
-            <p>See the contributor guide in the repository for complete instructions on creating <code>BaseParser</code> subclasses, adding anonymized HTML fixtures under <code>tests/fixtures/</code>, and preparing Pull Requests.</p>
+            <h3>Contributor Reference (<a href="https://github.com/WiltonGabriel/WebPullBook/blob/main/CONTRIBUTING.md">CONTRIBUTING.md</a>)</h3>
+            <p>Full contributor setup notes, versioning rules (<code>MAJOR.MINOR.PATCH</code>), and step-by-step Pull Request checklist in the repository.</p>
           </article>
 
           <article class="card">
-            <h3>AI Coding Agent Instructions (<a href="https://github.com/WiltonGabriel/WebPullBook/blob/main/AGENTS.md">AGENTS.md</a>)</h3>
-            <p>The repository includes an <code>AGENTS.md</code> guide documenting module boundaries, SRP contracts, MV3 CSP constraints, and the single-source-of-truth website sync workflow.</p>
+            <h3>Architectural Rules &amp; Guardrails (<a href="https://github.com/WiltonGabriel/WebPullBook/blob/main/AGENTS.md">AGENTS.md</a>)</h3>
+            <p>Authoritative reference for module invariants, DNR slot ranges, single sources of truth, and automated verification commands.</p>
           </article>
         </div>
       </div>

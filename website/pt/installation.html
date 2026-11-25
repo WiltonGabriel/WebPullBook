@@ -127,6 +127,7 @@
               <li>Acesse a página do <a href="https://addons.mozilla.org/firefox/addon/webpullbook/" data-wpb-link="firefoxAddons">WebPullBook no Firefox Add-ons</a>.</li>
               <li>Clique em <strong>Adicionar ao Firefox</strong> e confirme as permissões de acesso aos sites para leitura e extração.</li>
               <li>Fixe o ícone do WebPullBook na barra do navegador pelo menu de extensões para abrir com um clique.</li>
+              <li>Se o Firefox exibir aviso de permissão ao abrir sua primeira obra, clique no botão do aviso ou libere o acesso em <code>about:addons</code> &rarr; <em>Permissões</em>.</li>
               <li><strong>Atualizações:</strong> Chegam automaticamente assinadas pela Mozilla AMO.</li>
             </ol>
           </article>
@@ -135,7 +136,7 @@
             <span class="badge accent">Chrome • Edge • Brave • Vivaldi • Chromium</span>
             <h3>Google Chrome, Edge, Brave &amp; Vivaldi (Beta)</h3>
             <ol>
-              <li>Baixe o arquivo <code>.zip</code> mais recente em <a href="https://github.com/WiltonGabriel/WebPullBook/releases/tag/v1.7.1" data-wpb-link="releasesLatest">GitHub Releases</a> e extraia em uma pasta fixa (não apague essa pasta depois).</li>
+              <li>Baixe o arquivo <code>.zip</code> mais recente em <a href="https://github.com/WiltonGabriel/WebPullBook/releases/tag/v1.7.1" data-wpb-link="releasesLatest">GitHub Releases</a> e extraia para uma <strong>pasta permanente</strong> (ex.: <code>Documentos/Extensoes/WebPullBook/</code> — não apague nem mova essa pasta depois).</li>
               <li>Na barra de endereço, abra <code>chrome://extensions/</code> (ou <code>edge://extensions/</code> / <code>brave://extensions/</code>).</li>
               <li>Ative o <strong>Modo do desenvolvedor</strong> no canto superior direito.</li>
               <li>Clique em <strong>Carregar sem compactação</strong> e selecione a pasta extraída que contém <code>manifest.json</code>.</li>
@@ -144,8 +145,8 @@
         </div>
 
         <div class="callout" style="margin-block-start: 1.5rem;">
-          <strong>Atualizando no Chromium Sem Perder Seus Livros Salvos</strong>
-          <p>Quando sair uma versão nova, extraia o novo <code>.zip</code> por cima da mesma pasta (ou rode <code>git pull</code>) e clique no botão circular de recarregar em <code>chrome://extensions/</code>. Suas preferências, séries da Biblioteca e regras de domínio ficam intactas no <code>chrome.storage.local</code>.</p>
+          <strong>Atualizando ou Trocando de Computador Sem Perder Nada</strong>
+          <p>Quando sair uma versão nova no Chromium, extraia o novo <code>.zip</code> por cima da mesma pasta (ou rode <code>git pull</code>) e clique no botão circular de recarregar em <code>chrome://extensions/</code>. Suas preferências, séries da Biblioteca e regras de domínio permanecem intactas no <code>chrome.storage.local</code>. Vai formatar ou trocar de PC? Use <strong>Opções Avançadas &rarr; Backup &amp; Restauração Global</strong> para salvar tudo em JSON.</p>
         </div>
       </div>
     </section>
@@ -153,8 +154,8 @@
     <section class="section alt">
       <div class="container">
         <div class="section-header">
-          <h2>2. Crie Seu Primeiro Ebook</h2>
-          <p>O passo a passo simples da página aberta até o arquivo pronto:</p>
+          <h2>2. Crie Seu Primeiro Ebook &amp; Dicas Rápidas</h2>
+          <p>O fluxo simples da página aberta até o arquivo pronto, com quatro hábitos recomendados:</p>
         </div>
 
         <div class="grid-3">
@@ -165,12 +166,34 @@
 
           <article class="card">
             <h3>Passo 2: Marque Capítulos e Perfil</h3>
-            <p>Clique no ícone do <strong>WebPullBook</strong>. Confira os dados e volumes, selecione só um trecho se quiser, e escolha seu aparelho em <strong>Perfil de Leitor</strong> (ex.: <em>Kindle Antigo</em>, <em>Kindle Moderno</em> ou <em>Kobo</em>).</p>
+            <p>Clique no ícone do <strong>WebPullBook</strong>. Confira os dados e volumes, selecione só um trecho se quiser, e escolha seu aparelho em <strong>Perfil de Leitor</strong>.</p>
           </article>
 
           <article class="card">
             <h3>Passo 3: Exporte e Salve</h3>
-            <p>Deixe o <strong>Modo Seguro</strong> ativo para obras grandes e clique em <strong>Empacotar EPUB</strong>. Os livros vão direto para sua pasta Downloads (ou pasta escolhida no Chromium).</p>
+            <p>Deixe o <strong>Modo Seguro</strong> ativo para obras grandes e clique em <strong>Empacotar EPUB</strong>. Os livros vão direto para sua pasta Downloads ou pasta escolhida.</p>
+          </article>
+        </div>
+
+        <div class="grid-4" style="margin-block-start: 1.5rem;">
+          <article class="card">
+            <h3>Fixe o Ícone</h3>
+            <p>Deixe o WebPullBook visível na barra do navegador para abrir o workspace com um único clique.</p>
+          </article>
+
+          <article class="card">
+            <h3>Defina Seu Perfil Uma Vez</h3>
+            <p>Escolha seu perfil de e-reader uma vez; a extensão guarda essa escolha para os próximos livros.</p>
+          </article>
+
+          <article class="card">
+            <h3>Ative o Modo Seguro</h3>
+            <p>Em livros com mais de 100 capítulos, reduz o risco de bloqueio HTTP 429 pelo site.</p>
+          </article>
+
+          <article class="card">
+            <h3>Salve na Biblioteca</h3>
+            <p>Clique em <strong>Salvar na Biblioteca</strong> para depois baixar apenas os novos capítulos publicados.</p>
           </article>
         </div>
       </div>
@@ -187,15 +210,15 @@
           <article class="card">
             <h3>Amazon Kindle</h3>
             <ul>
-              <li><strong>Send to Kindle (E-mail / Web / App):</strong> Use <strong>Kindle (Antigo)</strong> para gerar EPUB 2 com imagens JPEG a 1200px compatíveis com o conversor da Amazon.</li>
-              <li><strong>Cabo USB via Calibre:</strong> Use <strong>Kindle (Moderno)</strong> (EPUB 3) e deixe o Calibre converter para <code>KFX</code> ou <code>AZW3</code> antes de copiar para o Kindle.</li>
+              <li><strong>Send to Kindle (E-mail / Web / App):</strong> Use <strong>Kindle (Antigo)</strong> para gerar EPUB 2 com imagens JPEG a 1200px aceitas sem erro pelo conversor da Amazon.</li>
+              <li><strong>Cabo USB via Calibre:</strong> Use <strong>Kindle (Moderno)</strong> (EPUB 3 com notas pop-up) e deixe o Calibre converter para <code>KFX</code> ou <code>AZW3</code> antes de copiar para o Kindle.</li>
             </ul>
           </article>
 
           <article class="card">
             <h3>Kobo, Tolino &amp; PocketBook</h3>
             <ul>
-              <li>Exporte com <strong>Kobo e Leitores Digitais</strong> (EPUB 3 com JPEG a 1080px e notas pop-up).</li>
+              <li>Exporte com <strong>Kobo e Leitores Digitais</strong> (EPUB 3 com JPEG a 1080px, cores preservadas e notas pop-up).</li>
               <li>Copie o <code>.epub</code> por cabo USB direto para o leitor (ou envie pelo Calibre se preferir conversão para KePub).</li>
             </ul>
           </article>
@@ -214,7 +237,33 @@
     <section class="section alt">
       <div class="container">
         <div class="section-header">
-          <h2>4. Execução a Partir do Código-Fonte &amp; Testes (Desenvolvimento)</h2>
+          <h2>4. Resolvendo Dúvidas Comuns de Instalação</h2>
+          <p>Soluções rápidas para os três imprevistos mais comuns logo após instalar:</p>
+        </div>
+
+        <div class="grid-3">
+          <article class="card">
+            <h3>Extensão Sumiu ao Reiniciar o Chrome ou Edge</h3>
+            <p>Extensões carregadas sem compactação apontam para a pasta no disco. Confira se você extraiu o <code>.zip</code> para uma pasta definitiva (e não abriu direto de dentro do ZIP ou de pasta temporária limpa pelo sistema) e carregue novamente.</p>
+          </article>
+
+          <article class="card">
+            <h3>Firefox Exibe Aviso de Permissão ao Carregar Site</h3>
+            <p>O Manifest V3 do Firefox exige permissão explícita para acessar sites externos. Aceite pelo banner de alerta do próprio WebPullBook ou ative em <code>about:addons</code> &rarr; <em>WebPullBook</em> &rarr; <em>Permissões</em>.</p>
+          </article>
+
+          <article class="card">
+            <h3>Onde Ficam Salvos os Meus Ebooks?</h3>
+            <p>Por padrão, vão para <code>Downloads/WebPullBook/&lt;Título&gt;/</code>. Você pode personalizar subpastas por tokens ou — no Chrome, Edge e Brave — clicar em <strong>Escolher Pasta no PC...</strong> nas <strong>Opções Avançadas</strong>.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <div class="section-header">
+          <h2>5. Execução a Partir do Código-Fonte &amp; Testes (Desenvolvimento)</h2>
           <p>O WebPullBook usa módulos ES nativos sem build nem dependências de runtime — a pasta do repositório já funciona direto no navegador, enquanto as ferramentas opcionais de Node.js validam qualquer alteração.</p>
         </div>
 
