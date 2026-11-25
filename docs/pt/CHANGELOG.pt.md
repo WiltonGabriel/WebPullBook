@@ -29,7 +29,7 @@ Todas as mudanças notáveis do **WebPullBook** estão documentadas neste arquiv
 
 ### Site Oficial, Documentação e Migração de Licença
 - **Site Oficial e Automação (`website/`, `scripts/`):** removido o `syncDocsFromRepo()` obsoleto em `website/assets/js/site.js`, automatizada a sincronização de links `[data-wpb-link]`, JSON-LD e `<lastmod>` em `website/sitemap.xml` via `scripts/sync-website.mjs`, adicionada a tabela de Guardrails em `AGENTS.md`, atualizado o link de instalação no Firefox (AMO) nas notas de release e corrigidos os alertas do CodeQL.
-- **Migração de Licença (`AGPL-3.0-or-later`):** licença atualizada de MIT para **GNU Affero General Public License v3.0 (`AGPL-3.0-or-later`)** a partir da versão `v1.7.0-beta` (versões até `v1.6.1-beta` permanecem historicamente sob a Licença MIT).
+- **Licença (`AGPL-3.0-or-later`):** licença do projeto atualizada para **GNU Affero General Public License v3.0 (`AGPL-3.0-or-later`)**.
 
 ## [1.6.1] - 2026-11-20 (Beta)
 

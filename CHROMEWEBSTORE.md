@@ -147,7 +147,7 @@ Mozilla Add-ons (`addons.mozilla.org`) does not charge a developer registration 
 - **Data Collection Consent:** `data_collection_permissions: { "required": ["none"] }` (matches `addons-linter` canonical zero-collection declaration)
 - **Submission Package:** Upload `WebPullBook-v<version>.zip` from GitHub Releases directly at `https://addons.mozilla.org/developers/` (no separate source code archive is required because WebPullBook uses native ES modules with zero build steps, zero bundlers, and zero minification)
 - **Listing Metadata:**
-  - **License:** GNU AGPLv3 (`AGPL-3.0-or-later`; versions up to `v1.6.1-beta` remain historically under the MIT License)
+  - **License:** GNU AGPLv3 (`AGPL-3.0-or-later`)
   - **Summary (≤ 250 chars):** Extract web novels, serialized fiction, articles, and open browser tabs into volume-organized EPUB 2/3, single-file HTML, Markdown, and TXT ebooks offline in your browser.
   - **Categories:** *Download Management*, *Other*
   - **Homepage / Support / Privacy Policy:** `https://wiltongabriel.github.io/WebPullBook/`, `https://github.com/WiltonGabriel/WebPullBook/issues`, `https://wiltongabriel.github.io/WebPullBook/privacy.html`
@@ -214,7 +214,7 @@ Encontrou algum problema ou deseja sugerir melhoria? Abra uma issue em https://g
 | Version | Date | Changes | Status |
 |---------|------|---------|--------|
 | `1.7.0` (`1.7.0-beta`) | 2026-11-23 | Firefox MV3 localization (`_locales/`), optional Firefox website-access banner, DNR Referer image fallback, inline Test Selectors diagnostic, parser/helper deduplication, Chromium `sourceTabId`/SPA E2E coverage, automated website links/sitemap sync, `AGENTS.md` guardrails, and GNU AGPLv3 (`AGPL-3.0-or-later`) migration. | Released (GitHub Release Beta & Firefox Add-ons) |
-| `1.6.1` (`1.6.1-beta`) | 2026-11-20 | Reload Cover button (restores the original series cover in high resolution), vertical 2:3 cover preview, emoji-free language/theme selectors, versioning policy and Firefox for Android roadmap documentation. | Released (GitHub Release Beta & Firefox Add-ons, MIT historically) |
+| `1.6.1` (`1.6.1-beta`) | 2026-11-20 | Reload Cover button (restores the original series cover in high resolution), vertical 2:3 cover preview, emoji-free language/theme selectors, versioning policy and Firefox for Android roadmap documentation. | Released (GitHub Release Beta & Firefox Add-ons) |
 | `1.6.0` (`1.6.0-beta`) | 2026-11-20 | Verified NovelBin React SPA adapter, generic SPA `TabRenderPool` & DOM stability upgrades, `.sr-only`/duplicate-heading sanitizer hardening, CodeQL security fixes, 5-theme website improvements, and updated policies/docs. | Released (GitHub Release Beta) |
 | `1.5.0` (`1.5.0-beta`) | 2026-11-20 | Automatic default cover fallback with WebPullBook logo, official bilingual GitHub Pages site with dynamic version detection and direct `.zip` download, `AGENTS.md`, `CHROMEWEBSTORE.md`, and quiet/minimalist documentation review. | Released (GitHub Release Beta) |
 | `1.4.0` (`1.4.0-beta`) | 2026-11-20 | Reader Profiles for Kindle (Legacy/Modern) & Kobo, Start-of-Book TOC, customizable Information & End-of-Book pages, active-tab live DOM capture, resilient image pipeline, Ctrl/Shift range selection, per-site selector isolation, Library batch updates, and SRP modularization. | Released (GitHub Release Beta) |

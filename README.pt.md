@@ -5,7 +5,7 @@
 [![Manifest V3](https://img.shields.io/badge/Manifest-V3-4338ca?style=flat-square)](manifest.json)
 [![Chrome & Firefox](https://img.shields.io/badge/Navegadores-Chrome%20%7C%20Edge%20%7C%20Firefox%20128%2B-2563eb?style=flat-square)](#-primeiros-passos)
 [![Firefox Add-ons](https://img.shields.io/badge/Firefox%20Add--ons-Dispon%C3%ADvel-FF7139?style=flat-square)](https://addons.mozilla.org/firefox/addon/webpullbook/)
-[![Versão](https://img.shields.io/badge/Vers%C3%A3o-1.7.0--beta-0ea5e9?style=flat-square)](https://github.com/WiltonGabriel/WebPullBook/releases)
+[![Versão](https://img.shields.io/badge/Vers%C3%A3o-1.7.2--beta-0ea5e9?style=flat-square)](https://github.com/WiltonGabriel/WebPullBook/releases)
 [![Dependências](https://img.shields.io/badge/Depend%C3%AAncias-Zero-16a34a?style=flat-square)](src/core/zip.js)
 [![Licença: AGPLv3](https://img.shields.io/badge/Licen%C3%A7a-AGPLv3-f59e0b?style=flat-square)](LICENSE)
 [![CI Validation](https://github.com/WiltonGabriel/WebPullBook/actions/workflows/ci.yml/badge.svg)](https://github.com/WiltonGabriel/WebPullBook/actions/workflows/ci.yml)
@@ -67,7 +67,7 @@ A tabela de compatibilidade em quatro níveis (**Verificados e Testados**, **Adi
 
 ## Primeiros Passos
 
-> **Status de Lançamento (`v1.7.0-beta`):** O WebPullBook já está publicado oficialmente no [Firefox Add-ons (AMO)](https://addons.mozilla.org/firefox/addon/webpullbook/) para Firefox 128+. A publicação na Chrome Web Store está nos próximos passos; até lá, quem usa Chrome, Edge ou Brave pode instalar o pacote oficial disponível em [GitHub Releases](https://github.com/WiltonGabriel/WebPullBook/releases).
+> **Status de Lançamento (`v1.7.2-beta`):** O WebPullBook já está publicado oficialmente no [Firefox Add-ons (AMO)](https://addons.mozilla.org/firefox/addon/webpullbook/) para Firefox 128+. A publicação na Chrome Web Store está nos próximos passos; até lá, quem usa Chrome, Edge ou Brave pode instalar o pacote oficial disponível em [GitHub Releases](https://github.com/WiltonGabriel/WebPullBook/releases).
 
 ### Instalação (Mozilla Firefox)
 
@@ -163,7 +163,7 @@ Para detalhes do pipeline em 5 etapas, mapa de módulos e guia passo a passo de 
 
 ## Autoria, Manutenção e Contribuições
 
-O WebPullBook foi criado e é mantido por **Wilton Gabriel** ([@WiltonGabriel](https://github.com/WiltonGabriel)), contando com a colaboração de contribuidores da comunidade open source. O projeto é distribuído sob a [Licença GNU Affero General Public License v3.0 (AGPL-3.0-or-later)](LICENSE) (versões `<= v1.6.1-beta` permanecem historicamente sob a Licença MIT) e segue nosso [Código de Conduta](docs/pt/CODE_OF_CONDUCT.pt.md).
+O WebPullBook foi criado e é mantido por **Wilton Gabriel** ([@WiltonGabriel](https://github.com/WiltonGabriel)), contando com a colaboração de contribuidores da comunidade open source. O projeto é distribuído sob a [Licença GNU Affero General Public License v3.0 (AGPL-3.0-or-later)](LICENSE) e segue nosso [Código de Conduta](docs/pt/CODE_OF_CONDUCT.pt.md).
 
 ### Formas de Contribuir — Destaque para Desenvolvimento e Adição de Parsers
 
